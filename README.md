@@ -8,8 +8,10 @@ worst-case **time and space** complexity: a class, a calibrated confidence,
 the code spans that drove the prediction, and a growth chart — computed by a
 model that only ever *reads* the code.
 
-> 🚧 **Status: early scaffold (Phase 0 of 7).** Parsing, the oracle, models,
-> and the API are not implemented yet — see the build plan below.
+> 🚧 **Status: Phase 1 of 7.** tree-sitter parsing and IR normalisation for
+> Python + C++, tabular features, and a rung-0 rule baseline are wired up
+> end to end via `cli.py`. The oracle, richer models, and the API are not
+> implemented yet — see the build plan below.
 
 ## Why this exists
 

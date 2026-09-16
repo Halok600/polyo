@@ -4,3 +4,9 @@ mypy>=1.13,<2
 pytest>=8.3,<9
 pytest-cov>=6.0,<7
 httpx>=0.28,<0.29
+# Parsing (plan §5/§12 `parsing/`) -- not yet in requirements-api.txt because
+# api/main.py doesn't call the parser until Phase 6 wires up serving; keeping
+# it dev-only until then avoids bloating the image-size-budgeted Docker build.
+tree-sitter>=0.24,<0.27
+tree-sitter-python>=0.23,<0.26
+tree-sitter-cpp>=0.23,<0.24

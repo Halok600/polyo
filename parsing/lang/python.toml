@@ -1,0 +1,65 @@
+# Python -> IR mapping (tree-sitter-python grammar). See core/ir.py for the
+# full IR symbol vocabulary and plan §5 for the design this implements.
+#
+# `nodes`: tree-sitter node type -> IR symbol, applied directly.
+# `calls`: regex (matched against the fully-qualified callee text) -> IR
+#          symbol. First match wins. A value of "" means the call node itself
+#          carries no algorithmic meaning and is elided -- its arguments are
+#          still visited. `range(...)` is Python's loop-bound syntax, not an
+#          operation (the C-style `for(;i<n;)` header has no call node
+#          either), so it is elided rather than counted as CALL.
+# `binary_operator_map`: for node types listed in `binary_operator_nodes`,
+#          the operator token's text selects the IR symbol instead of the
+#          node type. Unused for Python, whose grammar already splits
+#          comparisons and arithmetic into distinct node types, but present
+#          for parity with cpp.toml and future languages that don't.
+
+[nodes]
+function_definition = "FUNC_DEF"
+return_statement = "RETURN"
+block = "BLOCK"
+for_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+subscript = "ARRAY_INDEX"
+list = "ARRAY_ALLOC"
+list_comprehension = "ARRAY_ALLOC"
+dictionary = "HASH_ALLOC"
+dictionary_comprehension = "HASH_ALLOC"
+set = "SET_OP"
+assignment = "ASSIGN"
+augmented_assignment = "ASSIGN"
+binary_operator = "ARITH"
+boolean_operator = "COMPARE"
+comparison_operator = "COMPARE"
+unary_operator = "ARITH"
+identifier = "IDENT"
+integer = "LITERAL"
+float = "LITERAL"
+string = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+none = "LITERAL"
+
+[calls]
+"^range$" = ""
+"^(sort|sorted)$" = "SORT"
+"^bisect\\." = "BINARY_SEARCH"
+"^heapq\\.heappush$" = "HEAP_PUSH"
+"^heapq\\.heappop$" = "HEAP_POP"
+"^(min|max|abs|sum|pow|len)$" = "MATH_OP"
+"\\.append$" = "LIST_APPEND"
+
+[binary_operator_nodes]
+# none for Python -- comparison_operator / boolean_operator / binary_operator
+# already distinguish COMPARE from ARITH by node type.
+
+[binary_operator_map]
+
+[params]
+# Node type whose direct children are the function's formal parameters.
+container = "parameters"
+# Child node types treated as one PARAM leaf each (not recursed into).
+leaf_types = ["identifier", "typed_parameter", "default_parameter", "typed_default_parameter"]

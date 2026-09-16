@@ -17,7 +17,7 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
       - name: Type-check (mypy)
-        run: mypy core api
+        run: mypy core api parsing features models cli.py
       - name: Test
         run: pytest -q
 
