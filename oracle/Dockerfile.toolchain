@@ -1,0 +1,27 @@
+# Multi-language toolchain for the OFFLINE oracle (see plan SS6, SS0).
+# This machine's dev environment has only Python + Node -- gcc/g++, a JDK
+# and Go are deliberately absent here to keep the local dev/serving
+# footprint small. Two ways to get them:
+#
+#   1. GitHub Actions on ubuntu-latest already ships gcc/g++ and adds the
+#      rest via actions/setup-{java,go,node} -- see
+#      .github/workflows/oracle-label.yml. This is what CI actually uses.
+#   2. Build this image locally if you have Docker and want to reproduce
+#      oracle runs outside CI: `docker build -f oracle/Dockerfile.toolchain .`
+#
+# Never used by the serving image or the deployed API.
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip \
+        build-essential g++ \
+        openjdk-21-jdk-headless \
+        golang-go \
+        curl ca-certificates gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /oracle
+# Populated with codegen/runner/fit modules in Phase 2 (Python) and
+# Phase 4 (C/C++/Java/JS/Go).

@@ -1,0 +1,22 @@
+[project]
+name = "polyo"
+version = "0.0.0"
+description = "Static, multi-language time & space complexity prediction — no LLM, no execution at inference time."
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+strict_optional = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

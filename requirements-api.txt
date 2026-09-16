@@ -1,0 +1,5 @@
+# Serving image deps only — kept minimal, no torch/ONNX, per the free-tier
+# image-size budget (see plan §13, enforced in CI).
+fastapi>=0.115,<0.116
+uvicorn[standard]>=0.34,<0.35
+pydantic>=2.10,<3

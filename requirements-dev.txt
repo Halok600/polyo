@@ -1,0 +1,6 @@
+-r requirements-api.txt
+ruff>=0.8,<0.9
+mypy>=1.13,<2
+pytest>=8.3,<9
+pytest-cov>=6.0,<7
+httpx>=0.28,<0.29

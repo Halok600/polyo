@@ -1,0 +1,39 @@
+name: Oracle -- multi-language labelling
+
+# Manual-only: this runs untrusted-by-construction code (synthetic + scraped
+# solutions) to auto-label training data. It never runs on a push/PR trigger
+# and never touches the serving path. See plan SS0 -- this is the mitigation
+# for this dev machine lacking gcc/java/go/docker: ubuntu-latest ships gcc
+# already, and the actions below add Node, a JDK and Go.
+on:
+  workflow_dispatch:
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Confirm toolchains are present
+        run: |
+          gcc --version
+          g++ --version
+          node --version
+          java -version
+          go version
+      - name: Run oracle labelling
+        run: |
+          echo "oracle/ codegen + runner land in Phase 2 (Python) and Phase 4 (C/C++/Java/JS/Go)."
+          echo "This job's toolchain setup is the concrete fix for this project's local-machine gap (see plan SS0)."
