@@ -156,7 +156,7 @@ public final class Driver {
             System.exit(2);
         }
         bean.setThreadAllocatedMemoryEnabled(true);
-        long threadId = Thread.currentThread().threadId();
+        long threadId = Thread.currentThread().getId();
 
         Random rng = new Random(SEED);
 

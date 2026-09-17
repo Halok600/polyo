@@ -24,6 +24,13 @@
  * target)`, not `f(int arr[], int target)`. A const-length array is NOT
  * given this treatment -- its length is a spec-time constant the solution
  * can already hardcode, unlike an n-swept size known only at run time.
+ *
+ * The entrypoint must also return a value (not `void`) -- `call_entrypoint`
+ * below sinks it into a `volatile` to stop -O2 from proving the call has no
+ * observable effect and eliminating it outright (see that sink's comment).
+ * A naturally void algorithm (e.g. an in-place mutation) should return a
+ * trivial value such as its own first argument for oracle-measurement
+ * purposes.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -45,6 +52,18 @@ static const int ARG_POOL_SIZE = 8;
 
 static long long (*polyo_peak_bytes)(void) = NULL;
 static void (*polyo_reset_peak)(void) = NULL;
+
+/* A call whose return value is discarded, to a function the compiler can
+ * see the full body of (true here: oracle/runner.py concatenates the
+ * solution directly into this translation unit), is legally free for
+ * -O2 to remove entirely if it can prove no other observable effect --
+ * a real bug hit while building this driver, where a plain read-only
+ * linear scan measured as O(1) because gcc eliminated the whole loop.
+ * Sinking the result into a `volatile` defeats this: a volatile write
+ * can never be optimized away, so neither can the call that produces it.
+ * This is why oracle-measured C/C++ entrypoints must return a value
+ * (not void) -- see this file's header comment. */
+static volatile long long g_sink;
 
 struct arg_set {
 {% for p in params %}
@@ -120,7 +139,7 @@ static void free_args(struct arg_set *a) {
 }
 
 static void call_entrypoint(struct arg_set *a) {
-    {{ entrypoint }}({% for p in params %}{% if p.type == "int[]" %}a->arg{{ loop.index0 }}{% if p.has_size %}, a->arg{{ loop.index0 }}_len{% endif %}{% else %}a->arg{{ loop.index0 }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %});
+    g_sink = (long long){{ entrypoint }}({% for p in params %}{% if p.type == "int[]" %}a->arg{{ loop.index0 }}{% if p.has_size %}, a->arg{{ loop.index0 }}_len{% endif %}{% else %}a->arg{{ loop.index0 }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %});
 }
 
 static long long now_ns(void) {

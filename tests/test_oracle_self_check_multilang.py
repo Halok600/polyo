@@ -107,24 +107,27 @@ func libSort(arr []int) []int {
 }
 """,
     "c": """
+#include <stdlib.h>
+#include <string.h>
 static int cmp_int(const void *a, const void *b) {
     return (*(const int *)a) - (*(const int *)b);
 }
-void lib_sort(int arr[], int arr_len) {
+int *lib_sort(int arr[], int arr_len) {
     int *copy = malloc((size_t)arr_len * sizeof(int));
     memcpy(copy, arr, (size_t)arr_len * sizeof(int));
     qsort(copy, (size_t)arr_len, sizeof(int), cmp_int);
-    free(copy);
+    return copy;
 }
 """,
     "cpp": """
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
-void lib_sort(int arr[], int arr_len) {
+int *lib_sort(int arr[], int arr_len) {
     int *copy = (int *)malloc((size_t)arr_len * sizeof(int));
     memcpy(copy, arr, (size_t)arr_len * sizeof(int));
     std::sort(copy, copy + arr_len);
-    free(copy);
+    return copy;
 }
 """,
 }

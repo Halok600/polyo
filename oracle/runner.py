@@ -199,9 +199,14 @@ def _run_java(
 def _run_go(
     tmp_dir: Path, spec: TestSpec, solution_source: str
 ) -> subprocess.CompletedProcess[str]:
-    solution_path = tmp_dir / "_solution.go"
+    # Filenames deliberately do NOT start with "_" (unlike every other
+    # language's temp files here) -- go/build ignores any file whose name
+    # begins with "_" or "." when resolving a package, even when it's named
+    # explicitly on the command line, so `go run _solution.go _driver.go`
+    # silently sees zero Go files rather than the two just written.
+    solution_path = tmp_dir / "solution.go"
     solution_path.write_text(_wrap_go_solution(solution_source), encoding="utf-8")
-    driver_path = tmp_dir / "_driver.go"
+    driver_path = tmp_dir / "driver.go"
     driver_path.write_text(render_driver("go", spec, solution_path), encoding="utf-8")
     # `go run` compiles and executes multiple explicitly-listed files as one
     # ad-hoc main package -- no go.mod needed for stdlib-only solutions.
