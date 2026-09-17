@@ -26,3 +26,15 @@ numpy>=2.0,<3
 scikit-learn>=1.5,<1.6
 lightgbm>=4.5,<5
 matplotlib>=3.9,<4
+
+# GNN training only (plan §8 rung 3, Phase 5, `models/gnn.py`) -- never
+# imported by api/: the trained GNN's forward pass is re-implemented in ~50
+# lines of numpy for serving (plan §8 "serving without torch"), so torch
+# never needs to appear in requirements-api.txt or the served image.
+# `pip install -r requirements-dev.txt` alone resolves whatever build the
+# default PyPI index serves for your platform (CPU-only on many setups);
+# for a CUDA GPU, install torch explicitly first from PyTorch's own index,
+# matched to your driver's supported CUDA version, e.g.:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+# (verified locally: torch==2.6.0+cu124, CUDA available, on an RTX 3050.)
+torch>=2.6,<3
