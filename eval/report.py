@@ -25,14 +25,14 @@ from models.calibrate import expected_calibration_error
 
 # dataviz skill's validated sequential-blue ramp (references/palette.md,
 # steps 100->700) and chart chrome -- reused verbatim, not eyeballed.
-_SEQUENTIAL_BLUE_STEPS = [
+SEQUENTIAL_BLUE_STEPS = [
     "#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7",
     "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b",
 ]
-_INK_PRIMARY = "#0b0b0b"
-_INK_MUTED = "#898781"
-_GRIDLINE = "#e1e0d9"
-_SURFACE = "#fcfcfb"
+INK_PRIMARY = "#0b0b0b"
+INK_MUTED = "#898781"
+GRIDLINE = "#e1e0d9"
+SURFACE = "#fcfcfb"
 
 TIME_CLASSES: tuple[str, ...] = tuple(c.value for c in TimeClass)
 SPACE_CLASSES: tuple[str, ...] = tuple(c.value for c in SpaceClass)
@@ -132,8 +132,8 @@ def per_language_metrics(
     return by_language
 
 
-def _sequential_blue_cmap() -> LinearSegmentedColormap:
-    return LinearSegmentedColormap.from_list("polyo_sequential_blue", _SEQUENTIAL_BLUE_STEPS)
+def sequential_blue_cmap() -> LinearSegmentedColormap:
+    return LinearSegmentedColormap.from_list("polyo_sequential_blue", SEQUENTIAL_BLUE_STEPS)
 
 
 def plot_confusion_matrix(metrics: Metrics, title: str, out_path: Path) -> None:
@@ -146,17 +146,17 @@ def plot_confusion_matrix(metrics: Metrics, title: str, out_path: Path) -> None:
     normalized = np.divide(conf, row_sums, out=np.zeros_like(conf), where=row_sums > 0)
 
     n = len(metrics.classes)
-    fig, ax = plt.subplots(figsize=(1.1 * n + 2, 1.1 * n + 1.5), facecolor=_SURFACE)
-    ax.set_facecolor(_SURFACE)
-    im = ax.imshow(normalized, cmap=_sequential_blue_cmap(), vmin=0, vmax=1)
+    fig, ax = plt.subplots(figsize=(1.1 * n + 2, 1.1 * n + 1.5), facecolor=SURFACE)
+    ax.set_facecolor(SURFACE)
+    im = ax.imshow(normalized, cmap=sequential_blue_cmap(), vmin=0, vmax=1)
 
     ax.set_xticks(range(n))
     ax.set_yticks(range(n))
-    ax.set_xticklabels(metrics.classes, rotation=45, ha="right", color=_INK_MUTED, fontsize=9)
-    ax.set_yticklabels(metrics.classes, color=_INK_MUTED, fontsize=9)
-    ax.set_xlabel("Predicted class", color=_INK_PRIMARY, fontsize=10)
-    ax.set_ylabel("True class", color=_INK_PRIMARY, fontsize=10)
-    ax.set_title(title, color=_INK_PRIMARY, fontsize=11, pad=12)
+    ax.set_xticklabels(metrics.classes, rotation=45, ha="right", color=INK_MUTED, fontsize=9)
+    ax.set_yticklabels(metrics.classes, color=INK_MUTED, fontsize=9)
+    ax.set_xlabel("Predicted class", color=INK_PRIMARY, fontsize=10)
+    ax.set_ylabel("True class", color=INK_PRIMARY, fontsize=10)
+    ax.set_title(title, color=INK_PRIMARY, fontsize=11, pad=12)
 
     for i in range(n):
         for j in range(n):
@@ -164,22 +164,22 @@ def plot_confusion_matrix(metrics: Metrics, title: str, out_path: Path) -> None:
             if count == 0:
                 continue
             pct = normalized[i, j]
-            text_color = _SURFACE if pct > 0.6 else _INK_PRIMARY
+            text_color = SURFACE if pct > 0.6 else INK_PRIMARY
             ax.text(
                 j, i, f"{count}\n{pct:.0%}", ha="center", va="center",
                 color=text_color, fontsize=7.5,
             )
 
     for spine in ax.spines.values():
-        spine.set_color(_GRIDLINE)
-    ax.tick_params(colors=_GRIDLINE, length=0)
+        spine.set_color(GRIDLINE)
+    ax.tick_params(colors=GRIDLINE, length=0)
 
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.tick_params(colors=_INK_MUTED, labelsize=8)
-    cbar.set_label("Row-normalised share (recall)", color=_INK_MUTED, fontsize=8)
-    cbar.outline.set_edgecolor(_GRIDLINE)
+    cbar.ax.tick_params(colors=INK_MUTED, labelsize=8)
+    cbar.set_label("Row-normalised share (recall)", color=INK_MUTED, fontsize=8)
+    cbar.outline.set_edgecolor(GRIDLINE)
 
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150, facecolor=_SURFACE)
+    fig.savefig(out_path, dpi=150, facecolor=SURFACE)
     plt.close(fig)

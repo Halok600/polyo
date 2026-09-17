@@ -23,7 +23,7 @@ from typing import Any
 
 from tree_sitter import Node as TSNode
 
-from core.ir import IREdge, IRGraph, IRNode
+from core.ir import IREdge, IRGraph, IRNode, data_dependency_edges, loop_carry_edges
 from parsing.parse import UnsupportedLanguageError, parse_source
 
 _LANG_DIR = Path(__file__).resolve().parent / "lang"
@@ -84,6 +84,11 @@ class _Normalizer:
         self.edges: list[IREdge] = []
         self._next_id = 0
         self._func_name_stack: list[str] = []
+        # CALL_EDGE (plan §5) needs a whole-file view -- a call may reference
+        # a function defined later in the file -- so candidates are recorded
+        # here during `walk()` and resolved once in `finalize()`.
+        self._pending_calls: list[tuple[IRNode, str]] = []
+        self._func_defs: list[tuple[str, IRNode]] = []
 
     def _text(self, node: TSNode) -> str:
         return self.source_bytes[node.start_byte : node.end_byte].decode("utf-8", "replace")
@@ -201,6 +206,8 @@ class _Normalizer:
                 self.walk(args, parent_ir)
             return []
         emitted = self._emit(symbol, node)
+        if symbol in ("CALL", "RECURSE"):
+            self._pending_calls.append((emitted, self._callee_text(node)))
         if args is not None:
             self.walk(args, emitted)
         return [emitted]
@@ -211,12 +218,33 @@ class _Normalizer:
         name = self._function_name(node)
         if name is not None:
             self._func_name_stack.append(name)
+            if emitted is not None:
+                self._func_defs.append((name, emitted))
         try:
             self.walk(node, emitted if emitted is not None else parent_ir)
         finally:
             if name is not None:
                 self._func_name_stack.pop()
         return [emitted] if emitted is not None else []
+
+    def resolve_call_edges(self) -> None:
+        """CALL_EDGE: call site -> the FUNC_DEF it resolves to, by in-file
+        name match (first definition wins on a duplicate name, for
+        determinism). Only CALL/RECURSE sites are candidates -- a library
+        call (SORT, HEAP_PUSH, ...) isn't a call into this file's own code.
+        A qualified callee (`self.helper`, `obj.method`) also matches on its
+        trailing segment, since the static IR has no receiver-type
+        information to resolve the qualifier itself. Run once after `walk()`
+        completes -- see `_pending_calls`'s docstring above."""
+        by_name: dict[str, IRNode] = {}
+        for name, func_node in self._func_defs:
+            by_name.setdefault(name, func_node)
+        for call_node, callee_text in self._pending_calls:
+            target = by_name.get(callee_text)
+            if target is None and "." in callee_text:
+                target = by_name.get(callee_text.rsplit(".", 1)[-1])
+            if target is not None:
+                self.edges.append(IREdge(call_node.id, target.id, "CALL_EDGE"))
 
 
 def normalize_source(source: str, language: str) -> IRGraph:
@@ -225,4 +253,8 @@ def normalize_source(source: str, language: str) -> IRGraph:
     source_bytes = source.encode("utf-8")
     normalizer = _Normalizer(config, source_bytes)
     normalizer.walk(tree.root_node, None)
-    return IRGraph(nodes=normalizer.nodes, edges=normalizer.edges)
+    normalizer.resolve_call_edges()
+    graph = IRGraph(nodes=normalizer.nodes, edges=normalizer.edges)
+    graph.edges.extend(data_dependency_edges(graph))
+    graph.edges.extend(loop_carry_edges(graph))
+    return graph
