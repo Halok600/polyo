@@ -1,0 +1,188 @@
+"""Auto-generated oracle driver -- DO NOT EDIT BY HAND.
+
+Rendered by oracle/codegen/python.j2 for entrypoint {{ entrypoint }} (plan
+§6). Runs standalone in a subprocess launched by oracle/runner.py: builds
+inputs at each n in the grid, discards warmup calls, and measures time,
+heap peak (tracemalloc) and max Python call-stack depth (sys.settrace) as
+THREE SEPARATE calls per n -- tracemalloc and sys.settrace each carry real,
+non-negligible per-operation overhead of their own (most visible as a false
+superlinear slope at small n), so neither may be active while timing is.
+Heap peak and call-stack depth are two independent auxiliary-space signals:
+tracemalloc alone cannot see recursion-stack space (see oracle/fit.py's
+classify_space).
+"""
+import importlib.util
+import itertools
+import json
+import random
+import sys
+import time
+import tracemalloc
+
+SOLUTION_PATH = {{ solution_path|tojson }}
+ENTRYPOINT = {{ entrypoint|tojson }}
+N_VALUES = {{ n_values|tojson }}
+BUDGET_MS = {{ budget_ms }}
+WARMUP_ITERS = {{ warmup_iters }}
+MEASURE_REPEATS = {{ measure_repeats }}
+SEED = {{ seed }}
+
+# A single call to a fast (O(1)/O(log n)) solution can be a few hundred
+# nanoseconds -- comparable to timer/OS-scheduling noise, which would hide
+# real shape differences. Autorange a batch of calls up to a minimum total
+# duration (same principle as timeit.Timer.autorange) and report cost per
+# call; a small pool of distinct pre-built inputs is cycled through so a
+# batch isn't just timing one memoized/cached call repeated.
+_MIN_BATCH_NS = 1_000_000
+_MAX_BATCH_CALLS = 10_000
+_ARG_POOL_SIZE = 8
+
+
+def _load_entrypoint():
+    spec = importlib.util.spec_from_file_location("oracle_solution", SOLUTION_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, ENTRYPOINT)
+
+
+def _build_args(n, rng):
+    args = []
+{% for p in params %}
+{% if p.type == "int[]" %}
+{% if p.has_size %}
+    size = n
+{% else %}
+    size = {{ p.const|tojson }}
+{% endif %}
+    values = [rng.randint(-1000, 1000) for _ in range(size)]
+{% if p.dist == "sorted" %}
+    values.sort()
+{% endif %}
+    args.append(values)
+{% elif p.type == "int" %}
+{% if p.has_size %}
+    args.append(n)
+{% elif p.dist == "const" %}
+    args.append({{ p.const|tojson }})
+{% else %}
+    args.append(rng.randint(-1000, 1000))
+{% endif %}
+{% endif %}
+{% endfor %}
+    return args
+
+
+_current_depth = 0
+_max_call_depth = 0
+
+
+def _trace(frame, event, arg):
+    global _current_depth, _max_call_depth
+    if event == "call":
+        # sys.settrace also enables per-LINE events by default, whose
+        # dispatch overhead scales with iterations executed -- call/return
+        # tracking (all _max_call_depth needs) doesn't require it.
+        frame.f_trace_lines = False
+        _current_depth += 1
+        _max_call_depth = max(_max_call_depth, _current_depth)
+    elif event == "return":
+        _current_depth -= 1
+    return _trace
+
+
+def _noop():
+    pass
+
+
+def _time_batches_ns(call_once):
+    def time_batch(batch_calls):
+        start = time.perf_counter_ns()
+        for _ in range(batch_calls):
+            call_once()
+        return time.perf_counter_ns() - start
+
+    batch_calls = 1
+    elapsed_ns = time_batch(batch_calls)
+    while elapsed_ns < _MIN_BATCH_NS and batch_calls < _MAX_BATCH_CALLS:
+        batch_calls *= 2
+        elapsed_ns = time_batch(batch_calls)
+
+    best_per_call_ns = elapsed_ns / batch_calls
+    for _ in range(MEASURE_REPEATS - 1):
+        elapsed_ns = time_batch(batch_calls)
+        best_per_call_ns = min(best_per_call_ns, elapsed_ns / batch_calls)
+        if elapsed_ns / 1e6 > BUDGET_MS:
+            break
+    return best_per_call_ns
+
+
+def _calibrate_time_overhead_ns():
+    # Fixed per-call overhead (interpreter dispatch, timer read) that would
+    # otherwise masquerade as algorithmic cost, worst at small n.
+    return _time_batches_ns(_noop)
+
+
+def _measure_time_ns(fn, n, rng):
+    pool = [_build_args(n, rng) for _ in range(_ARG_POOL_SIZE)]
+    pool_cycle = itertools.cycle(pool)
+
+    def call_once():
+        fn(*next(pool_cycle))
+
+    return _time_batches_ns(call_once)
+
+
+def _measure_peak_bytes(fn, n, rng):
+    call_args = _build_args(n, rng)
+    tracemalloc.start()
+    try:
+        fn(*call_args)
+    finally:
+        _, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+    return peak_bytes
+
+
+def _measure_call_depth(fn, n, rng):
+    global _current_depth, _max_call_depth
+    _current_depth, _max_call_depth = 0, 0
+    call_args = _build_args(n, rng)
+    sys.settrace(_trace)
+    try:
+        fn(*call_args)
+    finally:
+        sys.settrace(None)
+    return _max_call_depth
+
+
+def main():
+    fn = _load_entrypoint()
+    rng = random.Random(SEED)
+    baseline_ns = _calibrate_time_overhead_ns()
+
+    for n in N_VALUES:
+        for _ in range(WARMUP_ITERS):
+            fn(*_build_args(n, rng))
+
+        try:
+            raw_time_ns = _measure_time_ns(fn, n, rng)
+            peak_bytes = _measure_peak_bytes(fn, n, rng)
+            max_call_depth = _measure_call_depth(fn, n, rng)
+        except Exception as exc:
+            print(json.dumps({"n": n, "error": repr(exc)}))
+            sys.stdout.flush()
+            continue
+
+        print(json.dumps({
+            "n": n,
+            "time_ns": max(round(raw_time_ns - baseline_ns), 1),
+            "peak_bytes": peak_bytes,
+            "max_call_depth": max_call_depth,
+        }))
+        sys.stdout.flush()
+        if raw_time_ns / 1e6 > BUDGET_MS:
+            break
+
+
+if __name__ == "__main__":
+    main()

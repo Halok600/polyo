@@ -8,10 +8,13 @@ worst-case **time and space** complexity: a class, a calibrated confidence,
 the code spans that drove the prediction, and a growth chart — computed by a
 model that only ever *reads* the code.
 
-> 🚧 **Status: Phase 1 of 7.** tree-sitter parsing and IR normalisation for
+> 🚧 **Status: Phase 2 of 7.** tree-sitter parsing and IR normalisation for
 > Python + C++, tabular features, and a rung-0 rule baseline are wired up
-> end to end via `cli.py`. The oracle, richer models, and the API are not
-> implemented yet — see the build plan below.
+> end to end via `cli.py`. The Python oracle (codegen, subprocess runner,
+> BIC curve-shape fitting) is verified against six functions of known
+> complexity, and BigO(Bench) + CodeComplex ingest into a labelled Python
+> corpus. Richer models and the API are not implemented yet — see the build
+> plan below.
 
 ## Why this exists
 

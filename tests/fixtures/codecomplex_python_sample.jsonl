@@ -1,0 +1,3 @@
+{"src": "def f():\n    pass\n", "complexity": "linear", "problem": "0001_A", "from": "CODEFORCES", "tags": "implementation"}
+{"src": "def g():\n    pass\n", "complexity": "made_up_label", "problem": "0001_A", "from": "CODEFORCES", "tags": "math"}
+{"src": "def h():\n    pass\n", "complexity": "quadratic", "problem": "0002_B", "from": "CODEFORCES", "tags": "dp"}

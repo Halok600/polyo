@@ -13,9 +13,11 @@ MIT for anything derived from them:
   consistent — but if you fork this for commercial use, retrain on the
   synthetic generator (`data/synth.py`) plus permissively-licensed sources
   only, and keep BigO(Bench) as an eval-only benchmark.
-- **[CodeComplex](https://aclanthology.org/2025.findings-emnlp.1069/)**
+- **[CodeComplex-Data](https://github.com/sybaik1/CodeComplex-Data)**
   (EMNLP Findings 2025, [arXiv:2401.08719](https://arxiv.org/abs/2401.08719))
-  — used for training and as an external comparison point; see the paper for
-  its license terms.
+  — **CC-BY-NC-ND-4.0**. Used for training (time labels only) and as an
+  external comparison point; non-commercial and no-derivatives, same
+  practical consequence as BigO(Bench) above.
 
-This file is expanded as data sources are added in Phase 2/4 ingestion.
+Both are ingested by `data/ingest_bigobench.py` and `data/ingest_codecomplex.py`
+(Phase 2); this file is expanded further as more sources are added in Phase 4.
