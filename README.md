@@ -8,11 +8,14 @@ worst-case **time and space** complexity: a class, a calibrated confidence,
 the code spans that drove the prediction, and a growth chart — computed by a
 model that only ever *reads* the code.
 
-> 🚧 **Status: Phase 3 of 7.** Rungs 0–2 (rule → TF-IDF+logistic regression →
+> 🚧 **Status: Phase 4 of 7.** Rungs 0–2 (rule → TF-IDF+logistic regression →
 > IR features+LightGBM) are trained and evaluated on a real, problem-level
 > split of the labelled Python corpus (BigO(Bench) + CodeComplex) — see
 > [`MODEL_CARD.md`](MODEL_CARD.md) for metrics, confusion matrices, and what
-> they mean. The GNN rung, other languages' oracles, and the API are not
+> they mean (not yet retrained on the multi-language corpus below). All six
+> languages now have an IR mapping and an oracle driver — verified for real
+> in CI (`.github/workflows/oracle-label.yml`) for C/C++/Java/Go, since this
+> dev machine has none of those toolchains. The GNN rung and the API are not
 > implemented yet — see the build plan below.
 
 ## Why this exists

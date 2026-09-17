@@ -160,7 +160,13 @@ def fit_space_bytes(samples: list[Sample]) -> FitResult:
     return fit(samples, cost="peak_bytes", candidates=_SPACE_CANDIDATES)
 
 
-def fit_space_depth(samples: list[Sample]) -> FitResult:
+def fit_space_depth(samples: list[Sample]) -> FitResult | None:
+    """None when this language's driver doesn't measure call-stack depth
+    (plan §14 Phase 4: Python only, see `Sample.max_call_depth`'s docstring)
+    -- every sample from one run shares a language, so checking the first is
+    enough to know whether the whole batch has the signal at all."""
+    if samples[0].max_call_depth is None:
+        return None
     return fit(samples, cost="max_call_depth", candidates=_SPACE_CANDIDATES)
 
 
@@ -171,18 +177,23 @@ def classify_time(result: FitResult) -> tuple[TimeClass, float] | None:
 
 
 def classify_space(
-    byte_result: FitResult, depth_result: FitResult
+    byte_result: FitResult, depth_result: FitResult | None
 ) -> tuple[SpaceClass, float] | None:
     """True auxiliary space is at least the larger-growing of two
-    independent signals: heap allocation (tracemalloc) and Python call-stack
-    depth (sys.settrace) -- tracemalloc cannot see the latter on its own,
-    and plan §3 explicitly requires the recursion stack to count."""
+    independent signals: heap allocation and call-stack depth -- heap
+    allocation alone cannot see a solution that recurses without allocating,
+    and plan §3 explicitly requires the recursion stack to count.
+    `depth_result` is None wherever that second signal isn't measured (plan
+    §14 Phase 4: every language but Python currently) -- classification then
+    honestly rests on heap allocation alone rather than a faked signal, so a
+    recursive, allocation-light solution in those languages can undercount
+    its true space class. See `Sample.max_call_depth`'s docstring."""
     candidates: list[tuple[SpaceClass, float]] = []
     if byte_result.best.r_squared >= R2_FLOOR:
         candidates.append(
             (_SPACE_CLASS_BY_CANDIDATE[byte_result.best.candidate], byte_result.confidence)
         )
-    if depth_result.best.r_squared >= R2_FLOOR:
+    if depth_result is not None and depth_result.best.r_squared >= R2_FLOOR:
         candidates.append(
             (_SPACE_CLASS_BY_CANDIDATE[depth_result.best.candidate], depth_result.confidence)
         )

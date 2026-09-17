@@ -1,0 +1,213 @@
+// Auto-generated oracle driver -- DO NOT EDIT BY HAND.
+//
+// Rendered by oracle/codegen/go.j2 for entrypoint {{ entrypoint }} (plan §6).
+// Run via `go run _solution.go _driver.go` (oracle/runner.py) -- same
+// package, no go.mod needed for stdlib-only solutions. The solution file
+// declares the entrypoint but no `func main`; this file supplies main.
+//
+// Go is statically typed, unlike Python/JavaScript's drivers: arguments are
+// built into a fixed-shape `argSet` struct (one field per test-spec param,
+// in order) instead of a generic args list, so the call site
+// `{{ entrypoint }}(a.arg0, a.arg1, ...)` type-checks at compile time.
+//
+// No call-stack-depth signal (see oracle/runner.py's Sample.max_call_depth
+// docstring) -- space classification falls back to heap allocation alone.
+// Memory uses TotalAlloc (cumulative bytes ever allocated), not live bytes,
+// matching plan §16's "allocation counters, not RSS" guidance for
+// GC'd/JIT'd runtimes -- no forced GC needed since it never decreases.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"runtime"
+	"time"
+)
+
+var nValues = []int{ {{ n_values|join(', ') }} }
+
+const budgetMs = {{ budget_ms }}
+const warmupIters = {{ warmup_iters }}
+const measureRepeats = {{ measure_repeats }}
+const seed = {{ seed }}
+
+const minBatchNs = int64(1000000)
+const maxBatchCalls = 10000
+const argPoolSize = 8
+
+type argSet struct {
+{% for p in params %}
+{% if p.type == "int[]" %}
+	arg{{ loop.index0 }} []int
+{% elif p.type == "int" %}
+	arg{{ loop.index0 }} int
+{% endif %}
+{% endfor %}
+}
+
+func buildArgs(n int, rng *rand.Rand) argSet {
+	var a argSet
+{% for p in params %}
+{% if p.type == "int[]" %}
+{% if p.has_size %}
+	size{{ loop.index0 }} := n
+{% else %}
+	size{{ loop.index0 }} := {{ p.const|int }}
+{% endif %}
+	values{{ loop.index0 }} := make([]int, size{{ loop.index0 }})
+	for i := range values{{ loop.index0 }} {
+		values{{ loop.index0 }}[i] = rng.Intn(2001) - 1000
+	}
+{% if p.dist == "sorted" %}
+	sortInts(values{{ loop.index0 }})
+{% endif %}
+	a.arg{{ loop.index0 }} = values{{ loop.index0 }}
+{% elif p.type == "int" %}
+{% if p.has_size %}
+	a.arg{{ loop.index0 }} = n
+{% elif p.dist == "const" %}
+	a.arg{{ loop.index0 }} = {{ p.const|int }}
+{% else %}
+	a.arg{{ loop.index0 }} = rng.Intn(2001) - 1000
+{% endif %}
+{% endif %}
+{% endfor %}
+	return a
+}
+
+// Avoids importing "sort" purely for one call when no param needs it.
+func sortInts(xs []int) {
+	for i := 1; i < len(xs); i++ {
+		for j := i; j > 0 && xs[j-1] > xs[j]; j-- {
+			xs[j-1], xs[j] = xs[j], xs[j-1]
+		}
+	}
+}
+
+func call(a argSet) {
+	{{ entrypoint }}({% for p in params %}a.arg{{ loop.index0 }}{% if not loop.last %}, {% endif %}{% endfor %})
+}
+
+func timeBatchNs(pool []argSet, batchCalls int) int64 {
+	start := time.Now()
+	for i := 0; i < batchCalls; i++ {
+		call(pool[i%len(pool)])
+	}
+	return time.Since(start).Nanoseconds()
+}
+
+func timeBatchesNs(pool []argSet) float64 {
+	batchCalls := 1
+	elapsedNs := timeBatchNs(pool, batchCalls)
+	for elapsedNs < minBatchNs && batchCalls < maxBatchCalls {
+		batchCalls *= 2
+		elapsedNs = timeBatchNs(pool, batchCalls)
+	}
+	bestPerCallNs := float64(elapsedNs) / float64(batchCalls)
+	for r := 0; r < measureRepeats-1; r++ {
+		elapsedNs = timeBatchNs(pool, batchCalls)
+		perCall := float64(elapsedNs) / float64(batchCalls)
+		if perCall < bestPerCallNs {
+			bestPerCallNs = perCall
+		}
+		if float64(elapsedNs)/1e6 > budgetMs {
+			break
+		}
+	}
+	return bestPerCallNs
+}
+
+func timeNoopBatchNs(batchCalls int) int64 {
+	sink := 0
+	start := time.Now()
+	for i := 0; i < batchCalls; i++ {
+		sink += i
+	}
+	_ = sink
+	return time.Since(start).Nanoseconds()
+}
+
+func calibrateTimeOverheadNs() float64 {
+	batchCalls := 1
+	elapsed := timeNoopBatchNs(batchCalls)
+	for elapsed < minBatchNs && batchCalls < maxBatchCalls {
+		batchCalls *= 2
+		elapsed = timeNoopBatchNs(batchCalls)
+	}
+	return float64(elapsed) / float64(batchCalls)
+}
+
+func measureTimeNs(n int, rng *rand.Rand) float64 {
+	pool := make([]argSet, argPoolSize)
+	for i := range pool {
+		pool[i] = buildArgs(n, rng)
+	}
+	return timeBatchesNs(pool)
+}
+
+func measureAllocBytes(n int, rng *rand.Rand) uint64 {
+	a := buildArgs(n, rng)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	call(a)
+	runtime.ReadMemStats(&after)
+	if after.TotalAlloc < before.TotalAlloc {
+		return 0
+	}
+	return after.TotalAlloc - before.TotalAlloc
+}
+
+type sample struct {
+	N            int    `json:"n"`
+	TimeNs       int64  `json:"time_ns"`
+	PeakBytes    uint64 `json:"peak_bytes"`
+	MaxCallDepth *int   `json:"max_call_depth"`
+}
+
+// Guards only the measurement calls, not warmup -- matching python.j2's
+// _measure_time_ns/_measure_peak_bytes try/except, which likewise leaves
+// warmup unguarded. A solution that panics on every call (including
+// warmup) is meant to bring down the whole driver, giving oracle/runner.py
+// zero samples and therefore an OracleRunError for that (spec, solution)
+// pair -- not a partial, misleading result.
+func measureN(n int, rng *rand.Rand) (rawTimeNs float64, peakBytes uint64, errMsg string) {
+	defer func() {
+		if r := recover(); r != nil {
+			errMsg = fmt.Sprintf("%v", r)
+		}
+	}()
+	rawTimeNs = measureTimeNs(n, rng)
+	peakBytes = measureAllocBytes(n, rng)
+	return rawTimeNs, peakBytes, ""
+}
+
+func main() {
+	rng := rand.New(rand.NewSource(seed))
+	baselineNs := calibrateTimeOverheadNs()
+
+	for _, n := range nValues {
+		for i := 0; i < warmupIters; i++ {
+			call(buildArgs(n, rng))
+		}
+
+		rawTimeNs, peakBytes, errMsg := measureN(n, rng)
+		if errMsg != "" {
+			out, _ := json.Marshal(map[string]any{"n": n, "error": errMsg})
+			fmt.Println(string(out))
+			continue
+		}
+
+		timeNs := int64(rawTimeNs - baselineNs)
+		if timeNs < 1 {
+			timeNs = 1
+		}
+		out, _ := json.Marshal(sample{N: n, TimeNs: timeNs, PeakBytes: peakBytes, MaxCallDepth: nil})
+		fmt.Println(string(out))
+		if rawTimeNs/1e6 > budgetMs {
+			break
+		}
+	}
+	os.Exit(0)
+}

@@ -1,0 +1,69 @@
+# Go -> IR mapping (tree-sitter-go grammar). See core/ir.py for the full IR
+# symbol vocabulary and plan §5 for the design this implements.
+#
+# Go wraps statements in `statement_list`/`for_clause` wrapper nodes with no
+# entry below -- normalize.py's generic walker flattens any unmapped node
+# type (see its module docstring), so those wrappers need no special
+# handling here; their children attach straight to the nearest emitted
+# ancestor (e.g. `for_statement`).
+
+[nodes]
+function_declaration = "FUNC_DEF"
+method_declaration = "FUNC_DEF"
+func_literal = "FUNC_DEF"
+return_statement = "RETURN"
+block = "BLOCK"
+for_statement = "LOOP_FOR"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+index_expression = "ARRAY_INDEX"
+slice_expression = "SLICE"
+composite_literal = "ARRAY_ALLOC"
+assignment_statement = "ASSIGN"
+short_var_declaration = "ASSIGN"
+# Go's increment/decrement are statements, not expressions, and this
+# grammar does not expose a named "operator" field on them (unlike
+# javascript.toml's update_expression) -- unambiguous, so mapped directly
+# rather than routed through [binary_operator_nodes]/[binary_operator_map].
+inc_statement = "ARITH"
+dec_statement = "ARITH"
+identifier = "IDENT"
+int_literal = "LITERAL"
+float_literal = "LITERAL"
+interpreted_string_literal = "LITERAL"
+raw_string_literal = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+nil = "LITERAL"
+
+[calls]
+"^sort\\.(Ints|Strings|Float64s|Slice|Sort)$" = "SORT"
+"^sort\\.Search$" = "BINARY_SEARCH"
+"^make$" = "ARRAY_ALLOC"
+"^(len|cap)$" = "MATH_OP"
+"^math\\.(Min|Max|Abs|Pow|Sqrt|Log)$" = "MATH_OP"
+"^append$" = "LIST_APPEND"
+"^copy$" = "COPY"
+
+[binary_operator_nodes]
+types = ["binary_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+
+[params]
+container = "parameter_list"
+leaf_types = ["parameter_declaration", "variadic_parameter_declaration"]

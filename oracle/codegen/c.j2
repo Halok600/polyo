@@ -1,0 +1,235 @@
+/* Auto-generated oracle driver -- DO NOT EDIT BY HAND.
+ *
+ * Rendered by oracle/codegen/c.j2 for entrypoint {{ entrypoint }} (plan §6).
+ * oracle/runner.py concatenates the solution source directly above this
+ * file's own code into ONE translation unit before compiling (`gcc -O2`),
+ * so {{ entrypoint }} is already declared by the time main() below calls it
+ * -- no header/prototype generation needed.
+ *
+ * Peak heap bytes come from oracle/interposer.c, LD_PRELOAD-ed by
+ * oracle/runner.py; `polyo_peak_bytes`/`polyo_reset_peak` are resolved via
+ * dlsym(RTLD_DEFAULT, ...) rather than linked directly, since LD_PRELOAD is
+ * a runtime-only mechanism invisible to the static linker. A NULL lookup
+ * means the driver was run without LD_PRELOAD set -- treated as fatal
+ * (exit 2), not silently reported as zero bytes.
+ *
+ * No call-stack-depth signal (see oracle/runner.py's Sample.max_call_depth
+ * docstring) -- space classification falls back to heap allocation alone.
+ *
+ * Unlike Python/JS/Java/Go, a C array doesn't carry its own length -- so for
+ * every `int[]` param whose size varies with n, this driver passes the
+ * length as an EXTRA argument immediately after the array itself. A
+ * two-ParamSpec test-spec (`int[] size="n"`, `int`) therefore compiles
+ * against a THREE-parameter C entrypoint: `f(int arr[], int arr_len, int
+ * target)`, not `f(int arr[], int target)`. A const-length array is NOT
+ * given this treatment -- its length is a spec-time constant the solution
+ * can already hardcode, unlike an n-swept size known only at run time.
+ */
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+static const long long N_VALUES[] = { {{ n_values|join(', ') }} };
+static const int N_COUNT = {{ n_values|length }};
+static const double BUDGET_MS = {{ budget_ms }};
+static const int WARMUP_ITERS = {{ warmup_iters }};
+static const int MEASURE_REPEATS = {{ measure_repeats }};
+static const unsigned int SEED = {{ seed }};
+
+static const long long MIN_BATCH_NS = 1000000LL;
+static const int MAX_BATCH_CALLS = 10000;
+static const int ARG_POOL_SIZE = 8;
+
+static long long (*polyo_peak_bytes)(void) = NULL;
+static void (*polyo_reset_peak)(void) = NULL;
+
+struct arg_set {
+{% for p in params %}
+{% if p.type == "int[]" %}
+    int *arg{{ loop.index0 }};
+    int arg{{ loop.index0 }}_len;
+{% elif p.type == "int" %}
+    int arg{{ loop.index0 }};
+{% endif %}
+{% endfor %}
+};
+
+static int rand_range(unsigned int *state, int lo, int hi) {
+    /* xorshift32 -- deterministic, no libc rand() global-state sharing with
+     * anything the solution itself might call. */
+    unsigned int x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return lo + (int)(x % (unsigned int)(hi - lo + 1));
+}
+
+static void sort_ints(int *xs, int len) {
+    for (int i = 1; i < len; i++) {
+        int key = xs[i];
+        int j = i - 1;
+        while (j >= 0 && xs[j] > key) {
+            xs[j + 1] = xs[j];
+            j--;
+        }
+        xs[j + 1] = key;
+    }
+}
+
+static struct arg_set build_args(long long n, unsigned int *rng) {
+    struct arg_set a;
+{% for p in params %}
+{% if p.type == "int[]" %}
+{% if p.has_size %}
+    int size{{ loop.index0 }} = (int)n;
+{% else %}
+    int size{{ loop.index0 }} = {{ p.const|int }};
+{% endif %}
+    a.arg{{ loop.index0 }} = (int *)malloc((size_t)size{{ loop.index0 }} * sizeof(int));
+    a.arg{{ loop.index0 }}_len = size{{ loop.index0 }};
+    for (int i = 0; i < size{{ loop.index0 }}; i++) {
+        a.arg{{ loop.index0 }}[i] = rand_range(rng, -1000, 1000);
+    }
+{% if p.dist == "sorted" %}
+    sort_ints(a.arg{{ loop.index0 }}, size{{ loop.index0 }});
+{% endif %}
+{% elif p.type == "int" %}
+{% if p.has_size %}
+    a.arg{{ loop.index0 }} = (int)n;
+{% elif p.dist == "const" %}
+    a.arg{{ loop.index0 }} = {{ p.const|int }};
+{% else %}
+    a.arg{{ loop.index0 }} = rand_range(rng, -1000, 1000);
+{% endif %}
+{% endif %}
+{% endfor %}
+    return a;
+}
+
+static void free_args(struct arg_set *a) {
+{% for p in params %}
+{% if p.type == "int[]" %}
+    free(a->arg{{ loop.index0 }});
+    a->arg{{ loop.index0 }} = NULL;
+{% endif %}
+{% endfor %}
+}
+
+static void call_entrypoint(struct arg_set *a) {
+    {{ entrypoint }}({% for p in params %}{% if p.type == "int[]" %}a->arg{{ loop.index0 }}{% if p.has_size %}, a->arg{{ loop.index0 }}_len{% endif %}{% else %}a->arg{{ loop.index0 }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %});
+}
+
+static long long now_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static long long time_batch_ns(struct arg_set *pool, int pool_len, int batch_calls) {
+    long long start = now_ns();
+    for (int i = 0; i < batch_calls; i++) {
+        call_entrypoint(&pool[i % pool_len]);
+    }
+    return now_ns() - start;
+}
+
+static double time_batches_ns(struct arg_set *pool, int pool_len) {
+    int batch_calls = 1;
+    long long elapsed_ns = time_batch_ns(pool, pool_len, batch_calls);
+    while (elapsed_ns < MIN_BATCH_NS && batch_calls < MAX_BATCH_CALLS) {
+        batch_calls *= 2;
+        elapsed_ns = time_batch_ns(pool, pool_len, batch_calls);
+    }
+    double best_per_call_ns = (double)elapsed_ns / batch_calls;
+    for (int r = 0; r < MEASURE_REPEATS - 1; r++) {
+        elapsed_ns = time_batch_ns(pool, pool_len, batch_calls);
+        double per_call = (double)elapsed_ns / batch_calls;
+        if (per_call < best_per_call_ns) {
+            best_per_call_ns = per_call;
+        }
+        if ((double)elapsed_ns / 1e6 > BUDGET_MS) {
+            break;
+        }
+    }
+    return best_per_call_ns;
+}
+
+static long long noop_batch_ns(int batch_calls) {
+    volatile long long sink = 0;
+    long long start = now_ns();
+    for (int i = 0; i < batch_calls; i++) {
+        sink += i;
+    }
+    return now_ns() - start;
+}
+
+static double calibrate_time_overhead_ns(void) {
+    int batch_calls = 1;
+    long long elapsed_ns = noop_batch_ns(batch_calls);
+    while (elapsed_ns < MIN_BATCH_NS && batch_calls < MAX_BATCH_CALLS) {
+        batch_calls *= 2;
+        elapsed_ns = noop_batch_ns(batch_calls);
+    }
+    return (double)elapsed_ns / batch_calls;
+}
+
+static double measure_time_ns(long long n, unsigned int *rng) {
+    struct arg_set pool[8]; /* ARG_POOL_SIZE, spelled literally: C array size must be a compile-time constant */
+    for (int i = 0; i < ARG_POOL_SIZE; i++) {
+        pool[i] = build_args(n, rng);
+    }
+    double result = time_batches_ns(pool, ARG_POOL_SIZE);
+    for (int i = 0; i < ARG_POOL_SIZE; i++) {
+        free_args(&pool[i]);
+    }
+    return result;
+}
+
+static long long measure_peak_bytes(long long n, unsigned int *rng) {
+    struct arg_set a = build_args(n, rng);
+    polyo_reset_peak();
+    call_entrypoint(&a);
+    long long peak = polyo_peak_bytes();
+    free_args(&a);
+    return peak;
+}
+
+int main(void) {
+    polyo_peak_bytes = (long long (*)(void))dlsym(RTLD_DEFAULT, "polyo_peak_bytes");
+    polyo_reset_peak = (void (*)(void))dlsym(RTLD_DEFAULT, "polyo_reset_peak");
+    if (polyo_peak_bytes == NULL || polyo_reset_peak == NULL) {
+        fprintf(stderr, "oracle/interposer.so was not LD_PRELOAD-ed for this process\n");
+        return 2;
+    }
+
+    unsigned int rng = SEED != 0 ? SEED : 1;
+    double baseline_ns = calibrate_time_overhead_ns();
+
+    for (int idx = 0; idx < N_COUNT; idx++) {
+        long long n = N_VALUES[idx];
+        for (int w = 0; w < WARMUP_ITERS; w++) {
+            struct arg_set a = build_args(n, &rng);
+            call_entrypoint(&a);
+            free_args(&a);
+        }
+
+        double raw_time_ns = measure_time_ns(n, &rng);
+        long long peak_bytes = measure_peak_bytes(n, &rng);
+
+        long long time_ns = (long long)(raw_time_ns - baseline_ns);
+        if (time_ns < 1) {
+            time_ns = 1;
+        }
+        printf("{\"n\": %lld, \"time_ns\": %lld, \"peak_bytes\": %lld, \"max_call_depth\": null}\n",
+               n, time_ns, peak_bytes);
+        fflush(stdout);
+        if (raw_time_ns / 1e6 > BUDGET_MS) {
+            break;
+        }
+    }
+    return 0;
+}

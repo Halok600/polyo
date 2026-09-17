@@ -1,0 +1,189 @@
+// Auto-generated oracle driver -- DO NOT EDIT BY HAND.
+//
+// Rendered by oracle/codegen/javascript.j2 for entrypoint {{ entrypoint }}
+// (plan §6). Run with `node --expose-gc _driver.js` (oracle/runner.py always
+// passes --expose-gc; forced GC before each memory sample is what makes
+// heapUsed comparable across samples instead of drifting with whatever the
+// collector hasn't reclaimed yet).
+//
+// No call-stack-depth signal here (see oracle/runner.py's Sample.max_call_depth
+// docstring) -- only Python's driver measures that; every other language
+// reports null for it and space classification falls back to heap
+// allocation alone (oracle/fit.py's classify_space).
+'use strict';
+const SOLUTION_PATH = {{ solution_path|tojson }};
+const ENTRYPOINT = {{ entrypoint|tojson }};
+const N_VALUES = {{ n_values|tojson }};
+const BUDGET_MS = {{ budget_ms }};
+const WARMUP_ITERS = {{ warmup_iters }};
+const JIT_WARMUP_ITERS = {{ jit_warmup_iters }};
+const MEASURE_REPEATS = {{ measure_repeats }};
+const SEED = {{ seed }};
+
+const _MIN_BATCH_NS = 1000000n;
+const _MAX_BATCH_CALLS = 10000;
+const _ARG_POOL_SIZE = 8;
+
+// Math.random() isn't seedable -- mulberry32 gives deterministic, repeatable
+// input generation across n's, matching the other drivers' seeded RNGs.
+function makeRng(seed) {
+    let state = seed >>> 0;
+    return function next() {
+        state |= 0;
+        state = (state + 0x6D2B79F5) | 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function randInt(rng, lo, hi) {
+    return lo + Math.floor(rng() * (hi - lo + 1));
+}
+
+function loadEntrypoint() {
+    const solutionModule = require(SOLUTION_PATH);
+    const fn = solutionModule[ENTRYPOINT];
+    if (typeof fn !== 'function') {
+        throw new Error(`entrypoint not found or not a function: ${ENTRYPOINT}`);
+    }
+    return fn;
+}
+
+function buildArgs(n, rng) {
+    const args = [];
+{% for p in params %}
+{% if p.type == "int[]" %}
+{% if p.has_size %}
+    {
+        const size = n;
+{% else %}
+    {
+        const size = {{ p.const|tojson }};
+{% endif %}
+        const values = [];
+        for (let i = 0; i < size; i++) {
+            values.push(randInt(rng, -1000, 1000));
+        }
+{% if p.dist == "sorted" %}
+        values.sort((a, b) => a - b);
+{% endif %}
+        args.push(values);
+    }
+{% elif p.type == "int" %}
+{% if p.has_size %}
+    args.push(n);
+{% elif p.dist == "const" %}
+    args.push({{ p.const|tojson }});
+{% else %}
+    args.push(randInt(rng, -1000, 1000));
+{% endif %}
+{% endif %}
+{% endfor %}
+    return args;
+}
+
+function timeBatchNs(callOnce, batchCalls) {
+    const start = process.hrtime.bigint();
+    for (let i = 0; i < batchCalls; i++) {
+        callOnce();
+    }
+    return process.hrtime.bigint() - start;
+}
+
+function timeBatchesNs(callOnce) {
+    let batchCalls = 1;
+    let elapsedNs = timeBatchNs(callOnce, batchCalls);
+    while (elapsedNs < _MIN_BATCH_NS && batchCalls < _MAX_BATCH_CALLS) {
+        batchCalls *= 2;
+        elapsedNs = timeBatchNs(callOnce, batchCalls);
+    }
+    let bestPerCallNs = Number(elapsedNs) / batchCalls;
+    for (let r = 0; r < MEASURE_REPEATS - 1; r++) {
+        elapsedNs = timeBatchNs(callOnce, batchCalls);
+        bestPerCallNs = Math.min(bestPerCallNs, Number(elapsedNs) / batchCalls);
+        if (Number(elapsedNs) / 1e6 > BUDGET_MS) {
+            break;
+        }
+    }
+    return bestPerCallNs;
+}
+
+function calibrateTimeOverheadNs() {
+    return timeBatchesNs(() => {});
+}
+
+function measureTimeNs(fn, n, rng) {
+    const pool = [];
+    for (let i = 0; i < _ARG_POOL_SIZE; i++) {
+        pool.push(buildArgs(n, rng));
+    }
+    let cursor = 0;
+    const callOnce = () => {
+        fn(...pool[cursor]);
+        cursor = (cursor + 1) % pool.length;
+    };
+    return timeBatchesNs(callOnce);
+}
+
+function measureHeapUsedBytes(fn, n, rng) {
+    const callArgs = buildArgs(n, rng);
+    global.gc();
+    const before = process.memoryUsage().heapUsed;
+    fn(...callArgs);
+    global.gc();
+    const after = process.memoryUsage().heapUsed;
+    return Math.max(after - before, 0);
+}
+
+function main() {
+    if (typeof global.gc !== 'function') {
+        process.stderr.write('driver must be run with --expose-gc\n');
+        process.exit(1);
+    }
+    const fn = loadEntrypoint();
+    const rng = makeRng(SEED);
+
+    // One-time JIT warmup at the grid's smallest n, before timing starts --
+    // not per-n (V8 stays warm for the rest of the process once compiled)
+    // and not at each n's own size (a huge n would make warmup itself the
+    // bottleneck; see oracle/codegen/__init__.py's
+    // _JIT_WARMUP_ITERS_BY_LANGUAGE for why).
+    if (JIT_WARMUP_ITERS > 0) {
+        const jitWarmupArgs = buildArgs(N_VALUES[0], rng);
+        for (let i = 0; i < JIT_WARMUP_ITERS; i++) {
+            fn(...jitWarmupArgs);
+        }
+    }
+
+    const baselineNs = calibrateTimeOverheadNs();
+
+    for (const n of N_VALUES) {
+        const warmupArgs = buildArgs(n, rng);
+        for (let i = 0; i < WARMUP_ITERS; i++) {
+            fn(...warmupArgs);
+        }
+
+        let rawTimeNs;
+        let peakBytes;
+        try {
+            rawTimeNs = measureTimeNs(fn, n, rng);
+            peakBytes = measureHeapUsedBytes(fn, n, rng);
+        } catch (exc) {
+            console.log(JSON.stringify({ n: n, error: String(exc) }));
+            continue;
+        }
+
+        console.log(JSON.stringify({
+            n: n,
+            time_ns: Math.max(Math.round(rawTimeNs - baselineNs), 1),
+            peak_bytes: peakBytes,
+            max_call_depth: null,
+        }));
+        if (rawTimeNs / 1e6 > BUDGET_MS) {
+            break;
+        }
+    }
+}
+
+main();

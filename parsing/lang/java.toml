@@ -1,0 +1,72 @@
+# Java -> IR mapping (tree-sitter-java grammar). See core/ir.py for the full
+# IR symbol vocabulary, plan §5 for the design, and python.toml for the
+# schema this file follows.
+#
+# Java's `method_invocation` splits a qualified call (`Arrays.sort(a)`) into
+# separate "object"/"name" fields rather than one "function" field like the
+# other grammars -- handled generically in `parsing/normalize.py`'s
+# `_callee_text`, not here.
+
+[nodes]
+method_declaration = "FUNC_DEF"
+constructor_declaration = "FUNC_DEF"
+return_statement = "RETURN"
+block = "BLOCK"
+for_statement = "LOOP_FOR"
+enhanced_for_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+array_access = "ARRAY_INDEX"
+array_creation_expression = "ARRAY_ALLOC"
+object_creation_expression = "ARRAY_ALLOC"
+assignment_expression = "ASSIGN"
+# Java's grammar does not expose a named "operator" field on
+# update_expression (see javascript.toml/cpp.toml for grammars that do), so
+# increment/decrement is unambiguous and mapped directly rather than routed
+# through [binary_operator_nodes]/[binary_operator_map].
+update_expression = "ARITH"
+identifier = "IDENT"
+decimal_integer_literal = "LITERAL"
+decimal_floating_point_literal = "LITERAL"
+string_literal = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+null_literal = "LITERAL"
+
+[calls]
+"^Arrays\\.sort$" = "SORT"
+"^Collections\\.sort$" = "SORT"
+"\\.sort$" = "SORT"
+"^Arrays\\.binarySearch$" = "BINARY_SEARCH"
+"^Collections\\.binarySearch$" = "BINARY_SEARCH"
+"^Math\\.(min|max|abs|pow|sqrt|log)$" = "MATH_OP"
+"\\.(add|addLast|push)$" = "LIST_APPEND"
+"\\.(get|containsKey|containsValue)$" = "HASH_LOOKUP"
+"\\.put$" = "HASH_INSERT"
+
+# `binary_expression` covers both comparison and arithmetic in this grammar
+# (unlike Python, whose grammar already splits them by node type) -- resolved
+# via the operator token, same schema as cpp.toml.
+[binary_operator_nodes]
+types = ["binary_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+
+[params]
+container = "formal_parameters"
+leaf_types = ["formal_parameter", "spread_parameter"]

@@ -28,13 +28,28 @@ from parsing.parse import UnsupportedLanguageError, parse_source
 
 _LANG_DIR = Path(__file__).resolve().parent / "lang"
 
-_CALL_NODE_TYPES = frozenset({"call", "call_expression"})
-_FUNC_DEF_NODE_TYPE = "function_definition"
+# Node types that represent a call across all supported grammars -- shared
+# because recognising "this is call-shaped" is not a per-language semantic
+# decision, unlike everything in `parsing/lang/*.toml`.
+_CALL_NODE_TYPES = frozenset({"call", "call_expression", "method_invocation"})
+# Node types that wrap a function's body -- skipped by `_function_name`'s
+# walk for the same reason (see its docstring). Shared for the same reason
+# as `_CALL_NODE_TYPES` above.
+_BODY_NODE_TYPES = frozenset({"block", "compound_statement", "statement_block"})
 
 
 class _LangConfig:
     def __init__(self, data: dict[str, Any]):
         self.nodes: dict[str, str] = data.get("nodes", {})
+        # Derived, not a separate toml section: whichever node type(s) a
+        # language maps to FUNC_DEF are the ones that carry a function name
+        # onto `_func_name_stack` for recursion detection. This used to be a
+        # single hardcoded node type ("function_definition"), which only
+        # worked for Python/C++ by coincidence -- Java's is
+        # `method_declaration`, Go's is `function_declaration`.
+        self.func_def_types: frozenset[str] = frozenset(
+            node_type for node_type, symbol in self.nodes.items() if symbol == "FUNC_DEF"
+        )
         self.calls: list[tuple[re.Pattern[str], str]] = [
             (re.compile(pattern), symbol) for pattern, symbol in data.get("calls", {}).items()
         ]
@@ -85,6 +100,18 @@ class _Normalizer:
         return ir_node
 
     def _callee_text(self, call_node: TSNode) -> str:
+        # Most grammars (Python, C/C++, JavaScript, Go) expose the callee as
+        # a single "function" field, whether or not it's qualified --
+        # `a.sort` already comes back as one field's text. Java's grammar is
+        # the odd one out: `method_invocation` splits a qualified call into
+        # separate "object" and "name" fields with no single node spanning
+        # both, so that shape is reassembled here instead of in a
+        # per-language config knob, since it's a call-shape quirk rather
+        # than a semantic choice.
+        name = call_node.child_by_field_name("name")
+        if name is not None:
+            obj = call_node.child_by_field_name("object")
+            return f"{self._text(obj)}.{self._text(name)}" if obj is not None else self._text(name)
         func = call_node.child_by_field_name("function")
         return self._text(func) if func is not None else self._text(call_node)
 
@@ -100,15 +127,14 @@ class _Normalizer:
         """First identifier in `func_def_node`, not descending into its body.
 
         Works across grammars without per-language special-casing because in
-        both Python and C++ the function's own name always precedes its body
-        in document order, and a preorder walk finds it before ever
+        every supported language the function's own name always precedes its
+        body in document order, and a preorder walk finds it before ever
         descending into the parameter list (also an identifier source).
         """
-        body_types = {"block", "compound_statement"}
 
         def walk(node: TSNode) -> TSNode | None:
             for child in node.children:
-                if child.type in body_types:
+                if child.type in _BODY_NODE_TYPES:
                     continue
                 if child.type in ("identifier", "field_identifier"):
                     return child
@@ -152,7 +178,7 @@ class _Normalizer:
             self.walk(node, emitted)
             return [emitted]
 
-        if node.type == _FUNC_DEF_NODE_TYPE:
+        if node.type in self.config.func_def_types:
             return self._visit_function_def(node, parent_ir)
 
         mapped_symbol = self.config.nodes.get(node.type)

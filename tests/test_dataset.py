@@ -28,7 +28,10 @@ def test_build_examples_parses_valid_python():
 
 
 def test_build_examples_counts_unsupported_language_separately():
-    records = [_record("func f() {}", language="go")]
+    # "go" was this test's original example of an unsupported language;
+    # Phase 4 added Go support, so this now uses a language that still has
+    # no `parsing/lang/*.toml` mapping.
+    records = [_record("fn f() {}", language="rust")]
     examples, stats = build_examples(records)
     assert examples == []
     assert stats.unsupported_language == 1

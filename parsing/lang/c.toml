@@ -1,0 +1,57 @@
+# C -> IR mapping (tree-sitter-c grammar). See core/ir.py for the full IR
+# symbol vocabulary, plan §5 for the design, and cpp.toml for the closely
+# related C++ mapping this file mirrors (the two grammars agree on almost
+# every node type used here).
+
+[nodes]
+function_definition = "FUNC_DEF"
+return_statement = "RETURN"
+compound_statement = "BLOCK"
+for_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+subscript_expression = "ARRAY_INDEX"
+assignment_expression = "ASSIGN"
+identifier = "IDENT"
+field_identifier = "IDENT"
+number_literal = "LITERAL"
+string_literal = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+
+[calls]
+"^qsort$" = "SORT"
+"^bsearch$" = "BINARY_SEARCH"
+"^(malloc|calloc|realloc)$" = "ALLOC_N"
+"^(memcpy|memmove|strcpy|strncpy)$" = "COPY"
+"^(strcat|strncat)$" = "STRING_CONCAT"
+"^(min|max|abs|fabs|pow|sqrt|log)$" = "MATH_OP"
+
+# tree-sitter-c does not distinguish comparison from arithmetic by node
+# type -- both parse as `binary_expression`/`update_expression`, same as
+# cpp.toml. `[nodes]` above must NOT list them.
+[binary_operator_nodes]
+types = ["binary_expression", "update_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+"++" = "ARITH"
+"--" = "ARITH"
+
+[params]
+container = "parameter_list"
+leaf_types = ["parameter_declaration", "variadic_parameter"]

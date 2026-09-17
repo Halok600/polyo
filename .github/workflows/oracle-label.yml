@@ -33,7 +33,9 @@ jobs:
           node --version
           java -version
           go version
-      - name: Run oracle labelling
-        run: |
-          echo "oracle/ codegen + runner land in Phase 2 (Python) and Phase 4 (C/C++/Java/JS/Go)."
-          echo "This job's toolchain setup is the concrete fix for this project's local-machine gap (see plan SS0)."
+      - name: Install Python deps
+        run: pip install -r requirements-dev.txt
+      - name: Run multi-language oracle self-check
+        run: pytest tests/test_oracle_self_check.py tests/test_oracle_self_check_multilang.py -v
+      - name: Generate the synthetic corpus (labels are exact by construction, no oracle needed)
+        run: python -m data.synth --out data/processed/synth.jsonl

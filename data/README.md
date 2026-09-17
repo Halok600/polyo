@@ -24,5 +24,15 @@ leak a problem across train/val/test (plan §9's "no problem_id in more than
 one split", strengthened). `tests/test_data_splits.py` enforces this in CI.
 Writes `data/processed/split_{train,val,test}.jsonl` (also gitignored).
 
-`synth.py` (parallel synthetic generator, all six languages) lands in
-Phase 4 -- see plan §14.
+`synth.py` (Phase 4, plan §7/§14) is the parallel synthetic generator: a
+small, fixed library of algorithms, each with the *same* shape written in
+all six languages and an exact label by construction -- no oracle
+execution, since the label is already known. Chosen specifically to cover
+the classes plan §7 says real corpora barely contain (O(n^3), O(2^n) time;
+O(n log n) space), and every language variant of one algorithm shares a
+`problem_id`, which is what makes the cross-language transfer experiment
+(Phase 5) possible. Run with `python -m data.synth` (writes
+`data/processed/synth.jsonl`, picked up by `build.py` like any other
+processed corpus file); `tests/test_synth.py` parses every algorithm in
+every language through the real per-language parser as a correctness
+check, since that needs no compiler even for C/C++/Java/Go.

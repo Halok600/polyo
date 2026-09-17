@@ -1,0 +1,72 @@
+# JavaScript -> IR mapping (tree-sitter-javascript grammar). See core/ir.py
+# for the full IR symbol vocabulary, plan §5 for the design, and
+# python.toml for the schema this file follows.
+
+[nodes]
+function_declaration = "FUNC_DEF"
+function_expression = "FUNC_DEF"
+generator_function_declaration = "FUNC_DEF"
+arrow_function = "FUNC_DEF"
+method_definition = "FUNC_DEF"
+return_statement = "RETURN"
+statement_block = "BLOCK"
+for_statement = "LOOP_FOR"
+for_in_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+subscript_expression = "ARRAY_INDEX"
+array = "ARRAY_ALLOC"
+new_expression = "ARRAY_ALLOC"
+object = "HASH_ALLOC"
+assignment_expression = "ASSIGN"
+augmented_assignment_expression = "ASSIGN"
+identifier = "IDENT"
+number = "LITERAL"
+string = "LITERAL"
+template_string = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+null = "LITERAL"
+undefined = "LITERAL"
+
+[calls]
+"\\.sort$" = "SORT"
+"^(Math\\.min|Math\\.max|Math\\.abs|Math\\.pow|Math\\.sqrt|Math\\.log)$" = "MATH_OP"
+"\\.(push|unshift)$" = "LIST_APPEND"
+"\\.(has|get)$" = "HASH_LOOKUP"
+"\\.set$" = "HASH_INSERT"
+"\\.concat$" = "STRING_CONCAT"
+"\\.(slice|splice)$" = "SLICE"
+
+# `binary_expression` covers both comparison and arithmetic in this grammar;
+# `update_expression` (++/--) does expose a named "operator" field here
+# (unlike java.toml/go.toml, which map it directly instead) -- both resolved
+# via the operator token, same schema as cpp.toml.
+[binary_operator_nodes]
+types = ["binary_expression", "update_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"===" = "COMPARE"
+"!=" = "COMPARE"
+"!==" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+"**" = "ARITH"
+"++" = "ARITH"
+"--" = "ARITH"
+
+[params]
+container = "formal_parameters"
+leaf_types = ["identifier", "assignment_pattern", "rest_pattern", "object_pattern", "array_pattern"]

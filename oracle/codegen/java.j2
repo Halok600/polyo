@@ -1,0 +1,198 @@
+// Auto-generated oracle driver -- DO NOT EDIT BY HAND.
+//
+// Rendered by oracle/codegen/java.j2 for entrypoint {{ entrypoint }} (plan
+// §6). oracle/runner.py compiles this alongside a generated Solution.java
+// (`javac Solution.java Driver.java`, then `java -cp <dir> Driver`) --
+// {{ entrypoint }} must be a STATIC method of `class Solution`, called here
+// as `Solution.{{ entrypoint }}(...)`.
+//
+// JIT warmup is not optional here (plan §6): WARMUP_ITERS is set much
+// higher for Java than for AOT-compiled languages (see
+// oracle/codegen/__init__.py's _WARMUP_ITERS_BY_LANGUAGE) so HotSpot has
+// actually compiled hot methods before the timed calls, not just
+// interpreted them.
+//
+// Memory uses ThreadMXBean.getThreadAllocatedBytes -- cumulative bytes
+// allocated by this thread, not live bytes (plan §6's specified metric for
+// Java; plan §16: "allocation counters, not RSS").
+//
+// No call-stack-depth signal (see oracle/runner.py's Sample.max_call_depth
+// docstring) -- space classification falls back to heap allocation alone.
+import com.sun.management.ThreadMXBean;
+import java.lang.management.ManagementFactory;
+import java.util.Random;
+
+public final class Driver {
+    static final long[] N_VALUES = { {{ n_values|join(', ') }} };
+    static final double BUDGET_MS = {{ budget_ms }};
+    static final int WARMUP_ITERS = {{ warmup_iters }};
+    static final int JIT_WARMUP_ITERS = {{ jit_warmup_iters }};
+    static final int MEASURE_REPEATS = {{ measure_repeats }};
+    static final long SEED = {{ seed }};
+
+    static final long MIN_BATCH_NS = 1_000_000L;
+    static final int MAX_BATCH_CALLS = 10_000;
+    static final int ARG_POOL_SIZE = 8;
+
+    static final class ArgSet {
+{% for p in params %}
+{% if p.type == "int[]" %}
+        int[] arg{{ loop.index0 }};
+{% elif p.type == "int" %}
+        int arg{{ loop.index0 }};
+{% endif %}
+{% endfor %}
+    }
+
+    static ArgSet buildArgs(long n, Random rng) {
+        ArgSet a = new ArgSet();
+{% for p in params %}
+{% if p.type == "int[]" %}
+{% if p.has_size %}
+        int size{{ loop.index0 }} = (int) n;
+{% else %}
+        int size{{ loop.index0 }} = {{ p.const|int }};
+{% endif %}
+        int[] values{{ loop.index0 }} = new int[size{{ loop.index0 }}];
+        for (int i = 0; i < size{{ loop.index0 }}; i++) {
+            values{{ loop.index0 }}[i] = rng.nextInt(2001) - 1000;
+        }
+{% if p.dist == "sorted" %}
+        java.util.Arrays.sort(values{{ loop.index0 }});
+{% endif %}
+        a.arg{{ loop.index0 }} = values{{ loop.index0 }};
+{% elif p.type == "int" %}
+{% if p.has_size %}
+        a.arg{{ loop.index0 }} = (int) n;
+{% elif p.dist == "const" %}
+        a.arg{{ loop.index0 }} = {{ p.const|int }};
+{% else %}
+        a.arg{{ loop.index0 }} = rng.nextInt(2001) - 1000;
+{% endif %}
+{% endif %}
+{% endfor %}
+        return a;
+    }
+
+    static void call(ArgSet a) {
+        Solution.{{ entrypoint }}({% for p in params %}a.arg{{ loop.index0 }}{% if not loop.last %}, {% endif %}{% endfor %});
+    }
+
+    static long timeBatchNs(ArgSet[] pool, int batchCalls) {
+        long start = System.nanoTime();
+        for (int i = 0; i < batchCalls; i++) {
+            call(pool[i % pool.length]);
+        }
+        return System.nanoTime() - start;
+    }
+
+    static double timeBatchesNs(ArgSet[] pool) {
+        int batchCalls = 1;
+        long elapsedNs = timeBatchNs(pool, batchCalls);
+        while (elapsedNs < MIN_BATCH_NS && batchCalls < MAX_BATCH_CALLS) {
+            batchCalls *= 2;
+            elapsedNs = timeBatchNs(pool, batchCalls);
+        }
+        double bestPerCallNs = (double) elapsedNs / batchCalls;
+        for (int r = 0; r < MEASURE_REPEATS - 1; r++) {
+            elapsedNs = timeBatchNs(pool, batchCalls);
+            double perCall = (double) elapsedNs / batchCalls;
+            if (perCall < bestPerCallNs) {
+                bestPerCallNs = perCall;
+            }
+            if ((double) elapsedNs / 1e6 > BUDGET_MS) {
+                break;
+            }
+        }
+        return bestPerCallNs;
+    }
+
+    static long noopBatchNs(int batchCalls) {
+        long sink = 0;
+        long start = System.nanoTime();
+        for (int i = 0; i < batchCalls; i++) {
+            sink += i;
+        }
+        if (sink == Long.MIN_VALUE) {
+            System.err.println("unreachable"); // keeps `sink` observably used
+        }
+        return System.nanoTime() - start;
+    }
+
+    static double calibrateTimeOverheadNs() {
+        int batchCalls = 1;
+        long elapsedNs = noopBatchNs(batchCalls);
+        while (elapsedNs < MIN_BATCH_NS && batchCalls < MAX_BATCH_CALLS) {
+            batchCalls *= 2;
+            elapsedNs = noopBatchNs(batchCalls);
+        }
+        return (double) elapsedNs / batchCalls;
+    }
+
+    static double measureTimeNs(long n, Random rng) {
+        ArgSet[] pool = new ArgSet[ARG_POOL_SIZE];
+        for (int i = 0; i < ARG_POOL_SIZE; i++) {
+            pool[i] = buildArgs(n, rng);
+        }
+        return timeBatchesNs(pool);
+    }
+
+    static long measureAllocatedBytes(long n, Random rng, ThreadMXBean bean, long threadId) {
+        ArgSet a = buildArgs(n, rng);
+        long before = bean.getThreadAllocatedBytes(threadId);
+        call(a);
+        long after = bean.getThreadAllocatedBytes(threadId);
+        return Math.max(after - before, 0);
+    }
+
+    static String escapeJson(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+    }
+
+    public static void main(String[] args) {
+        ThreadMXBean bean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
+        if (!bean.isThreadAllocatedMemorySupported()) {
+            System.err.println("JVM does not support per-thread allocated-memory measurement");
+            System.exit(2);
+        }
+        bean.setThreadAllocatedMemoryEnabled(true);
+        long threadId = Thread.currentThread().threadId();
+
+        Random rng = new Random(SEED);
+
+        // One-time JIT warmup at the grid's smallest n, before timing
+        // starts -- not per-n (HotSpot stays warm for the rest of the
+        // process once compiled) and not at each n's own size (a huge n
+        // would make warmup itself the bottleneck; see
+        // oracle/codegen/__init__.py's _JIT_WARMUP_ITERS_BY_LANGUAGE for
+        // why -- a real bug hit while building this driver).
+        if (JIT_WARMUP_ITERS > 0) {
+            ArgSet jitWarmupArgs = buildArgs(N_VALUES[0], rng);
+            for (int w = 0; w < JIT_WARMUP_ITERS; w++) {
+                call(jitWarmupArgs);
+            }
+        }
+
+        double baselineNs = calibrateTimeOverheadNs();
+
+        for (long n : N_VALUES) {
+            ArgSet warmupArgs = buildArgs(n, rng);
+            for (int w = 0; w < WARMUP_ITERS; w++) {
+                call(warmupArgs);
+            }
+
+            try {
+                double rawTimeNs = measureTimeNs(n, rng);
+                long peakBytes = measureAllocatedBytes(n, rng, bean, threadId);
+                long timeNs = Math.max(Math.round(rawTimeNs - baselineNs), 1);
+                System.out.println("{\"n\": " + n + ", \"time_ns\": " + timeNs
+                        + ", \"peak_bytes\": " + peakBytes + ", \"max_call_depth\": null}");
+                if (rawTimeNs / 1e6 > BUDGET_MS) {
+                    break;
+                }
+            } catch (Throwable t) {
+                System.out.println("{\"n\": " + n + ", \"error\": \"" + escapeJson(String.valueOf(t)) + "\"}");
+            }
+        }
+    }
+}
