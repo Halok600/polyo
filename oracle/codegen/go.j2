@@ -1,9 +1,11 @@
 // Auto-generated oracle driver -- DO NOT EDIT BY HAND.
 //
 // Rendered by oracle/codegen/go.j2 for entrypoint {{ entrypoint }} (plan §6).
-// Run via `go run _solution.go _driver.go` (oracle/runner.py) -- same
+// Run via `go run solution.go driver.go` (oracle/runner.py) -- same
 // package, no go.mod needed for stdlib-only solutions. The solution file
 // declares the entrypoint but no `func main`; this file supplies main.
+// Neither filename may start with "_" or "." -- go/build ignores those even
+// when named explicitly (a real bug hit while building this driver).
 //
 // Go is statically typed, unlike Python/JavaScript's drivers: arguments are
 // built into a fixed-shape `argSet` struct (one field per test-spec param,
@@ -47,6 +49,12 @@ type argSet struct {
 {% endfor %}
 }
 
+// A wide value range (not [-1000,1000], the naive choice) matters: some
+// sort implementations special-case low-cardinality input (few distinct
+// values, many duplicates) with a faster partitioning scheme, which
+// would measure library_sort closer to O(n) than its real O(n log n) --
+// a real, reproducible effect hit while building this driver, not
+// sensor noise.
 func buildArgs(n int, rng *rand.Rand) argSet {
 	var a argSet
 {% for p in params %}
@@ -58,7 +66,7 @@ func buildArgs(n int, rng *rand.Rand) argSet {
 {% endif %}
 	values{{ loop.index0 }} := make([]int, size{{ loop.index0 }})
 	for i := range values{{ loop.index0 }} {
-		values{{ loop.index0 }}[i] = rng.Intn(2001) - 1000
+		values{{ loop.index0 }}[i] = rng.Intn(2000000001) - 1000000000
 	}
 {% if p.dist == "sorted" %}
 	sortInts(values{{ loop.index0 }})
@@ -70,7 +78,7 @@ func buildArgs(n int, rng *rand.Rand) argSet {
 {% elif p.dist == "const" %}
 	a.arg{{ loop.index0 }} = {{ p.const|int }}
 {% else %}
-	a.arg{{ loop.index0 }} = rng.Intn(2001) - 1000
+	a.arg{{ loop.index0 }} = rng.Intn(2000000001) - 1000000000
 {% endif %}
 {% endif %}
 {% endfor %}

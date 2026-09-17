@@ -44,6 +44,12 @@ public final class Driver {
 {% endfor %}
     }
 
+    // A wide value range (not [-1000,1000], the naive choice) matters:
+    // Java's dual-pivot quicksort special-cases low-cardinality input
+    // (few distinct values, many duplicates) with a faster partitioning
+    // scheme, which would measure library_sort closer to O(n) than its
+    // real O(n log n) -- a real, reproducible effect hit while building
+    // this driver, not sensor noise.
     static ArgSet buildArgs(long n, Random rng) {
         ArgSet a = new ArgSet();
 {% for p in params %}
@@ -55,7 +61,7 @@ public final class Driver {
 {% endif %}
         int[] values{{ loop.index0 }} = new int[size{{ loop.index0 }}];
         for (int i = 0; i < size{{ loop.index0 }}; i++) {
-            values{{ loop.index0 }}[i] = rng.nextInt(2001) - 1000;
+            values{{ loop.index0 }}[i] = rng.nextInt(2_000_000_001) - 1_000_000_000;
         }
 {% if p.dist == "sorted" %}
         java.util.Arrays.sort(values{{ loop.index0 }});
@@ -67,7 +73,7 @@ public final class Driver {
 {% elif p.dist == "const" %}
         a.arg{{ loop.index0 }} = {{ p.const|int }};
 {% else %}
-        a.arg{{ loop.index0 }} = rng.nextInt(2001) - 1000;
+        a.arg{{ loop.index0 }} = rng.nextInt(2_000_000_001) - 1_000_000_000;
 {% endif %}
 {% endif %}
 {% endfor %}

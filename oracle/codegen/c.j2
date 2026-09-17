@@ -99,6 +99,12 @@ static void sort_ints(int *xs, int len) {
     }
 }
 
+/* A wide value range (not the [-1000,1000] that would be the naive
+ * choice) matters here: some standard-library sorts special-case
+ * low-cardinality input (few distinct values, many duplicates) with a
+ * faster partitioning scheme, which would make library_sort measure
+ * closer to O(n) than its real O(n log n) -- a real, reproducible
+ * effect hit while building this driver, not sensor noise. */
 static struct arg_set build_args(long long n, unsigned int *rng) {
     struct arg_set a;
 {% for p in params %}
@@ -111,7 +117,7 @@ static struct arg_set build_args(long long n, unsigned int *rng) {
     a.arg{{ loop.index0 }} = (int *)malloc((size_t)size{{ loop.index0 }} * sizeof(int));
     a.arg{{ loop.index0 }}_len = size{{ loop.index0 }};
     for (int i = 0; i < size{{ loop.index0 }}; i++) {
-        a.arg{{ loop.index0 }}[i] = rand_range(rng, -1000, 1000);
+        a.arg{{ loop.index0 }}[i] = rand_range(rng, -1000000000, 1000000000);
     }
 {% if p.dist == "sorted" %}
     sort_ints(a.arg{{ loop.index0 }}, size{{ loop.index0 }});
@@ -122,7 +128,7 @@ static struct arg_set build_args(long long n, unsigned int *rng) {
 {% elif p.dist == "const" %}
     a.arg{{ loop.index0 }} = {{ p.const|int }};
 {% else %}
-    a.arg{{ loop.index0 }} = rand_range(rng, -1000, 1000);
+    a.arg{{ loop.index0 }} = rand_range(rng, -1000000000, 1000000000);
 {% endif %}
 {% endif %}
 {% endfor %}

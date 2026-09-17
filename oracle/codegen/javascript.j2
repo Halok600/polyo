@@ -50,6 +50,10 @@ function loadEntrypoint() {
     return fn;
 }
 
+// A wide value range (not [-1000,1000], the naive choice) matters: some
+// sort implementations special-case low-cardinality input (few distinct
+// values, many duplicates) with a faster partitioning scheme, which
+// would measure library_sort closer to O(n) than its real O(n log n).
 function buildArgs(n, rng) {
     const args = [];
 {% for p in params %}
@@ -63,7 +67,7 @@ function buildArgs(n, rng) {
 {% endif %}
         const values = [];
         for (let i = 0; i < size; i++) {
-            values.push(randInt(rng, -1000, 1000));
+            values.push(randInt(rng, -1000000000, 1000000000));
         }
 {% if p.dist == "sorted" %}
         values.sort((a, b) => a - b);
@@ -76,7 +80,7 @@ function buildArgs(n, rng) {
 {% elif p.dist == "const" %}
     args.push({{ p.const|tojson }});
 {% else %}
-    args.push(randInt(rng, -1000, 1000));
+    args.push(randInt(rng, -1000000000, 1000000000));
 {% endif %}
 {% endif %}
 {% endfor %}
