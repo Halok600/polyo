@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ingest CodeComplex-Data's Python split (plan §7) into the shared
+"""Ingest CodeComplex-Data's Python and Java splits (plan §7) into the shared
 labelled-corpus schema. Time-only -- CodeComplex has no space labels, so
 every record's `space_class` is `None`.
 
@@ -13,12 +13,16 @@ every record's `space_class` is `None`.
   Note: the repo's own README documents this 7th class as "exponential",
   but the actual released python_data.jsonl (checked directly, all 4,900
   rows) uses "np" instead -- both are registered below so this survives
-  either spelling.
+  either spelling. java_data.jsonl uses the identical schema and label
+  vocabulary (checked directly against the real file's first row before
+  wiring in --lang java below, not assumed from the Python split).
 From https://github.com/sybaik1/CodeComplex-Data (arXiv:2401.08719; see
 NOTICE.md for the license). Download with:
     curl -L -o data/raw/codecomplex/python_data.jsonl \\
         https://raw.githubusercontent.com/sybaik1/CodeComplex-Data/main/python_data.jsonl
-(~5MB, 4,900 rows -- `data/raw/` is gitignored.)
+    curl -L -o data/raw/codecomplex/java_data.jsonl \\
+        https://raw.githubusercontent.com/sybaik1/CodeComplex-Data/main/java_data.jsonl
+(`data/raw/` is gitignored.)
 """
 from __future__ import annotations
 
@@ -59,11 +63,11 @@ def _map_time_or_none(raw: str | None, stats: Counter[str]) -> TimeClass | None:
         return None
 
 
-def ingest(python_data_path: Path, out_path: Path) -> Counter[str]:
+def ingest(data_path: Path, out_path: Path, language: str = "python") -> Counter[str]:
     records: list[CorpusRecord] = []
     stats: Counter[str] = Counter()
 
-    with python_data_path.open(encoding="utf-8") as f:
+    with data_path.open(encoding="utf-8") as f:
         for i, line in enumerate(f):
             row = json.loads(line)
             time_class = _map_time_or_none(row.get("complexity"), stats)
@@ -75,9 +79,13 @@ def ingest(python_data_path: Path, out_path: Path) -> Counter[str]:
             records.append(
                 CorpusRecord(
                     problem_id=problem_id,
-                    solution_id=f"{problem_id}_{i}",
+                    # language-qualified: Python and Java rows can share a
+                    # problem_id (parallel submissions to the same contest
+                    # problem), and ingesting both splits into one corpus
+                    # would otherwise produce identical solution_ids.
+                    solution_id=f"{problem_id}_{language}_{i}",
                     source=SOURCE,
-                    language="python",
+                    language=language,
                     code=row["src"],
                     time_class=time_class.value,
                     space_class=None,
@@ -89,13 +97,24 @@ def ingest(python_data_path: Path, out_path: Path) -> Counter[str]:
     return stats
 
 
+_DEFAULTS = {
+    "python": ("data/raw/codecomplex/python_data.jsonl", "data/processed/codecomplex_python.jsonl"),
+    "java": ("data/raw/codecomplex/java_data.jsonl", "data/processed/codecomplex_java.jsonl"),
+}
+
+
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Ingest CodeComplex-Python into the corpus.")
-    parser.add_argument("--data", type=Path, default=Path("data/raw/codecomplex/python_data.jsonl"))
-    parser.add_argument("--out", type=Path, default=Path("data/processed/codecomplex_python.jsonl"))
+    parser = argparse.ArgumentParser(description="Ingest CodeComplex-Python/Java into the corpus.")
+    parser.add_argument("--lang", choices=sorted(_DEFAULTS), default="python")
+    parser.add_argument("--data", type=Path, default=None)
+    parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
-    if not args.data.is_file():
+    default_data, default_out = _DEFAULTS[args.lang]
+    data_path = args.data or Path(default_data)
+    out_path = args.out or Path(default_out)
+
+    if not data_path.is_file():
         print(
             "error: raw CodeComplex file not found -- see this script's "
             "module docstring for the download command",
@@ -103,7 +122,7 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    stats = ingest(args.data, args.out)
+    stats = ingest(data_path, out_path, language=args.lang)
     print(json.dumps(dict(stats)))
     return 0
 

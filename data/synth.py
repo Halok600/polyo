@@ -718,6 +718,566 @@ func naiveFibonacci(n int) int {
 """,
         },
     ),
+    # --- Phase-5 prep: expanded for cross-language transfer signal (plan
+    # §7/§9). Deliberately built only from IR symbols already consistently
+    # mapped across all six lang/*.toml files (LOOP, ARRAY_ALLOC, ARRAY_INDEX,
+    # RECURSE, BRANCH) -- a hash-based example was considered and dropped
+    # after checking the real mapping tables: Python only maps dict/set
+    # *literals* (not .add()/set()/dict.get() calls) to HASH_*, C/C++/Go have
+    # no hash-container mapping at all yet (object_creation_expression in
+    # java.toml and new_expression in cpp.toml both fall through to the
+    # generic ARRAY_ALLOC), so a hash example today would silently diverge
+    # across languages rather than align. Closing that mapping gap is
+    # IR-design work for a future phase, not a training-data addition.
+    SynthAlgorithm(
+        name="recursive_sum",
+        time_class=TimeClass.O_N,
+        space_class=SpaceClass.O_N,
+        code_by_language={
+            "python": """\
+def recursive_sum(arr, i):
+    if i >= len(arr):
+        return 0
+    return arr[i] + recursive_sum(arr, i + 1)
+""",
+            "cpp": """\
+long recursive_sum(int arr[], int n, int i) {
+    if (i >= n) {
+        return 0;
+    }
+    return arr[i] + recursive_sum(arr, n, i + 1);
+}
+""",
+            "c": """\
+long recursive_sum(int arr[], int n, int i) {
+    if (i >= n) {
+        return 0;
+    }
+    return arr[i] + recursive_sum(arr, n, i + 1);
+}
+""",
+            "java": """\
+class Solution {
+    static long recursiveSum(int[] arr, int i) {
+        if (i >= arr.length) {
+            return 0;
+        }
+        return arr[i] + recursiveSum(arr, i + 1);
+    }
+}
+""",
+            "javascript": """\
+function recursiveSum(arr, i) {
+    if (i >= arr.length) {
+        return 0;
+    }
+    return arr[i] + recursiveSum(arr, i + 1);
+}
+""",
+            "go": """\
+package main
+
+func recursiveSum(arr []int, i int) int64 {
+    if i >= len(arr) {
+        return 0
+    }
+    return int64(arr[i]) + recursiveSum(arr, i+1)
+}
+""",
+        },
+    ),
+    SynthAlgorithm(
+        name="binary_search_recursive",
+        time_class=TimeClass.O_LOG_N,
+        space_class=SpaceClass.O_LOG_N,
+        code_by_language={
+            "python": """\
+def binary_search_recursive(arr, target, lo, hi):
+    if lo > hi:
+        return -1
+    mid = (lo + hi) // 2
+    if arr[mid] == target:
+        return mid
+    if arr[mid] < target:
+        return binary_search_recursive(arr, target, mid + 1, hi)
+    return binary_search_recursive(arr, target, lo, mid - 1)
+""",
+            "cpp": """\
+int binary_search_recursive(int arr[], int target, int lo, int hi) {
+    if (lo > hi) {
+        return -1;
+    }
+    int mid = (lo + hi) / 2;
+    if (arr[mid] == target) {
+        return mid;
+    }
+    if (arr[mid] < target) {
+        return binary_search_recursive(arr, target, mid + 1, hi);
+    }
+    return binary_search_recursive(arr, target, lo, mid - 1);
+}
+""",
+            "c": """\
+int binary_search_recursive(int arr[], int target, int lo, int hi) {
+    if (lo > hi) {
+        return -1;
+    }
+    int mid = (lo + hi) / 2;
+    if (arr[mid] == target) {
+        return mid;
+    }
+    if (arr[mid] < target) {
+        return binary_search_recursive(arr, target, mid + 1, hi);
+    }
+    return binary_search_recursive(arr, target, lo, mid - 1);
+}
+""",
+            "java": """\
+class Solution {
+    static int binarySearchRecursive(int[] arr, int target, int lo, int hi) {
+        if (lo > hi) {
+            return -1;
+        }
+        int mid = (lo + hi) / 2;
+        if (arr[mid] == target) {
+            return mid;
+        }
+        if (arr[mid] < target) {
+            return binarySearchRecursive(arr, target, mid + 1, hi);
+        }
+        return binarySearchRecursive(arr, target, lo, mid - 1);
+    }
+}
+""",
+            "javascript": """\
+function binarySearchRecursive(arr, target, lo, hi) {
+    if (lo > hi) {
+        return -1;
+    }
+    const mid = Math.floor((lo + hi) / 2);
+    if (arr[mid] === target) {
+        return mid;
+    }
+    if (arr[mid] < target) {
+        return binarySearchRecursive(arr, target, mid + 1, hi);
+    }
+    return binarySearchRecursive(arr, target, lo, mid - 1);
+}
+""",
+            "go": """\
+package main
+
+func binarySearchRecursive(arr []int, target int, lo int, hi int) int {
+    if lo > hi {
+        return -1
+    }
+    mid := (lo + hi) / 2
+    if arr[mid] == target {
+        return mid
+    }
+    if arr[mid] < target {
+        return binarySearchRecursive(arr, target, mid+1, hi)
+    }
+    return binarySearchRecursive(arr, target, lo, mid-1)
+}
+""",
+        },
+    ),
+    SynthAlgorithm(
+        name="halving_loop",
+        time_class=TimeClass.O_LOG_N,
+        space_class=SpaceClass.O_1,
+        code_by_language={
+            "python": """\
+def halving_loop(n):
+    count = 0
+    while n > 0:
+        n = n // 2
+        count += 1
+    return count
+""",
+            "cpp": """\
+int halving_loop(int n) {
+    int count = 0;
+    while (n > 0) {
+        n = n / 2;
+        count++;
+    }
+    return count;
+}
+""",
+            "c": """\
+int halving_loop(int n) {
+    int count = 0;
+    while (n > 0) {
+        n = n / 2;
+        count++;
+    }
+    return count;
+}
+""",
+            "java": """\
+class Solution {
+    static int halvingLoop(int n) {
+        int count = 0;
+        while (n > 0) {
+            n = n / 2;
+            count++;
+        }
+        return count;
+    }
+}
+""",
+            "javascript": """\
+function halvingLoop(n) {
+    let count = 0;
+    while (n > 0) {
+        n = Math.floor(n / 2);
+        count++;
+    }
+    return count;
+}
+""",
+            "go": """\
+package main
+
+func halvingLoop(n int) int {
+    count := 0
+    for n > 0 {
+        n = n / 2
+        count++
+    }
+    return count
+}
+""",
+        },
+    ),
+    SynthAlgorithm(
+        name="merge_sort",
+        time_class=TimeClass.O_N_LOG_N,
+        space_class=SpaceClass.O_N,
+        code_by_language={
+            "python": """\
+def merge(left, right):
+    result = []
+    i = 0
+    j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+""",
+            "cpp": """\
+#include <vector>
+std::vector<int> merge(std::vector<int> left, std::vector<int> right) {
+    std::vector<int> result;
+    size_t i = 0, j = 0;
+    while (i < left.size() && j < right.size()) {
+        if (left[i] <= right[j]) {
+            result.push_back(left[i]);
+            i++;
+        } else {
+            result.push_back(right[j]);
+            j++;
+        }
+    }
+    while (i < left.size()) {
+        result.push_back(left[i]);
+        i++;
+    }
+    while (j < right.size()) {
+        result.push_back(right[j]);
+        j++;
+    }
+    return result;
+}
+
+std::vector<int> merge_sort(std::vector<int> arr) {
+    if (arr.size() <= 1) {
+        return arr;
+    }
+    size_t mid = arr.size() / 2;
+    std::vector<int> left(arr.begin(), arr.begin() + mid);
+    std::vector<int> right(arr.begin() + mid, arr.end());
+    return merge(merge_sort(left), merge_sort(right));
+}
+""",
+            "c": """\
+#include <stdlib.h>
+static int *merge(int left[], int left_n, int right[], int right_n, int *out_n) {
+    int *result = malloc(sizeof(int) * (size_t)(left_n + right_n));
+    int i = 0, j = 0, k = 0;
+    while (i < left_n && j < right_n) {
+        if (left[i] <= right[j]) {
+            result[k++] = left[i++];
+        } else {
+            result[k++] = right[j++];
+        }
+    }
+    while (i < left_n) {
+        result[k++] = left[i++];
+    }
+    while (j < right_n) {
+        result[k++] = right[j++];
+    }
+    *out_n = k;
+    return result;
+}
+
+int *merge_sort(int arr[], int n, int *out_n) {
+    if (n <= 1) {
+        *out_n = n;
+        int *copy = malloc(sizeof(int) * (size_t)n);
+        for (int i = 0; i < n; i++) {
+            copy[i] = arr[i];
+        }
+        return copy;
+    }
+    int mid = n / 2;
+    int left_n, right_n;
+    int *left = merge_sort(arr, mid, &left_n);
+    int *right = merge_sort(arr + mid, n - mid, &right_n);
+    int *result = merge(left, left_n, right, right_n, out_n);
+    free(left);
+    free(right);
+    return result;
+}
+""",
+            "java": """\
+class Solution {
+    static int[] merge(int[] left, int[] right) {
+        int[] result = new int[left.length + right.length];
+        int i = 0, j = 0, k = 0;
+        while (i < left.length && j < right.length) {
+            if (left[i] <= right[j]) {
+                result[k++] = left[i++];
+            } else {
+                result[k++] = right[j++];
+            }
+        }
+        while (i < left.length) {
+            result[k++] = left[i++];
+        }
+        while (j < right.length) {
+            result[k++] = right[j++];
+        }
+        return result;
+    }
+
+    static int[] mergeSort(int[] arr) {
+        if (arr.length <= 1) {
+            return arr;
+        }
+        int mid = arr.length / 2;
+        int[] left = java.util.Arrays.copyOfRange(arr, 0, mid);
+        int[] right = java.util.Arrays.copyOfRange(arr, mid, arr.length);
+        return merge(mergeSort(left), mergeSort(right));
+    }
+}
+""",
+            "javascript": """\
+function merge(left, right) {
+    const result = [];
+    let i = 0;
+    let j = 0;
+    while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) {
+            result.push(left[i]);
+            i++;
+        } else {
+            result.push(right[j]);
+            j++;
+        }
+    }
+    while (i < left.length) {
+        result.push(left[i]);
+        i++;
+    }
+    while (j < right.length) {
+        result.push(right[j]);
+        j++;
+    }
+    return result;
+}
+
+function mergeSort(arr) {
+    if (arr.length <= 1) {
+        return arr;
+    }
+    const mid = Math.floor(arr.length / 2);
+    const left = mergeSort(arr.slice(0, mid));
+    const right = mergeSort(arr.slice(mid));
+    return merge(left, right);
+}
+""",
+            "go": """\
+package main
+
+func merge(left []int, right []int) []int {
+    result := make([]int, 0, len(left)+len(right))
+    i, j := 0, 0
+    for i < len(left) && j < len(right) {
+        if left[i] <= right[j] {
+            result = append(result, left[i])
+            i++
+        } else {
+            result = append(result, right[j])
+            j++
+        }
+    }
+    result = append(result, left[i:]...)
+    result = append(result, right[j:]...)
+    return result
+}
+
+func mergeSort(arr []int) []int {
+    if len(arr) <= 1 {
+        return arr
+    }
+    mid := len(arr) / 2
+    left := mergeSort(arr[:mid])
+    right := mergeSort(arr[mid:])
+    return merge(left, right)
+}
+""",
+        },
+    ),
+    SynthAlgorithm(
+        name="memoized_fibonacci",
+        time_class=TimeClass.O_N,
+        space_class=SpaceClass.O_N,
+        code_by_language={
+            "python": """\
+def fib_helper(n, memo):
+    if n <= 1:
+        return n
+    if memo[n] != -1:
+        return memo[n]
+    memo[n] = fib_helper(n - 1, memo) + fib_helper(n - 2, memo)
+    return memo[n]
+
+
+def memoized_fibonacci(n):
+    memo = [-1] * (n + 1)
+    return fib_helper(n, memo)
+""",
+            "cpp": """\
+#include <vector>
+int fib_helper(int n, std::vector<int> &memo) {
+    if (n <= 1) {
+        return n;
+    }
+    if (memo[n] != -1) {
+        return memo[n];
+    }
+    memo[n] = fib_helper(n - 1, memo) + fib_helper(n - 2, memo);
+    return memo[n];
+}
+
+int memoized_fibonacci(int n) {
+    std::vector<int> memo(n + 1, -1);
+    return fib_helper(n, memo);
+}
+""",
+            "c": """\
+#include <stdlib.h>
+static int fib_helper(int n, int memo[]) {
+    if (n <= 1) {
+        return n;
+    }
+    if (memo[n] != -1) {
+        return memo[n];
+    }
+    memo[n] = fib_helper(n - 1, memo) + fib_helper(n - 2, memo);
+    return memo[n];
+}
+
+int memoized_fibonacci(int n) {
+    int *memo = malloc(sizeof(int) * (size_t)(n + 1));
+    for (int i = 0; i <= n; i++) {
+        memo[i] = -1;
+    }
+    int result = fib_helper(n, memo);
+    free(memo);
+    return result;
+}
+""",
+            "java": """\
+class Solution {
+    static int fibHelper(int n, int[] memo) {
+        if (n <= 1) {
+            return n;
+        }
+        if (memo[n] != -1) {
+            return memo[n];
+        }
+        memo[n] = fibHelper(n - 1, memo) + fibHelper(n - 2, memo);
+        return memo[n];
+    }
+
+    static int memoizedFibonacci(int n) {
+        int[] memo = new int[n + 1];
+        java.util.Arrays.fill(memo, -1);
+        return fibHelper(n, memo);
+    }
+}
+""",
+            "javascript": """\
+function fibHelper(n, memo) {
+    if (n <= 1) {
+        return n;
+    }
+    if (memo[n] !== -1) {
+        return memo[n];
+    }
+    memo[n] = fibHelper(n - 1, memo) + fibHelper(n - 2, memo);
+    return memo[n];
+}
+
+function memoizedFibonacci(n) {
+    const memo = new Array(n + 1).fill(-1);
+    return fibHelper(n, memo);
+}
+""",
+            "go": """\
+package main
+
+func fibHelper(n int, memo []int) int {
+    if n <= 1 {
+        return n
+    }
+    if memo[n] != -1 {
+        return memo[n]
+    }
+    memo[n] = fibHelper(n-1, memo) + fibHelper(n-2, memo)
+    return memo[n]
+}
+
+func memoizedFibonacci(n int) int {
+    memo := make([]int, n+1)
+    for i := range memo {
+        memo[i] = -1
+    }
+    return fibHelper(n, memo)
+}
+""",
+        },
+    ),
 )
 
 
