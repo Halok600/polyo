@@ -14,3 +14,11 @@ tree-sitter-cpp>=0.23,<0.24
 # Oracle (plan §6, `oracle/`) -- offline-only driver codegen. Never imported
 # by api/ (see tests/test_isolation.py), so kept out of requirements-api.txt.
 jinja2>=3.1,<4
+
+# Training (plan §8, `models/` `eval/`) -- offline-only until Phase 6 wires
+# a trained model into api/main.py, kept out of requirements-api.txt until
+# then for the same image-size-budget reason as tree-sitter above.
+numpy>=2.0,<3
+scikit-learn>=1.5,<1.6
+lightgbm>=4.5,<5
+matplotlib>=3.9,<4

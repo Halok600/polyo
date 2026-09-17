@@ -24,7 +24,7 @@ from typing import Any
 from tree_sitter import Node as TSNode
 
 from core.ir import IREdge, IRGraph, IRNode
-from parsing.parse import parse_source
+from parsing.parse import UnsupportedLanguageError, parse_source
 
 _LANG_DIR = Path(__file__).resolve().parent / "lang"
 
@@ -52,8 +52,11 @@ _CONFIG_CACHE: dict[str, _LangConfig] = {}
 
 def _load_config(language: str) -> _LangConfig:
     if language not in _CONFIG_CACHE:
-        with (_LANG_DIR / f"{language}.toml").open("rb") as f:
-            data = tomllib.load(f)
+        try:
+            with (_LANG_DIR / f"{language}.toml").open("rb") as f:
+                data = tomllib.load(f)
+        except FileNotFoundError as e:
+            raise UnsupportedLanguageError(f"no IR mapping for language: {language!r}") from e
         _CONFIG_CACHE[language] = _LangConfig(data)
     return _CONFIG_CACHE[language]
 

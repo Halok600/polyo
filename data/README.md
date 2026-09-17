@@ -17,6 +17,12 @@ to multi-GB. Run the ingestion scripts locally once you've downloaded the
 raw files (commands are in each script's docstring); each prints a JSON
 summary of kept/dropped counts.
 
-`synth.py` (parallel synthetic generator, all six languages) and `build.py`
-(dedupe, problem-level splits, class balancing) land in Phase 4 and Phase 3
-respectively -- see plan §14.
+`build.py` (Phase 3) dedupes and splits the ingested corpus by
+**(source, problem_id)**, not just `problem_id` -- BigO(Bench) and
+CodeComplex use overlapping id spellings, so splitting on the bare id could
+leak a problem across train/val/test (plan §9's "no problem_id in more than
+one split", strengthened). `tests/test_data_splits.py` enforces this in CI.
+Writes `data/processed/split_{train,val,test}.jsonl` (also gitignored).
+
+`synth.py` (parallel synthetic generator, all six languages) lands in
+Phase 4 -- see plan §14.
