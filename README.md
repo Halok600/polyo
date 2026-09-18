@@ -39,12 +39,15 @@ baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
 - **Zero-shot cross-language transfer**: trained on Python+Java only,
   evaluated on C++, JavaScript, Go, and C it never saw during training.
   Directionally consistent with a language-agnostic IR, but honestly
-  caveated: `data/scrape.py` (a real-code source for those languages) was
-  never built, so those test cells are the ~5-example synthetic corpus —
-  **illustrative, not a statistically robust result**. Python and Java, the
-  languages with real corpus-scale test data, transfer as expected.
-  [`PHASE5_REPORT.md`](PHASE5_REPORT.md) reports the per-language numbers
-  plainly rather than only the aggregate.
+  caveated: `data/scrape.py` now exists (40 real, MIT-licensed solutions
+  from `github.com/TheAlgorithms`, hand-labelled by algorithm identity —
+  see its module docstring), but the reported numbers below predate it and
+  still reflect the smaller synthetic-only non-Python/Java test cells
+  (n=5-7) — **illustrative, not yet a statistically robust result**.
+  Retraining on the expanded corpus is a deliberate next step, not done
+  here. Python and Java, the languages with real corpus-scale test data,
+  transfer as expected. [`PHASE5_REPORT.md`](PHASE5_REPORT.md) reports the
+  per-language numbers plainly rather than only the aggregate.
 - Calibrated: temperature-scaled confidence, ECE reported, not just accuracy
   (never bare accuracy — a fixed-rule baseline can *win* on accuracy while
   losing badly on macro-F1, and the model card shows exactly that failure
