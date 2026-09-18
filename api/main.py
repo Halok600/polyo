@@ -22,6 +22,7 @@ from api.guards import (
     MaxBodySizeMiddleware,
     ParseTimeoutError,
     RateLimiter,
+    client_key,
     run_with_timeout,
 )
 from api.logging_utils import configure_logging, log_event
@@ -176,7 +177,7 @@ class PredictResponse(BaseModel):
 @app.post("/v1/predict", response_model=PredictResponse)
 def predict_endpoint(request: PredictRequest, http_request: Request) -> dict[str, object]:
     start = time.monotonic()
-    client_ip = http_request.client.host if http_request.client else "unknown"
+    client_ip = client_key(http_request)
 
     if request.language != "auto" and request.language not in SERVED_LANGUAGES:
         metrics.record("bad_request", time.monotonic() - start)

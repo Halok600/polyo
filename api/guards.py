@@ -10,6 +10,7 @@ would still trip that test's import check).
 """
 from __future__ import annotations
 
+import os
 import threading
 import time
 from collections.abc import Callable
@@ -18,6 +19,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass
 from typing import TypeVar
 
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -81,6 +83,34 @@ def run_with_timeout(fn: Callable[[], T], timeout_s: float = PARSE_TIMEOUT_SECON
         return future.result(timeout=timeout_s)
     except FutureTimeoutError as e:
         raise ParseTimeoutError(f"exceeded {timeout_s}s") from e
+
+
+def client_key(request: Request) -> str:
+    """The per-IP rate-limit key (plan §10). The real client IP behind
+    Render's edge proxy when TRUST_PROXY_HEADERS=1 (see render.yaml), the
+    direct TCP peer otherwise.
+
+    **Replaces a real, shipped bug, not a hypothetical one**: an earlier
+    version of this trust decision lived in uvicorn's own CLI, via
+    `--proxy-headers --forwarded-allow-ips="*"`. uvicorn's
+    `_TrustedHosts.get_trusted_client_host` has an `always_trust` branch for
+    `"*"` that returns `x_forwarded_for_hosts[0]` -- the *first* entry,
+    i.e. whatever the client itself put in the header. Proxies
+    conventionally *append* to X-Forwarded-For, never replace it (RFC 7239's
+    predecessor convention; every hop from client to origin adds one entry),
+    so the first entry is always attacker-controlled and the *last* entry is
+    the one Render's own edge actually appended -- uvicorn's "*" mode reads
+    exactly the wrong end of the list. Rotating the header per request fully
+    defeated the rate limiter under that version. Done here instead, in
+    application code, specifically to control which end of the list wins
+    directly, rather than depend on a middleware whose "*" branch doesn't
+    match this deployment's actual proxy topology.
+    """
+    if os.environ.get("TRUST_PROXY_HEADERS") == "1":
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            return xff.rsplit(",", 1)[-1].strip()
+    return request.client.host if request.client else "unknown"
 
 
 @dataclass(slots=True)

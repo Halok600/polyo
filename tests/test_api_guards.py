@@ -11,8 +11,24 @@ from api.guards import (
     MAX_REQUEST_BODY_BYTES,
     ParseTimeoutError,
     RateLimiter,
+    client_key,
     run_with_timeout,
 )
+
+
+class _FakeClient:
+    def __init__(self, host: str) -> None:
+        self.host = host
+
+
+class _FakeRequest:
+    """Minimal stand-in for starlette.requests.Request -- client_key only
+    touches .headers.get(...) and .client.host, so a full ASGI scope would
+    be pure ceremony here."""
+
+    def __init__(self, client_host: str | None, headers: dict[str, str] | None = None) -> None:
+        self.client = _FakeClient(client_host) if client_host is not None else None
+        self.headers = headers or {}
 
 
 def test_max_code_bytes_is_64kb():
@@ -64,3 +80,44 @@ def test_rate_limiter_refills_over_time():
     assert limiter.allow("ip-a", now=0.0)
     assert not limiter.allow("ip-a", now=0.01)
     assert limiter.allow("ip-a", now=1.0)  # 10 tokens/s * 1s >> 1 token needed
+
+
+def test_client_key_ignores_x_forwarded_for_when_not_trusted(monkeypatch):
+    # The untrusted/local/docker-compose default: a spoofed header must have
+    # zero effect, full stop, regardless of what it claims.
+    monkeypatch.delenv("TRUST_PROXY_HEADERS", raising=False)
+    request = _FakeRequest("203.0.113.77", {"x-forwarded-for": "9.9.9.9"})
+    assert client_key(request) == "203.0.113.77"
+
+
+def test_client_key_takes_the_rightmost_forwarded_for_entry_when_trusted(monkeypatch):
+    # The exact bug this replaced: an earlier version (uvicorn's own
+    # --forwarded-allow-ips="*") took the *leftmost* entry, which is
+    # whatever the client itself claims -- trivially spoofable, and fully
+    # defeats the rate limiter by rotating the header per request. Render's
+    # edge appends the real client IP as the *last* hop; every entry before
+    # it (including this attacker-set "1.2.3.4") must be ignored.
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "1")
+    request = _FakeRequest(
+        "10.0.0.5",  # Render's edge itself, as seen by the direct TCP peer
+        {"x-forwarded-for": "1.2.3.4, 203.0.113.77"},
+    )
+    assert client_key(request) == "203.0.113.77"
+
+
+def test_client_key_trims_whitespace_around_the_rightmost_entry(monkeypatch):
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "1")
+    request = _FakeRequest("10.0.0.5", {"x-forwarded-for": "1.2.3.4,  203.0.113.77 "})
+    assert client_key(request) == "203.0.113.77"
+
+
+def test_client_key_falls_back_to_the_tcp_peer_when_trusted_but_header_absent(monkeypatch):
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "1")
+    request = _FakeRequest("203.0.113.77")
+    assert client_key(request) == "203.0.113.77"
+
+
+def test_client_key_returns_unknown_when_there_is_no_client_at_all(monkeypatch):
+    monkeypatch.delenv("TRUST_PROXY_HEADERS", raising=False)
+    request = _FakeRequest(None)
+    assert client_key(request) == "unknown"

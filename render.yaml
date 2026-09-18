@@ -16,10 +16,10 @@ services:
       # Unset, CORS still allows http://localhost:3000 for local dev.
       - key: ALLOWED_ORIGINS
         sync: false
-      # Tells the Dockerfile's CMD it's safe to trust X-Forwarded-For --
+      # Tells api/guards.py:client_key it's safe to trust X-Forwarded-For --
       # true only here, specifically because Render's containers accept no
       # public ingress except through its own edge proxy. Must NOT be set
       # for docker-compose/local use, which exposes the port directly to
-      # whatever network it runs on (see the Dockerfile's own comment).
+      # whatever network it runs on (see client_key's own docstring).
       - key: TRUST_PROXY_HEADERS
         value: "1"
