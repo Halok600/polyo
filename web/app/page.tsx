@@ -1,11 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { BenchPanel } from "@/components/BenchPanel";
 import { ClassChip } from "@/components/ClassChip";
-import { CodeEditor } from "@/components/CodeEditor";
 import { CodeWithSpans } from "@/components/CodeWithSpans";
 import { GrowthChart } from "@/components/GrowthChart";
 import { Landing } from "@/components/Landing";
@@ -17,6 +17,17 @@ import { Toolbar } from "@/components/Toolbar";
 import { ApiError, fetchLanguages, predict } from "@/lib/api";
 import { usePrefersReducedMotion, withViewTransition } from "@/lib/motion";
 import type { LanguageOption, PredictResponse } from "@/lib/types";
+
+// CodeMirror (core + language packages) is a ~650KB chunk on its own --
+// deferred out of the landing page's bundle entirely via next/dynamic, not
+// loaded until the tool scene actually mounts. ssr:false is safe (and
+// required): the editor only ever touches the DOM inside its own effects,
+// never during render, but its whole import chain still shouldn't be part
+// of what the static prerender needs to produce first paint.
+const CodeEditor = dynamic(() => import("@/components/CodeEditor").then((mod) => mod.CodeEditor), {
+  ssr: false,
+  loading: () => <div className="code-editor-frame" style={{ height: 340 }} />,
+});
 
 const EXAMPLE_CODE = `def two_sum(nums, target):
     seen = {}
@@ -259,9 +270,7 @@ export default function Home() {
             Static, multi-language time &amp; space complexity prediction. No LLM, no code execution.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span className="mono-nums" style={{ color: "var(--text-muted)", fontSize: 11, letterSpacing: "0.08em" }}>
-              EXAMPLES
-            </span>
+            <span className="mono-nums field-label">EXAMPLES</span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {EXAMPLES.map((example) => (
                 <button
@@ -284,21 +293,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading || code.trim().length === 0}
-              className="mono-nums vt-run-cta"
-              style={{
-                alignSelf: "flex-start",
-                padding: "11px 22px",
-                borderRadius: 0,
-                border: "none",
-                background: "var(--signal)",
-                color: "var(--page-plane)",
-                fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: "0.04em",
-                cursor: loading ? "default" : "pointer",
-                opacity: loading ? 0.65 : 1,
-                transition: "opacity 150ms var(--ease-settle)",
-              }}
+              className="mono-nums vt-run-cta cta-button submit-cta"
             >
               {loading ? (wakingUp ? "WAKING SERVER…" : "SAMPLING…") : "RUN ANALYSIS"}
             </button>
@@ -339,17 +334,7 @@ export default function Home() {
                       key={dim}
                       type="button"
                       onClick={() => setChartDimension(dim)}
-                      className="mono-nums"
-                      style={{
-                        padding: "6px 16px",
-                        borderRadius: 0,
-                        border: "1px solid var(--border-strong)",
-                        background: chartDimension === dim ? "var(--signal)" : "var(--surface-1)",
-                        color: chartDimension === dim ? "var(--page-plane)" : "var(--text-secondary)",
-                        fontSize: 11,
-                        letterSpacing: "0.06em",
-                        cursor: "pointer",
-                      }}
+                      className={`mono-nums dim-tab${chartDimension === dim ? " is-active" : ""}`}
                     >
                       {dim.toUpperCase()}
                     </button>
@@ -370,7 +355,7 @@ export default function Home() {
               </BenchPanel>
 
               <BenchPanel channel="CH.04 — DISTRIBUTION" revealDelayMs={180}>
-                <div className="mono-nums" style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 14 }}>
+                <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
                   CLASS PROBABILITY — {chartDimension.toUpperCase()}
                 </div>
                 <ProbabilityBars
@@ -381,7 +366,7 @@ export default function Home() {
               </BenchPanel>
 
               <BenchPanel channel="CH.05 — SOURCE" revealDelayMs={240}>
-                <div className="mono-nums" style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 14 }}>
+                <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
                   DRIVING SPANS HIGHLIGHTED
                 </div>
                 <CodeWithSpans code={code} attribution={result.attribution} />

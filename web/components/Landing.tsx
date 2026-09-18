@@ -70,7 +70,7 @@ export function Landing({ onEnter }: LandingProps) {
       </section>
 
       <div className="landing-cta-row bench-reveal-row" style={{ "--row-delay": "360ms" } as React.CSSProperties}>
-        <button type="button" onClick={onEnter} className="mono-nums landing-cta vt-run-cta">
+        <button type="button" onClick={onEnter} className="mono-nums cta-button landing-cta vt-run-cta">
           RUN THE BENCH →
         </button>
       </div>

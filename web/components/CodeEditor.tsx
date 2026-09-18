@@ -9,12 +9,7 @@
 // existing text-primary/secondary/muted scale, not a rainbow theme.
 
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { cpp } from "@codemirror/lang-cpp";
-import { java } from "@codemirror/lang-java";
-import { javascript } from "@codemirror/lang-javascript";
-import { python } from "@codemirror/lang-python";
 import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from "@codemirror/language";
-import { go } from "@codemirror/legacy-modes/mode/go";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, dropCursor, EditorView, type KeyBinding, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
@@ -26,19 +21,34 @@ type CodeEditorProps = {
   language: string;
 };
 
-function languageExtension(language: string): Extension | null {
+// Each served language's syntax package is only pulled in once someone
+// actually selects it -- unlike the ~650KB CodeMirror core (see page.tsx's
+// next/dynamic import of this component), these are small individually,
+// but there's no reason to ship all five upfront when "auto" (no language
+// package at all) is the default and most runs only ever use one language.
+async function loadLanguageExtension(language: string): Promise<Extension | null> {
   switch (language) {
-    case "python":
+    case "python": {
+      const { python } = await import("@codemirror/lang-python");
       return python();
-    case "javascript":
+    }
+    case "javascript": {
+      const { javascript } = await import("@codemirror/lang-javascript");
       return javascript();
-    case "java":
+    }
+    case "java": {
+      const { java } = await import("@codemirror/lang-java");
       return java();
+    }
     case "cpp":
-    case "c":
+    case "c": {
+      const { cpp } = await import("@codemirror/lang-cpp");
       return cpp();
-    case "go":
+    }
+    case "go": {
+      const { go } = await import("@codemirror/legacy-modes/mode/go");
       return StreamLanguage.define(go);
+    }
     default:
       return null; // "auto" -- the language isn't known until a run completes.
   }
@@ -128,7 +138,9 @@ export function CodeEditor({ value, onChange, language }: CodeEditorProps) {
           bracketMatching(),
           EditorView.lineWrapping,
           keymap.of([indentWithTab, ...suppressModEnter, ...defaultKeymap, ...historyKeymap]),
-          languageCompartment.current.of(languageExtension(language) ?? []),
+          // Starts empty -- the [language] effect below loads and applies
+          // the initial language too, asynchronously, right after mount.
+          languageCompartment.current.of([]),
           syntaxHighlighting(benchHighlightStyle),
           benchEditorTheme,
           EditorView.updateListener.of((update) => {
@@ -144,7 +156,18 @@ export function CodeEditor({ value, onChange, language }: CodeEditorProps) {
   }, []);
 
   useEffect(() => {
-    viewRef.current?.dispatch({ effects: languageCompartment.current.reconfigure(languageExtension(language) ?? []) });
+    let cancelled = false;
+    loadLanguageExtension(language).then((extension) => {
+      // Guards against a stale, out-of-order resolution -- rapidly
+      // switching languages (or examples, which change language and code
+      // together) must not let an earlier import "win" over the current
+      // selection just because it happened to resolve later.
+      if (cancelled) return;
+      viewRef.current?.dispatch({ effects: languageCompartment.current.reconfigure(extension ?? []) });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [language]);
 
   useEffect(() => {

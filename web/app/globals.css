@@ -399,24 +399,41 @@ html.vt-scene::view-transition-group(run-cta) {
   padding-bottom: 64px;
 }
 
-.landing-cta {
+/* Shared by the landing CTA and the tool's submit button -- they already
+   agreed on background/color/weight/letter-spacing independently before
+   this existed; only size and padding actually differ between them. */
+.cta-button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 16px 28px;
   border: none;
   border-radius: 0;
   background: var(--signal);
   color: var(--page-plane);
-  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: pointer;
   transition: transform 150ms var(--ease-settle), opacity 150ms var(--ease-settle);
 }
 
+.landing-cta {
+  padding: 16px 28px;
+  font-size: 14px;
+}
+
 .landing-cta:hover {
   transform: translateY(-1px);
+}
+
+.submit-cta {
+  align-self: flex-start;
+  padding: 11px 22px;
+  font-size: 13px;
+}
+
+.submit-cta:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 @media (max-width: 760px) {
@@ -518,6 +535,31 @@ html.vt-scene::view-transition-group(run-cta) {
   .lang-select-panel {
     animation: none;
   }
+}
+
+/* The small muted mono caption used above the example gallery, and above
+   the distribution/source panels' content -- was three independent inline
+   style={{}} blocks repeating the same three values. */
+.field-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.dim-tab {
+  padding: 6px 16px;
+  border-radius: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.dim-tab.is-active {
+  background: var(--signal);
+  color: var(--page-plane);
 }
 
 .example-chip {
