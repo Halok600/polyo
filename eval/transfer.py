@@ -24,6 +24,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 
 from eval.report import (
     GRIDLINE,
@@ -88,6 +90,44 @@ def run_transfer_experiment(
     predictions = model.predict(scored_ex)
     languages = [e.record.language for e in scored_ex]
     return per_language_metrics(dimension, scored_y, predictions, languages, tuple(model.classes))
+
+
+def run_raw_token_transfer_experiment(
+    dimension: str,
+    train_ex: list[ParsedExample],
+    train_y: list[str | None],
+    test_ex: list[ParsedExample],
+    test_y: list[str | None],
+) -> dict[str, Metrics]:
+    """The actual test of `eval/ablations.py`'s own rebuttal to raw tokens
+    beating IR-symbol TF-IDF in-distribution ("raw tokens have no path to
+    cross-language transfer at all") -- trains the same raw-source-text
+    TF-IDF + LogisticRegression baseline on {Python, Java} only and scores
+    it exactly like `run_transfer_experiment`, so the two are directly
+    comparable per language. A vocabulary fit on Python/Java source tokens
+    has no representation for C++/Go/JavaScript/C syntax at all, so this is
+    expected to collapse toward chance on those languages even though it
+    wins in-distribution -- this either confirms that prediction with a
+    real number or, if it doesn't, is itself a result worth reporting
+    rather than silently dropped for not matching the expected story.
+    """
+    train_subset = filter_by_language(train_ex, TRAIN_LANGUAGES)
+    train_subset_y = [
+        y for e, y in zip(train_ex, train_y, strict=True) if e.record.language in TRAIN_LANGUAGES
+    ]
+    fit_ex, fit_y = with_label(train_subset, train_subset_y)
+
+    vectorizer = TfidfVectorizer(ngram_range=(1, 3))
+    train_x = vectorizer.fit_transform([e.record.code for e in fit_ex])
+    classifier = LogisticRegression(max_iter=2000, class_weight="balanced")
+    classifier.fit(train_x, fit_y)
+
+    scored_ex, scored_y = with_label(test_ex, test_y)
+    test_x = vectorizer.transform([e.record.code for e in scored_ex])
+    predictions = list(classifier.predict(test_x))
+    languages = [e.record.language for e in scored_ex]
+    classes = tuple(classifier.classes_)
+    return per_language_metrics(dimension, scored_y, predictions, languages, classes)
 
 
 def plot_transfer_heatmap(

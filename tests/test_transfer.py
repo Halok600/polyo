@@ -10,6 +10,7 @@ from eval.transfer import (
     TRAIN_LANGUAGES,
     filter_by_language,
     plot_transfer_heatmap,
+    run_raw_token_transfer_experiment,
     run_transfer_experiment,
 )
 from models.dataset import build_examples
@@ -80,6 +81,37 @@ def test_run_transfer_experiment_scores_every_language_present_in_test():
     )
     assert set(results.keys()) == {"python", "java", "cpp"}
     assert results["cpp"].n == 3  # the genuinely zero-shot language
+
+
+def test_run_raw_token_transfer_experiment_scores_every_language_present_in_test():
+    train_examples = _examples(["python", "java"], per_language=6)
+    test_examples = _examples(["python", "java", "cpp"], per_language=3)
+    # LogisticRegression needs >= 2 classes to fit at all -- alternate
+    # labels rather than reuse _record's uniform "O(n)" (fine for the GNN
+    # tests above, not fine here).
+    train_y = ["O(n)" if i % 2 == 0 else "O(1)" for i in range(len(train_examples))]
+    test_y = ["O(n)" if i % 2 == 0 else "O(1)" for i in range(len(test_examples))]
+
+    results = run_raw_token_transfer_experiment(
+        "time", train_examples, train_y, test_examples, test_y
+    )
+    assert set(results.keys()) == {"python", "java", "cpp"}
+    assert results["cpp"].n == 3  # the genuinely zero-shot language
+
+
+def test_run_raw_token_transfer_experiment_only_trains_on_train_languages():
+    # A raw-token vectorizer/classifier fit including cpp text would give
+    # cpp an (unrealistic) in-vocabulary advantage -- confirms the same
+    # {Python, Java}-only filtering the GNN version uses.
+    train_examples = _examples(["python", "java", "cpp"], per_language=4)
+    test_examples = _examples(["cpp"], per_language=3)
+    train_y = ["O(n)" if i % 2 == 0 else "O(1)" for i in range(len(train_examples))]
+    test_y = ["O(n)" if i % 2 == 0 else "O(1)" for i in range(len(test_examples))]
+
+    results = run_raw_token_transfer_experiment(
+        "time", train_examples, train_y, test_examples, test_y
+    )
+    assert results["cpp"].n == 3  # still scored -- just genuinely zero-shot, not trained on
 
 
 def test_plot_transfer_heatmap_writes_a_file(tmp_path):

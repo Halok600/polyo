@@ -1,0 +1,198 @@
+{
+  "time": {
+    "c": {
+      "dimension": "time",
+      "n": 1,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "mean_ordinal_distance": 1.0,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(2^n)": 0.0,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0,
+        "O(n^3)": 0.0
+      }
+    },
+    "cpp": {
+      "dimension": "time",
+      "n": 5,
+      "accuracy": 0.4,
+      "macro_f1": 0.1429,
+      "mean_ordinal_distance": 1.4,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(2^n)": 0.0,
+        "O(log n)": 1.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0,
+        "O(n^3)": 0.0
+      }
+    },
+    "go": {
+      "dimension": "time",
+      "n": 5,
+      "accuracy": 0.4,
+      "macro_f1": 0.1905,
+      "mean_ordinal_distance": 1.8,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(2^n)": 0.0,
+        "O(log n)": 0.6667,
+        "O(n log n)": 0.0,
+        "O(n)": 0.6667,
+        "O(n^2)": 0.0,
+        "O(n^3)": 0.0
+      }
+    },
+    "java": {
+      "dimension": "time",
+      "n": 867,
+      "accuracy": 0.4095,
+      "macro_f1": 0.3822,
+      "mean_ordinal_distance": 1.1626,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.7833,
+        "O(2^n)": 0.4567,
+        "O(log n)": 0.804,
+        "O(n log n)": 0.4302,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0792,
+        "O(n^3)": 0.1223
+      }
+    },
+    "javascript": {
+      "dimension": "time",
+      "n": 5,
+      "accuracy": 0.2,
+      "macro_f1": 0.0714,
+      "mean_ordinal_distance": 2.0,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(2^n)": 0.0,
+        "O(log n)": 0.5,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0,
+        "O(n^3)": 0.0
+      }
+    },
+    "python": {
+      "dimension": "time",
+      "n": 24559,
+      "accuracy": 0.4915,
+      "macro_f1": 0.3429,
+      "mean_ordinal_distance": 1.0009,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.6885,
+        "O(2^n)": 0.1705,
+        "O(log n)": 0.1974,
+        "O(n log n)": 0.4518,
+        "O(n)": 0.4677,
+        "O(n^2)": 0.2197,
+        "O(n^3)": 0.2044
+      }
+    }
+  },
+  "space": {
+    "c": {
+      "dimension": "space",
+      "n": 1,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "mean_ordinal_distance": 1.0,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0
+      }
+    },
+    "cpp": {
+      "dimension": "space",
+      "n": 5,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "mean_ordinal_distance": 2.0,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0
+      }
+    },
+    "go": {
+      "dimension": "space",
+      "n": 5,
+      "accuracy": 0.2,
+      "macro_f1": 0.08,
+      "mean_ordinal_distance": 1.6,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.4,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0
+      }
+    },
+    "java": {
+      "dimension": "space",
+      "n": 5,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "mean_ordinal_distance": 1.6,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0
+      }
+    },
+    "javascript": {
+      "dimension": "space",
+      "n": 5,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "mean_ordinal_distance": 1.8,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.0,
+        "O(log n)": 0.0,
+        "O(n log n)": 0.0,
+        "O(n)": 0.0,
+        "O(n^2)": 0.0
+      }
+    },
+    "python": {
+      "dimension": "space",
+      "n": 24543,
+      "accuracy": 0.613,
+      "macro_f1": 0.3276,
+      "mean_ordinal_distance": 0.7205,
+      "ece": null,
+      "per_class_f1": {
+        "O(1)": 0.6821,
+        "O(log n)": 0.0679,
+        "O(n log n)": 0.0266,
+        "O(n)": 0.6851,
+        "O(n^2)": 0.1765
+      }
+    }
+  }
+}
