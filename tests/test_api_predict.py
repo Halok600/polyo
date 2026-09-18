@@ -43,7 +43,12 @@ def test_predict_time_and_space_fields_have_the_documented_shape(tiny_registry):
         assert set(entry.keys()) == {"class", "rank", "confidence", "distribution"}
         assert isinstance(entry["rank"], int)
         assert 0.0 <= entry["confidence"] <= 1.0
-        assert abs(sum(entry["distribution"].values()) - 1.0) < 1e-4
+        # Each class probability is independently rounded to 4 decimals
+        # for the response (api/predict.py) -- across up to 7 classes
+        # (time), the worst-case cumulative rounding error is
+        # 7 * 0.5e-4 = 3.5e-4, so the tolerance here must clear that, not
+        # the tighter bound a truly unrounded softmax sum would allow.
+        assert abs(sum(entry["distribution"].values()) - 1.0) < 1e-3
 
 
 def test_predict_curve_shares_one_n_grid_across_both_dimensions(tiny_registry):
