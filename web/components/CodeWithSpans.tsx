@@ -17,9 +17,13 @@ type CodeWithSpansProps = {
   attribution: AttributionItem[];
 };
 
-type Range = { start: number; end: number; feature: string };
+export type Range = { start: number; end: number; feature: string };
 
-function lineStartOffsets(code: string): number[] {
+// Exported for direct unit testing (components/CodeWithSpans.test.tsx) --
+// this is the one piece of real logic in an otherwise presentational
+// component, and its edge cases (overlapping/adjacent/out-of-order spans)
+// are worth locking down independently of rendering.
+export function lineStartOffsets(code: string): number[] {
   const offsets = [0];
   for (let i = 0; i < code.length; i++) {
     if (code[i] === "\n") offsets.push(i + 1);
@@ -27,12 +31,12 @@ function lineStartOffsets(code: string): number[] {
   return offsets;
 }
 
-function toOffset(lineStarts: number[], line: number, col: number): number {
+export function toOffset(lineStarts: number[], line: number, col: number): number {
   const lineStart = lineStarts[Math.min(line, lineStarts.length - 1)] ?? 0;
   return lineStart + col;
 }
 
-function mergeRanges(ranges: Range[]): Range[] {
+export function mergeRanges(ranges: Range[]): Range[] {
   const sorted = [...ranges].sort((a, b) => a.start - b.start);
   const merged: Range[] = [];
   for (const range of sorted) {

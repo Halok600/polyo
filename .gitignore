@@ -14,6 +14,10 @@ htmlcov/
 node_modules/
 web/.next/
 web/out/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+.playwright-mcp/
 
 # Env / secrets
 .env
