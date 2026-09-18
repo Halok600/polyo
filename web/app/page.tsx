@@ -316,12 +316,24 @@ export default function Home() {
               </p>
 
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                <ClassChip channel="CH.01 — TIME" label="Time" predictedClass={result.time.class} confidence={result.time.confidence} revealDelayMs={0} />
+                <ClassChip
+                  channel="CH.01 — TIME"
+                  label="Time"
+                  predictedClass={result.time.class}
+                  confidence={result.time.confidence}
+                  conformalSet={result.time.conformal_set}
+                  conformalCoverage={result.time.conformal_coverage}
+                  abstain={result.time.abstain}
+                  revealDelayMs={0}
+                />
                 <ClassChip
                   channel="CH.02 — SPACE"
                   label="Space"
                   predictedClass={result.space.class}
                   confidence={result.space.confidence}
+                  conformalSet={result.space.conformal_set}
+                  conformalCoverage={result.space.conformal_coverage}
+                  abstain={result.space.abstain}
                   footnote="Auxiliary space, including recursion stack."
                   revealDelayMs={60}
                 />

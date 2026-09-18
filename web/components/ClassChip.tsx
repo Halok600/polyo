@@ -8,15 +8,33 @@ type ClassChipProps = {
   label: string;
   predictedClass: string;
   confidence: number;
+  conformalSet: string[];
+  conformalCoverage: number;
+  abstain: boolean;
   footnote?: string;
   revealDelayMs?: number;
 };
 
-export function ClassChip({ channel, label, predictedClass, confidence, footnote, revealDelayMs = 0 }: ClassChipProps) {
+export function ClassChip({
+  channel,
+  label,
+  predictedClass,
+  confidence,
+  conformalSet,
+  conformalCoverage,
+  abstain,
+  footnote,
+  revealDelayMs = 0,
+}: ClassChipProps) {
   const target = Math.round(confidence * 100);
   const displayed = useCountUp(target, 500, revealDelayMs);
   const percent = Math.round(displayed);
   const filled = Math.round((percent / 100) * 10);
+  const coveragePercent = Math.round(conformalCoverage * 100);
+  // A one-class set is exactly the point prediction above -- nothing new
+  // to say. A wider set is the honest complement to the confidence number:
+  // "usually within this range" read as a real range, not a coin flip.
+  const isRange = conformalSet.length > 1;
 
   return (
     <BenchPanel channel={channel} revealDelayMs={revealDelayMs} style={{ flex: "1 1 240px" }}>
@@ -43,6 +61,24 @@ export function ClassChip({ channel, label, predictedClass, confidence, footnote
           {percent}%
         </div>
       </div>
+
+      {isRange ? (
+        <div className="mono-nums" style={{ marginTop: 10, fontSize: 13 }}>
+          <span style={{ color: "var(--text-primary)" }}>
+            {conformalSet[0]} – {conformalSet[conformalSet.length - 1]}
+          </span>
+          <span style={{ color: "var(--text-muted)", fontSize: 11 }}> at {coveragePercent}% coverage</span>
+        </div>
+      ) : null}
+
+      {abstain ? (
+        <div
+          className="mono-nums"
+          style={{ marginTop: 8, fontSize: 11, color: "var(--signal)", borderLeft: "2px solid var(--signal)", paddingLeft: 8, lineHeight: 1.5 }}
+        >
+          [!] too uncertain to narrow down -- {conformalSet.length} classes still possible at {coveragePercent}% coverage
+        </div>
+      ) : null}
 
       {footnote ? <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-muted)" }}>{footnote}</div> : null}
     </BenchPanel>

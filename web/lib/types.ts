@@ -14,6 +14,12 @@ export type ClassPrediction = {
   rank: number;
   confidence: number;
   distribution: Record<string, number>;
+  // Split-conformal prediction set: the smallest ordinally contiguous run
+  // of classes guaranteed (marginally, distribution-free) to contain the
+  // true class conformal_coverage of the time -- see models/conformal.py.
+  conformal_set: string[];
+  conformal_coverage: number;
+  abstain: boolean;
 };
 
 export type AttributionItem = {

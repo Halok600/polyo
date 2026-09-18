@@ -11,8 +11,24 @@ const LANGUAGES = [
 
 const PREDICT_RESPONSE = {
   language_detected: "python",
-  time: { class: "O(n)", rank: 2, confidence: 0.8, distribution: { "O(1)": 0.05, "O(n)": 0.8, "O(n^2)": 0.15 } },
-  space: { class: "O(1)", rank: 0, confidence: 0.9, distribution: { "O(1)": 0.9, "O(n)": 0.1 } },
+  time: {
+    class: "O(n)",
+    rank: 2,
+    confidence: 0.8,
+    distribution: { "O(1)": 0.05, "O(n)": 0.8, "O(n^2)": 0.15 },
+    conformal_set: ["O(n)"],
+    conformal_coverage: 0.9,
+    abstain: false,
+  },
+  space: {
+    class: "O(1)",
+    rank: 0,
+    confidence: 0.9,
+    distribution: { "O(1)": 0.9, "O(n)": 0.1 },
+    conformal_set: ["O(1)"],
+    conformal_coverage: 0.9,
+    abstain: false,
+  },
   attribution: [{ feature: "HASH_LOOKUP", contribution: 1, spans: [[1, 4, 1, 8]] }],
   curve: {
     n: [10, 100, 1000],
