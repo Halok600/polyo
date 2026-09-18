@@ -9,6 +9,7 @@ import pytest
 
 from api.guards import MAX_CODE_BYTES
 from api.predict import PredictionError, predict
+from core.taxonomy import SpaceClass, TimeClass
 
 _LINEAR_PY = "def f(xs):\n    total = 0\n    for x in xs:\n        total += x\n    return total\n"
 
@@ -40,7 +41,15 @@ def test_predict_time_and_space_fields_have_the_documented_shape(tiny_registry):
     result = predict(tiny_registry, _LINEAR_PY, "python")
     for dimension in ("time", "space"):
         entry = result[dimension]
-        assert set(entry.keys()) == {"class", "rank", "confidence", "distribution"}
+        assert set(entry.keys()) == {
+            "class",
+            "rank",
+            "confidence",
+            "distribution",
+            "conformal_set",
+            "conformal_coverage",
+            "abstain",
+        }
         assert isinstance(entry["rank"], int)
         assert 0.0 <= entry["confidence"] <= 1.0
         # Each class probability is independently rounded to 4 decimals
@@ -49,6 +58,12 @@ def test_predict_time_and_space_fields_have_the_documented_shape(tiny_registry):
         # 7 * 0.5e-4 = 3.5e-4, so the tolerance here must clear that, not
         # the tighter bound a truly unrounded softmax sum would allow.
         assert abs(sum(entry["distribution"].values()) - 1.0) < 1e-3
+        assert entry["class"] in entry["conformal_set"]
+        taxonomy = TimeClass if dimension == "time" else SpaceClass
+        ranks = sorted(list(taxonomy).index(taxonomy(c)) for c in entry["conformal_set"])
+        assert ranks == list(range(ranks[0], ranks[-1] + 1))  # ordinally contiguous
+        assert entry["conformal_coverage"] == pytest.approx(0.9)
+        assert entry["abstain"] == (len(entry["conformal_set"]) >= 4)
 
 
 def test_predict_curve_shares_one_n_grid_across_both_dimensions(tiny_registry):

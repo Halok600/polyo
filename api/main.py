@@ -137,6 +137,15 @@ class ClassPrediction(BaseModel):
     rank: int
     confidence: float
     distribution: dict[str, float]
+    # Split-conformal prediction set (models/conformal.py): the smallest
+    # ORDINALLY CONTIGUOUS run of classes guaranteed, marginally and
+    # distribution-free, to contain the true class at conformal_coverage's
+    # rate -- e.g. ["O(n log n)", "O(n^2)"] reads as one real answer, not a
+    # scattered set. `class_` above is still the single point prediction;
+    # this is the honest-uncertainty complement to it, not a replacement.
+    conformal_set: list[str]
+    conformal_coverage: float
+    abstain: bool
 
     model_config = {"populate_by_name": True}
 

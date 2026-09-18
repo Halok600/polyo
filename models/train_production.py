@@ -31,6 +31,7 @@ from data.corpus import CorpusRecord, read_jsonl
 from eval.report import SPACE_CLASSES, TIME_CLASSES, compute_metrics
 from models import gbdt, gnn
 from models.calibrate import fit_temperature
+from models.conformal import DEFAULT_ALPHAS, evaluate_conformal, fit_conformal
 from models.dataset import ParsedExample, build_examples, space_labels, time_labels, with_label
 from models.export_numpy import export_gnn
 
@@ -81,6 +82,7 @@ def _train_and_export_gnn(
     )
 
     calibration: dict[str, object] = {}
+    conformal: dict[str, object] = {}
     for dimension, model, val_labels, test_labels in (
         ("time", time_model, val_time_y, test_time_y),
         ("space", space_model, val_space_y, test_space_y),
@@ -103,9 +105,28 @@ def _train_and_export_gnn(
             "classes": list(model.classes),
         }
 
+        # Conformal calibration reuses the val split fit_temperature already
+        # used (see models/conformal.py's own docstring on why that's fine)
+        # -- calibrated on val, always REPORTED on the held-out test split,
+        # which neither step ever touches.
+        val_proba = calibrator.calibrate(val_scores)
+        conformal_calibration = fit_conformal(
+            val_proba, val_scored_y, tuple(model.classes), alphas=DEFAULT_ALPHAS
+        )
+        print(f"GNN {dimension} conformal (test set, risk-coverage):")
+        for alpha in DEFAULT_ALPHAS:
+            result = evaluate_conformal(conformal_calibration, proba, test_scored_y, alpha)
+            print(json.dumps(result.as_dict(), indent=2), flush=True)
+        conformal[dimension] = {
+            "classes": list(model.classes),
+            "steps_by_alpha": conformal_calibration.steps_by_alpha,
+        }
+
     export_gnn(time_model.core, time_model.edge_kinds, ARTIFACTS_DIR / "gnn.npz")
     calibration_path = ARTIFACTS_DIR / "calibration.json"
     calibration_path.write_text(json.dumps(calibration, indent=2), encoding="utf-8")
+    conformal_path = ARTIFACTS_DIR / "conformal.json"
+    conformal_path.write_text(json.dumps(conformal, indent=2), encoding="utf-8")
 
 
 def _normalized_importance(model: gbdt.GbdtModel) -> dict[str, float]:

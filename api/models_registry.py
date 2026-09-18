@@ -14,6 +14,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from models.conformal import ConformalCalibration
 from models.export_numpy import NumpyGnnModel
 
 ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "models" / "artifacts"
@@ -35,6 +36,7 @@ class Calibration:
 class ModelRegistry:
     gnn: NumpyGnnModel
     calibration: dict[str, Calibration]
+    conformal: dict[str, ConformalCalibration]
     # Per-dimension normalised GBDT feature-importance weights, and one
     # shared per-feature training-set scale (see `models/train_production.
     # py`'s `_feature_scales`) -- `api/attribution.py` divides a request's
@@ -48,8 +50,14 @@ class ModelRegistry:
 def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
     gnn_path = artifacts_dir / "gnn.npz"
     calibration_path = artifacts_dir / "calibration.json"
+    conformal_path = artifacts_dir / "conformal.json"
     importance_path = artifacts_dir / "feature_importance.json"
-    if not (gnn_path.is_file() and calibration_path.is_file() and importance_path.is_file()):
+    if not (
+        gnn_path.is_file()
+        and calibration_path.is_file()
+        and conformal_path.is_file()
+        and importance_path.is_file()
+    ):
         raise ModelsNotTrainedError(
             f"missing model artifacts under {artifacts_dir} -- run "
             "`python -m models.train_production` first"
@@ -63,11 +71,20 @@ def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
         for dimension, entry in calibration_raw.items()
     }
 
+    conformal_raw = json.loads(conformal_path.read_text(encoding="utf-8"))
+    conformal = {
+        dimension: ConformalCalibration(
+            classes=tuple(entry["classes"]), steps_by_alpha=entry["steps_by_alpha"]
+        )
+        for dimension, entry in conformal_raw.items()
+    }
+
     importance_raw = json.loads(importance_path.read_text(encoding="utf-8"))
 
     return ModelRegistry(
         gnn=gnn,
         calibration=calibration,
+        conformal=conformal,
         feature_importance=importance_raw["weights"],
         feature_scales=importance_raw["scales"],
     )

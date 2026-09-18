@@ -21,6 +21,14 @@ from parsing.normalize import normalize_source
 from parsing.parse import UnsupportedLanguageError, detect_language_from_source
 
 _UNKNOWN_SHARE_WARNING_THRESHOLD = 0.2
+# The served operating point: 90% marginal coverage (see models/conformal.py
+# and PHASE5_REPORT.md's risk-coverage table for 0.05/0.20 too -- offline
+# only, not served live, since a live API should have one predictable
+# behaviour rather than a caller-tunable coverage knob nobody asked for).
+_CONFORMAL_ALPHA = 0.10
+# "Too uncertain to be useful" -- half or more of the 7-class time taxonomy
+# (or all but one of space's 5) in the set stops being a legible answer.
+_ABSTAIN_SET_SIZE = 4
 # Which dimension's prediction the GBDT explains (plan §10's response has
 # one flat `attribution` list, not one per dimension) -- time is the
 # project's headline metric (plan §1's title order, and every other
@@ -67,11 +75,16 @@ def _predict_dimension(
 
     class_proba_pairs = zip(calibration.classes, proba, strict=True)
     distribution = {cls: round(float(p), 4) for cls, p in class_proba_pairs}
+
+    conformal_set = registry.conformal[dimension].predict_set(proba, alpha=_CONFORMAL_ALPHA)
     response = {
         "class": predicted_class,
         "rank": _rank_fn(dimension)(_rank_enum(dimension)(predicted_class)),
         "confidence": round(float(proba[pred_idx]), 4),
         "distribution": distribution,
+        "conformal_set": conformal_set,
+        "conformal_coverage": 1.0 - _CONFORMAL_ALPHA,
+        "abstain": len(conformal_set) >= _ABSTAIN_SET_SIZE,
     }
     return response, distribution
 

@@ -22,6 +22,7 @@ from sklearn.metrics import confusion_matrix, f1_score
 
 from core.taxonomy import SpaceClass, TimeClass, ordinal_distance_space, ordinal_distance_time
 from models.calibrate import expected_calibration_error
+from models.conformal import ConformalEvaluation
 
 # dataviz skill's validated sequential-blue ramp (references/palette.md,
 # steps 100->700) and chart chrome -- reused verbatim, not eyeballed.
@@ -178,6 +179,62 @@ def plot_confusion_matrix(metrics: Metrics, title: str, out_path: Path) -> None:
     cbar.ax.tick_params(colors=INK_MUTED, labelsize=8)
     cbar.set_label("Row-normalised share (recall)", color=INK_MUTED, fontsize=8)
     cbar.outline.set_edgecolor(GRIDLINE)
+
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, facecolor=SURFACE)
+    plt.close(fig)
+
+
+def plot_risk_coverage_curve(
+    results_by_dimension: dict[str, list[ConformalEvaluation]], out_path: Path
+) -> None:
+    """One line per dimension, x = empirical coverage, y = average
+    conformal-set size (models/conformal.py) -- the actual shape of the
+    coverage/set-size tradeoff, not just three numbers in a table: "at 60%
+    coverage, accuracy is 0.85" is a claim, this is the picture behind it.
+    Reuses this file's own sequential-blue ramp (two shades of one
+    validated hue for time/space, not a new categorical palette) and chart
+    chrome, same as every other figure here."""
+    fig, ax = plt.subplots(figsize=(5.5, 4), facecolor=SURFACE)
+    ax.set_facecolor(SURFACE)
+
+    line_colors = {"time": SEQUENTIAL_BLUE_STEPS[-1], "space": SEQUENTIAL_BLUE_STEPS[6]}
+    for dimension, results in results_by_dimension.items():
+        ordered = sorted(results, key=lambda r: r.alpha, reverse=True)
+        xs = [r.empirical_coverage for r in ordered]
+        ys = [r.average_set_size for r in ordered]
+        color = line_colors.get(dimension, INK_PRIMARY)
+        ax.plot(xs, ys, marker="o", color=color, linewidth=2, label=dimension.title())
+
+        # Different alpha targets can land on the identical (coverage, set
+        # size) point (the calibration quantile is a small integer, so this
+        # is a real, expected artifact, not a plotting bug) -- group those
+        # into one label instead of stacking illegible overlapping text.
+        by_point: dict[tuple[float, float], list[float]] = {}
+        for r in ordered:
+            by_point.setdefault((r.empirical_coverage, r.average_set_size), []).append(r.alpha)
+        for (x, y), alphas in by_point.items():
+            label = ", ".join(f"{a:.2f}" for a in sorted(alphas))
+            ax.annotate(
+                f"α={label}",
+                (x, y),
+                textcoords="offset points",
+                xytext=(6, 4),
+                fontsize=8,
+                color=INK_MUTED,
+            )
+
+    ax.set_xlabel("Empirical coverage", color=INK_PRIMARY, fontsize=10)
+    ax.set_ylabel("Average conformal set size", color=INK_PRIMARY, fontsize=10)
+    ax.set_title(
+        "Risk-coverage: what confidence costs in set width", color=INK_PRIMARY, fontsize=11, pad=12
+    )
+    ax.legend(frameon=False, labelcolor=INK_PRIMARY, fontsize=9)
+    for spine in ax.spines.values():
+        spine.set_color(GRIDLINE)
+    ax.tick_params(colors=GRIDLINE, length=0)
+    ax.grid(True, color=GRIDLINE, linewidth=0.5)
 
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)

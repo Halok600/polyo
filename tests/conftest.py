@@ -12,6 +12,7 @@ from api.models_registry import Calibration, ModelRegistry
 from data.corpus import CorpusRecord
 from models import gbdt, gnn
 from models.calibrate import fit_temperature
+from models.conformal import fit_conformal
 from models.dataset import build_examples, space_labels, time_labels, with_label
 from models.export_numpy import NumpyGnnModel, export_gnn
 
@@ -63,6 +64,7 @@ def tiny_registry(tmp_path) -> ModelRegistry:
         patience=1,
     )
     calibration = {}
+    conformal = {}
     for dimension, model, labels in (("time", time_model, time_y), ("space", space_model, space_y)):
         # This fixture's records always set both labels, so `with_label`
         # here only exists to narrow the type from `list[str | None]` to
@@ -73,6 +75,8 @@ def tiny_registry(tmp_path) -> ModelRegistry:
         calibration[dimension] = Calibration(
             temperature=calibrator.temperature, classes=tuple(model.classes)
         )
+        proba = calibrator.calibrate(scores)
+        conformal[dimension] = fit_conformal(proba, labelled_y, tuple(model.classes))
 
     npz_path = tmp_path / "gnn.npz"
     export_gnn(time_model.core, time_model.edge_kinds, npz_path)
@@ -92,6 +96,7 @@ def tiny_registry(tmp_path) -> ModelRegistry:
     return ModelRegistry(
         gnn=numpy_gnn,
         calibration=calibration,
+        conformal=conformal,
         feature_importance=feature_importance,
         feature_scales=feature_scales,
     )
