@@ -80,6 +80,15 @@ def test_predict_returns_429_once_the_rate_limit_is_exhausted(monkeypatch, tiny_
     assert second.status_code == 429
 
 
+def test_predict_returns_413_for_an_oversized_body(monkeypatch, tiny_registry):
+    # A genuinely large body (well over api.guards.MAX_REQUEST_BODY_BYTES),
+    # not JSON -- MaxBodySizeMiddleware rejects on Content-Length before
+    # FastAPI ever tries to parse it, so the content doesn't matter.
+    client = _client_with_registry(monkeypatch, tiny_registry)
+    response = client.post("/v1/predict", content=b"x" * (600 * 1024))
+    assert response.status_code == 413
+
+
 def test_metrics_endpoint_reflects_recorded_requests(monkeypatch, tiny_registry):
     client = _client_with_registry(monkeypatch, tiny_registry)
     client.post("/v1/predict", json={"language": "python", "code": _LINEAR_PY})

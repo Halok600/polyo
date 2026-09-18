@@ -18,10 +18,54 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass
 from typing import TypeVar
 
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
+
 MAX_CODE_BYTES = 64 * 1024
+# Comfortably above MAX_CODE_BYTES even accounting for JSON string-escaping
+# overhead (worst case, e.g. a code sample that's mostly control characters,
+# can multiply encoded size several-fold) plus the request's other small
+# fields -- this is a transport-level circuit breaker against a genuinely
+# oversized POST, not the authoritative "reject too-long code" check (that's
+# api/predict.py's MAX_CODE_BYTES comparison, which stays the one producing
+# a clean 400 with a real error message).
+MAX_REQUEST_BODY_BYTES = 512 * 1024
 PARSE_TIMEOUT_SECONDS = 5.0
 
 T = TypeVar("T")
+
+
+class MaxBodySizeMiddleware:
+    """Rejects an oversized request body via its Content-Length header,
+    before FastAPI reads and JSON-decodes it into memory at all.
+
+    api/predict.py's own MAX_CODE_BYTES check runs *after* FastAPI has
+    already buffered and parsed the full request body -- a multi-hundred-MB
+    POST is fully read into memory before that check ever runs. This is
+    plain ASGI, not Starlette's BaseHTTPMiddleware (which itself buffers
+    the whole body to hand to `call_next`), so it can reject before the
+    body is touched at all.
+
+    Deliberately Content-Length-only, not a byte-counting wrapper around
+    `receive()`: every real client here (browser fetch, curl, requests)
+    sets Content-Length for a JSON POST, and a client sophisticated enough
+    to omit it and stream chunked instead is a materially different (and
+    here, unlikely) threat model than "someone points a large POST at this
+    endpoint," which is what this exists to stop.
+    """
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            for name, value in scope.get("headers", []):
+                if name == b"content-length" and int(value) > self.max_bytes:
+                    response = JSONResponse({"detail": "request body too large"}, status_code=413)
+                    await response(scope, receive, send)
+                    return
+        await self.app(scope, receive, send)
 
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="polyo-predict")
 

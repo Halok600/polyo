@@ -6,11 +6,25 @@ import time
 
 import pytest
 
-from api.guards import MAX_CODE_BYTES, ParseTimeoutError, RateLimiter, run_with_timeout
+from api.guards import (
+    MAX_CODE_BYTES,
+    MAX_REQUEST_BODY_BYTES,
+    ParseTimeoutError,
+    RateLimiter,
+    run_with_timeout,
+)
 
 
 def test_max_code_bytes_is_64kb():
     assert MAX_CODE_BYTES == 64 * 1024
+
+
+def test_max_request_body_bytes_leaves_headroom_over_max_code_bytes():
+    # Must comfortably exceed MAX_CODE_BYTES -- JSON string-escaping can
+    # multiply a code sample's encoded size, and the request has other
+    # fields besides `code`. See tests/test_api_endpoints.py for the
+    # HTTP-layer 413 behavior this constant actually gates.
+    assert MAX_REQUEST_BODY_BYTES > MAX_CODE_BYTES
 
 
 def test_run_with_timeout_returns_the_function_result_when_fast_enough():

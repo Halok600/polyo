@@ -17,7 +17,13 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from api.guards import ParseTimeoutError, RateLimiter, run_with_timeout
+from api.guards import (
+    MAX_REQUEST_BODY_BYTES,
+    MaxBodySizeMiddleware,
+    ParseTimeoutError,
+    RateLimiter,
+    run_with_timeout,
+)
 from api.logging_utils import configure_logging, log_event
 from api.metrics import metrics
 from api.models_registry import ModelRegistry, ModelsNotTrainedError, load_registry
@@ -70,6 +76,12 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+# Added after CORSMiddleware on purpose: Starlette builds its middleware
+# stack outer-to-inner in *reverse* add_middleware call order (each call
+# prepends), so this becomes the outer layer -- it sees and can reject an
+# oversized request before CORS, JSON parsing, or the route handler ever
+# touch the body.
+app.add_middleware(MaxBodySizeMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES)
 
 
 class Health(BaseModel):
