@@ -1,0 +1,63 @@
+# Kotlin -> IR mapping (tree-sitter-kotlin grammar). See core/ir.py for
+# the full IR symbol vocabulary, plan §5 for the design, and python.toml
+# for the schema this file follows.
+#
+# Tier 3 (plan §3): IR mapping file only, no oracle. Kotlin's `if`/`return`
+# are expressions here too (like rust.toml), and its `call_expression`
+# exposes no field at all for the callee (verified against a real parse --
+# neither "name"/"object" nor "function") -- handled generically in
+# `parsing/normalize.py`'s `_callee_text` fallback, not here. A real,
+# documented idiom quirk: `for (i in 0 until n)` implements the range
+# bound via `until` as a plain `identifier` in an infix expression (not a
+# distinct operator token), so it emits one extra IDENT beyond what a
+# bare numeric range would -- that is genuinely how the grammar spells it,
+# not a mapping bug (see the golden test's per-language idiom-gap table).
+
+[nodes]
+function_declaration = "FUNC_DEF"
+lambda_literal = "FUNC_DEF"
+return_expression = "RETURN"
+block = "BLOCK"
+for_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_expression = "BRANCH"
+break_expression = "BREAK"
+continue_expression = "CONTINUE"
+index_expression = "ARRAY_INDEX"
+identifier = "IDENT"
+integer_literal = "LITERAL"
+number_literal = "LITERAL"
+real_literal = "LITERAL"
+string_literal = "LITERAL"
+boolean_literal = "LITERAL"
+null_literal = "LITERAL"
+
+[calls]
+"\\.sort(ed)?$" = "SORT"
+"^Collections\\.sort$" = "SORT"
+"^(Math\\.min|Math\\.max|Math\\.abs|Math\\.pow|Math\\.sqrt|Math\\.log)$" = "MATH_OP"
+"\\.add$" = "LIST_APPEND"
+"\\.(get|containsKey)$" = "HASH_LOOKUP"
+"\\.put$" = "HASH_INSERT"
+
+[binary_operator_nodes]
+types = ["binary_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+
+[params]
+container = "function_value_parameters"
+leaf_types = ["parameter"]

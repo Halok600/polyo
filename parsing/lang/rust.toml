@@ -1,0 +1,61 @@
+# Rust -> IR mapping (tree-sitter-rust grammar). See core/ir.py for the
+# full IR symbol vocabulary, plan §5 for the design, and python.toml for
+# the schema this file follows.
+#
+# Tier 3 (plan §3): IR mapping file only, no oracle. Rust's `if`/`for`/
+# `return` are all *expressions*, not statements (usually wrapped in an
+# `expression_statement` when their value is discarded) -- that wrapper has
+# no [nodes] entry, so it's elided the same way any unmapped node is,
+# leaving the `if_expression`/`for_expression`/`return_expression` mapping
+# below to do the real work. Verified against a real parse, not assumed.
+
+[nodes]
+function_item = "FUNC_DEF"
+closure_expression = "FUNC_DEF"
+return_expression = "RETURN"
+block = "BLOCK"
+for_expression = "LOOP_FOR"
+while_expression = "LOOP_WHILE"
+loop_expression = "LOOP_WHILE"
+if_expression = "BRANCH"
+break_expression = "BREAK"
+continue_expression = "CONTINUE"
+index_expression = "ARRAY_INDEX"
+array_expression = "ARRAY_ALLOC"
+identifier = "IDENT"
+integer_literal = "LITERAL"
+float_literal = "LITERAL"
+string_literal = "LITERAL"
+boolean_literal = "LITERAL"
+
+[calls]
+"\\.sort$" = "SORT"
+"\\.binary_search$" = "BINARY_SEARCH"
+"^(cmp::min|cmp::max)$" = "MATH_OP"
+"\\.(push|push_back)$" = "LIST_APPEND"
+"\\.(get|contains_key)$" = "HASH_LOOKUP"
+"\\.insert$" = "HASH_INSERT"
+
+# `binary_expression` covers both comparison and arithmetic, resolved via
+# the operator token, same schema as cpp.toml/java.toml.
+[binary_operator_nodes]
+types = ["binary_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+
+[params]
+container = "parameters"
+leaf_types = ["parameter", "self_parameter"]

@@ -21,8 +21,7 @@ from api.guards import ParseTimeoutError, RateLimiter, run_with_timeout
 from api.logging_utils import configure_logging, log_event
 from api.metrics import metrics
 from api.models_registry import ModelRegistry, ModelsNotTrainedError, load_registry
-from api.predict import PredictionError, predict
-from parsing.parse import SUPPORTED_LANGUAGES
+from api.predict import SERVED_LANGUAGES, PredictionError, predict
 
 _logger = configure_logging()
 _rate_limiter = RateLimiter()
@@ -97,6 +96,16 @@ SUPPORTED_LANGUAGES_RESPONSE: list[Language] = [
     Language(id="c", tier=2),
     Language(id="go", tier=2),
 ]
+# Single source of truth for "served live" is `api.predict.SERVED_LANGUAGES`
+# -- deliberately NOT `parsing.parse.SUPPORTED_LANGUAGES`, which also
+# covers Tier 3 (plan §3: TypeScript, Rust, C#, Kotlin -- IR mapping file
+# only, no oracle, added Phase 7). Whether to advertise and serve Tier 3
+# live is its own product decision, deferred, not an accident of which
+# constant this validation happens to import. Checked, not just asserted
+# in a comment: the response list above and `SERVED_LANGUAGES` must name
+# the same languages, or `/v1/languages` and `/v1/predict` would silently
+# disagree about what's supported.
+assert {lang.id for lang in SUPPORTED_LANGUAGES_RESPONSE} == SERVED_LANGUAGES
 
 
 @app.get("/v1/languages", response_model=list[Language])
@@ -157,7 +166,7 @@ def predict_endpoint(request: PredictRequest, http_request: Request) -> dict[str
     start = time.monotonic()
     client_ip = http_request.client.host if http_request.client else "unknown"
 
-    if request.language != "auto" and request.language not in SUPPORTED_LANGUAGES:
+    if request.language != "auto" and request.language not in SERVED_LANGUAGES:
         metrics.record("bad_request", time.monotonic() - start)
         raise HTTPException(status_code=400, detail=f"unsupported language: {request.language!r}")
 

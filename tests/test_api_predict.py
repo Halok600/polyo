@@ -76,6 +76,24 @@ def test_predict_rejects_an_unsupported_language(tiny_registry):
         predict(tiny_registry, _LINEAR_PY, "cobol")
 
 
+def test_predict_rejects_an_explicit_tier_3_language(tiny_registry):
+    # Tier 3 (plan §3: TypeScript, Rust, C#, Kotlin) parses fine -- it's
+    # not "unsupported" the way "cobol" is -- but serving it live is a
+    # deliberately deferred product decision (see api/predict.py's
+    # SERVED_LANGUAGES), not something that should work by accident.
+    with pytest.raises(PredictionError):
+        predict(tiny_registry, "fn f() {}", "rust")
+
+
+def test_predict_rejects_tier_3_even_via_auto_detect(tiny_registry):
+    # The gate must hold for the *auto-detected* result too, not just an
+    # explicit `language="rust"` request -- auto-detect internally scans
+    # every parseable language, Tier 3 included.
+    rust_code = "fn linear_search(arr: &[i32], target: i32) -> i32 {\n    return -1;\n}\n"
+    with pytest.raises(PredictionError):
+        predict(tiny_registry, rust_code, "auto")
+
+
 def test_predict_never_executes_the_submitted_code(tiny_registry, tmp_path):
     # A concrete, checkable side effect that would prove execution happened,
     # if it ever did -- plan §10's hard invariant, exercised end-to-end here

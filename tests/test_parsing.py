@@ -1,6 +1,7 @@
 """Tests for the tree-sitter parsing driver and language detection (plan
 §5/§12 `parsing/parse.py`). Phase 1 shipped Python + C++; Phase 4 added
-Java, JavaScript, C and Go."""
+Java, JavaScript, C and Go (Tier 1/2); Phase 7 added TypeScript, Rust, C#
+and Kotlin (Tier 3, plan §3: IR mapping file only, no oracle)."""
 from __future__ import annotations
 
 import pytest
@@ -14,8 +15,19 @@ from parsing.parse import (
 )
 
 
-def test_supported_languages_cover_all_six_target_languages():
-    assert SUPPORTED_LANGUAGES == {"python", "cpp", "java", "javascript", "c", "go"}
+def test_supported_languages_cover_every_tier_1_2_and_3_language():
+    assert SUPPORTED_LANGUAGES == {
+        "python",
+        "cpp",
+        "java",
+        "javascript",
+        "c",
+        "go",
+        "typescript",
+        "rust",
+        "csharp",
+        "kotlin",
+    }
 
 
 def test_detect_language_from_python_extension():
@@ -35,9 +47,17 @@ def test_detect_language_from_phase_4_extensions():
     assert detect_language("solution.go") == "go"
 
 
+def test_detect_language_from_tier_3_extensions():
+    assert detect_language("solution.ts") == "typescript"
+    assert detect_language("solution.rs") == "rust"
+    assert detect_language("Solution.cs") == "csharp"
+    assert detect_language("solution.kt") == "kotlin"
+    assert detect_language("solution.kts") == "kotlin"
+
+
 def test_detect_language_rejects_unknown_extension():
     with pytest.raises(UnsupportedLanguageError):
-        detect_language("solution.rs")
+        detect_language("solution.rb")
 
 
 def test_parse_source_returns_root_node_with_expected_type_for_python():
@@ -70,9 +90,29 @@ def test_parse_source_returns_root_node_with_expected_type_for_go():
     assert tree.root_node.type == "source_file"
 
 
+def test_parse_source_returns_root_node_with_expected_type_for_typescript():
+    tree = parse_source("function f(): number { return 0; }", "typescript")
+    assert tree.root_node.type == "program"
+
+
+def test_parse_source_returns_root_node_with_expected_type_for_rust():
+    tree = parse_source("fn f() -> i32 { return 0; }", "rust")
+    assert tree.root_node.type == "source_file"
+
+
+def test_parse_source_returns_root_node_with_expected_type_for_csharp():
+    tree = parse_source("class C { int f() { return 0; } }", "csharp")
+    assert tree.root_node.type == "compilation_unit"
+
+
+def test_parse_source_returns_root_node_with_expected_type_for_kotlin():
+    tree = parse_source("fun f(): Int { return 0 }", "kotlin")
+    assert tree.root_node.type == "source_file"
+
+
 def test_parse_source_rejects_unsupported_language():
     with pytest.raises(UnsupportedLanguageError):
-        parse_source("fn f() {}", "rust")
+        parse_source("puts 'hi'", "ruby")
 
 
 def test_parse_source_marks_syntax_errors():

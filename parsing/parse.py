@@ -1,9 +1,15 @@
 """tree-sitter parsing driver and language detection.
 
 Phase 1 shipped Python and C++; Phase 4 (plan §14) adds Java, JavaScript, C
-and Go. Adding a language here is a new grammar dependency plus one entry in
-each of the three dicts below -- the per-language semantics live in
-`parsing/lang/<lang>.toml`, consumed by `parsing/normalize.py`, not here.
+and Go (Tier 1/2, plan §3 -- parse + IR, and for Tier 1 an oracle driver
+too). Phase 7 adds TypeScript, Rust, C#, Kotlin (Tier 3, plan §3: IR
+mapping file only, no oracle -- these never get a `codegen/<lang>.j2` or a
+labelled corpus, but they parse and predict through the exact same
+generic walker, which is the whole point: "adding a language is a config
+file, not a rewrite"). Adding a language here is a new grammar dependency
+plus one entry in each of the three dicts below -- the per-language
+semantics live in `parsing/lang/<lang>.toml`, consumed by
+`parsing/normalize.py`, not here.
 
 `.h` is ambiguous between C and C++ in the wild; it stayed mapped to "cpp"
 (Phase 1's choice) rather than being reassigned, since a C++ header is by far
@@ -15,15 +21,19 @@ from __future__ import annotations
 from pathlib import PurePath
 
 import tree_sitter_c
+import tree_sitter_c_sharp
 import tree_sitter_cpp
 import tree_sitter_go
 import tree_sitter_java
 import tree_sitter_javascript
+import tree_sitter_kotlin
 import tree_sitter_python
+import tree_sitter_rust
+import tree_sitter_typescript
 from tree_sitter import Language, Parser, Tree
 
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset(
-    {"python", "cpp", "java", "javascript", "c", "go"}
+    {"python", "cpp", "java", "javascript", "c", "go", "typescript", "rust", "csharp", "kotlin"}
 )
 
 _EXTENSION_TO_LANGUAGE: dict[str, str] = {
@@ -38,6 +48,11 @@ _EXTENSION_TO_LANGUAGE: dict[str, str] = {
     ".mjs": "javascript",
     ".c": "c",
     ".go": "go",
+    ".ts": "typescript",
+    ".rs": "rust",
+    ".cs": "csharp",
+    ".kt": "kotlin",
+    ".kts": "kotlin",
 }
 
 _LANGUAGE_CAPSULES: dict[str, Language] = {
@@ -47,6 +62,11 @@ _LANGUAGE_CAPSULES: dict[str, Language] = {
     "javascript": Language(tree_sitter_javascript.language()),
     "c": Language(tree_sitter_c.language()),
     "go": Language(tree_sitter_go.language()),
+    # Not `language_tsx` -- this project's IR has no JSX-specific symbols.
+    "typescript": Language(tree_sitter_typescript.language_typescript()),
+    "rust": Language(tree_sitter_rust.language()),
+    "csharp": Language(tree_sitter_c_sharp.language()),
+    "kotlin": Language(tree_sitter_kotlin.language()),
 }
 
 

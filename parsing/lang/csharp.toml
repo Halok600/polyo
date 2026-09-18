@@ -1,0 +1,66 @@
+# C# -> IR mapping (tree-sitter-c-sharp grammar). See core/ir.py for the
+# full IR symbol vocabulary, plan §5 for the design, and python.toml for
+# the schema this file follows.
+#
+# Tier 3 (plan §3): IR mapping file only, no oracle. C#'s call-shape is its
+# own quirk (`invocation_expression` exposes a single "function" field, so
+# no special-casing needed here -- see `parsing/normalize.py`'s
+# `_CALL_NODE_TYPES`), but `postfix_unary_expression` (`i++`) has no named
+# "operator" field (verified against a real parse), so it's mapped
+# directly to ARITH -- same approach as java.toml's `update_expression`.
+
+[nodes]
+method_declaration = "FUNC_DEF"
+local_function_statement = "FUNC_DEF"
+return_statement = "RETURN"
+block = "BLOCK"
+for_statement = "LOOP_FOR"
+foreach_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+element_access_expression = "ARRAY_INDEX"
+array_creation_expression = "ARRAY_ALLOC"
+object_creation_expression = "ARRAY_ALLOC"
+assignment_expression = "ASSIGN"
+# No named "operator" field on postfix_unary_expression in this grammar
+# (unlike javascript.toml's update_expression) -- mapped directly, same
+# approach as java.toml's update_expression.
+postfix_unary_expression = "ARITH"
+identifier = "IDENT"
+integer_literal = "LITERAL"
+real_literal = "LITERAL"
+string_literal = "LITERAL"
+boolean_literal = "LITERAL"
+null_literal = "LITERAL"
+
+[calls]
+"^(Array|Collections)\\.Sort$" = "SORT"
+"\\.Sort$" = "SORT"
+"^Array\\.BinarySearch$" = "BINARY_SEARCH"
+"^Math\\.(Min|Max|Abs|Pow|Sqrt|Log)$" = "MATH_OP"
+"\\.(Add|Push|Enqueue)$" = "LIST_APPEND"
+"\\.(ContainsKey|TryGetValue)$" = "HASH_LOOKUP"
+
+[binary_operator_nodes]
+types = ["binary_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"!=" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+
+[params]
+container = "parameter_list"
+leaf_types = ["parameter"]

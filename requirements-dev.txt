@@ -5,6 +5,17 @@ pytest>=8.3,<9
 pytest-cov>=6.0,<7
 httpx>=0.28,<0.29
 
+# Tier 3 parsing (plan §3/§14 Phase 7, `parsing/lang/{typescript,rust,
+# csharp,kotlin}.toml`) -- IR mapping file only, no oracle, so these never
+# need to reach requirements-api.txt: Tier 3 is a parsing/eval-time claim
+# ("adding a language is a config file, not a rewrite"), not yet a served
+# API language (see project memory on why serving them is a separate,
+# deliberately-deferred product decision).
+tree-sitter-typescript>=0.23,<0.24
+tree-sitter-rust>=0.24,<0.25
+tree-sitter-c-sharp>=0.23,<0.24
+tree-sitter-kotlin>=1.1,<1.2
+
 # Oracle (plan §6, `oracle/`) -- offline-only driver codegen. Never imported
 # by api/ (see tests/test_isolation.py), so kept out of requirements-api.txt.
 jinja2>=3.1,<4

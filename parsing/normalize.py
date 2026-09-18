@@ -30,8 +30,12 @@ _LANG_DIR = Path(__file__).resolve().parent / "lang"
 
 # Node types that represent a call across all supported grammars -- shared
 # because recognising "this is call-shaped" is not a per-language semantic
-# decision, unlike everything in `parsing/lang/*.toml`.
-_CALL_NODE_TYPES = frozenset({"call", "call_expression", "method_invocation"})
+# decision, unlike everything in `parsing/lang/*.toml`. C#'s is
+# `invocation_expression` (verified against a real parse, not guessed --
+# same discipline as the other five grammars' `call`/`call_expression`).
+_CALL_NODE_TYPES = frozenset(
+    {"call", "call_expression", "method_invocation", "invocation_expression"}
+)
 # Node types that wrap a function's body -- skipped by `_function_name`'s
 # walk for the same reason (see its docstring). Shared for the same reason
 # as `_CALL_NODE_TYPES` above.
@@ -118,7 +122,19 @@ class _Normalizer:
             obj = call_node.child_by_field_name("object")
             return f"{self._text(obj)}.{self._text(name)}" if obj is not None else self._text(name)
         func = call_node.child_by_field_name("function")
-        return self._text(func) if func is not None else self._text(call_node)
+        if func is not None:
+            return self._text(func)
+        # Kotlin's `call_expression` exposes no field at all for the
+        # callee -- neither "name"/"object" (Java's shape) nor "function"
+        # (every other grammar's) -- verified against a real parse. The
+        # callee is positionally always the node's first child, with the
+        # argument list (`value_arguments`) as a later sibling, so this
+        # falls back to that rather than the call's full text (which would
+        # include the arguments and break both `[calls]` regex matching
+        # and recursion self-detection).
+        if call_node.children:
+            return self._text(call_node.children[0])
+        return self._text(call_node)
 
     def _classify_call(self, call_node: TSNode) -> str | None:
         """Returns the IR symbol for a call, or None if it should be elided."""

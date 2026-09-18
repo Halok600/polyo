@@ -27,6 +27,19 @@ _UNKNOWN_SHARE_WARNING_THRESHOLD = 0.2
 # rung/report leads with it too).
 _ATTRIBUTION_DIMENSION = "time"
 
+# Tier 1/2 only (plan §3) -- NOT `parsing.parse.SUPPORTED_LANGUAGES`, which
+# also covers Tier 3 (TypeScript, Rust, C#, Kotlin: IR mapping file only,
+# no oracle, added Phase 7). The GNN is language-agnostic by construction
+# (it reads the IR, never source text) and would in principle score Tier
+# 3 code too, but whether to actually serve that live is a deliberate,
+# deferred product decision -- enforced here so it can't happen by
+# accident through auto-detect (which internally scans every parseable
+# language, Tier 3 included) even though an explicit `language: "rust"`
+# request is already rejected one level up, in `api/main.py`.
+SERVED_LANGUAGES: frozenset[str] = frozenset(
+    {"python", "cpp", "java", "javascript", "c", "go"}
+)
+
 
 class PredictionError(ValueError):
     """A request-level problem (bad language, code too large, unparseable)
@@ -73,7 +86,15 @@ def predict(registry: ModelRegistry, code: str, language: str) -> dict[str, obje
     if len(code.encode("utf-8")) > MAX_CODE_BYTES:
         raise PredictionError(f"code exceeds the {MAX_CODE_BYTES}-byte cap")
 
+    if language != "auto" and language not in SERVED_LANGUAGES:
+        raise PredictionError(f"unsupported language: {language!r}")
+
     detected = detect_language_from_source(code) if language == "auto" else language
+    if detected not in SERVED_LANGUAGES:
+        raise PredictionError(
+            f"auto-detected language {detected!r} is not yet served (Tier 3 -- "
+            "parses, but has no trained model behind it in production)"
+        )
     try:
         ir = normalize_source(code, detected)
     except UnsupportedLanguageError as e:

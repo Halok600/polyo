@@ -52,11 +52,14 @@ def test_cli_predicts_quadratic_time_for_nested_loops_cpp_file(tmp_path: Path):
 
 
 def test_cli_reports_error_for_unsupported_extension(tmp_path: Path):
-    src = tmp_path / "solution.rs"
-    src.write_text("fn f() {}\n")
+    # ".rs" was this test's earlier example of an unsupported extension;
+    # Phase 7 added Rust (Tier 3), so this now uses one that's still
+    # unmapped.
+    src = tmp_path / "solution.rb"
+    src.write_text("puts 'hi'\n")
     result = _run_cli(str(src))
     assert result.returncode != 0
-    assert "rs" in result.stderr or "language" in result.stderr.lower()
+    assert "rb" in result.stderr or "language" in result.stderr.lower()
 
 
 def test_cli_reports_error_for_missing_file():

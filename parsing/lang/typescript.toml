@@ -1,0 +1,82 @@
+# TypeScript -> IR mapping (tree-sitter-typescript grammar, `language_typescript`
+# variant -- not the `language_tsx` one, since this project's IR has no
+# JSX-specific symbols). See core/ir.py for the full IR symbol vocabulary,
+# plan §5 for the design, and python.toml for the schema this file follows.
+#
+# Tier 3 (plan §3): IR mapping file only, no oracle -- proves "adding a
+# language is a config file, not a rewrite." TypeScript's grammar extends
+# JavaScript's, and this mapping mirrors javascript.toml wherever the two
+# grammars agree (confirmed against a real parse, not assumed): the only
+# real difference relevant to this IR is that a parameter is wrapped in a
+# `required_parameter`/`optional_parameter`/`rest_parameter` node (to carry
+# its type annotation) rather than being a bare `identifier` the way JS's
+# untyped parameters are -- see [params] below. Type annotations themselves
+# (`: number`, `array_type`, `predefined_type`, ...) have no [nodes] entry,
+# so they're elided the same way any unmapped wrapper node is.
+
+[nodes]
+function_declaration = "FUNC_DEF"
+function_expression = "FUNC_DEF"
+generator_function_declaration = "FUNC_DEF"
+arrow_function = "FUNC_DEF"
+method_definition = "FUNC_DEF"
+return_statement = "RETURN"
+statement_block = "BLOCK"
+for_statement = "LOOP_FOR"
+for_in_statement = "LOOP_FOR"
+while_statement = "LOOP_WHILE"
+if_statement = "BRANCH"
+break_statement = "BREAK"
+continue_statement = "CONTINUE"
+subscript_expression = "ARRAY_INDEX"
+array = "ARRAY_ALLOC"
+new_expression = "ARRAY_ALLOC"
+object = "HASH_ALLOC"
+assignment_expression = "ASSIGN"
+augmented_assignment_expression = "ASSIGN"
+identifier = "IDENT"
+number = "LITERAL"
+string = "LITERAL"
+template_string = "LITERAL"
+true = "LITERAL"
+false = "LITERAL"
+null = "LITERAL"
+undefined = "LITERAL"
+
+[calls]
+"\\.sort$" = "SORT"
+"^(Math\\.min|Math\\.max|Math\\.abs|Math\\.pow|Math\\.sqrt|Math\\.log)$" = "MATH_OP"
+"\\.(push|unshift)$" = "LIST_APPEND"
+"\\.(has|get)$" = "HASH_LOOKUP"
+"\\.set$" = "HASH_INSERT"
+"\\.concat$" = "STRING_CONCAT"
+"\\.(slice|splice)$" = "SLICE"
+
+# `binary_expression` covers both comparison and arithmetic; `update_expression`
+# (++/--) exposes a named "operator" field here too (same as javascript.toml).
+[binary_operator_nodes]
+types = ["binary_expression", "update_expression"]
+
+[binary_operator_map]
+"==" = "COMPARE"
+"===" = "COMPARE"
+"!=" = "COMPARE"
+"!==" = "COMPARE"
+"<" = "COMPARE"
+"<=" = "COMPARE"
+">" = "COMPARE"
+">=" = "COMPARE"
+"&&" = "COMPARE"
+"||" = "COMPARE"
+"+" = "ARITH"
+"-" = "ARITH"
+"*" = "ARITH"
+"/" = "ARITH"
+"%" = "ARITH"
+"**" = "ARITH"
+"++" = "ARITH"
+"--" = "ARITH"
+
+[params]
+container = "formal_parameters"
+leaf_types = ["required_parameter", "optional_parameter", "rest_parameter"]
