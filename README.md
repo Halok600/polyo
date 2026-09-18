@@ -52,6 +52,15 @@ baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
 - Failure-bucket analysis names *where* the model is weakest (complexity
   hidden inside a library call is the single largest failure mode) instead
   of stopping at an aggregate score.
+- **LLM zero-shot baseline**: [BigO(Bench) found frontier LLMs themselves
+  struggle](https://arxiv.org/abs/2503.15242) at this task; PolyO now has
+  its own number rather than only citing that. Roughly comparable on time
+  (0.365 vs. 0.377 macro-F1), clearly better on space (0.265 vs. 0.336) —
+  and it gets there with a model that runs in milliseconds, has no
+  per-request LLM call or API cost, and doesn't depend on a third party's
+  model being available. [`PHASE5_REPORT.md`](PHASE5_REPORT.md) has the
+  full methodology and reads the numbers honestly, including where they
+  don't tell the cleanest possible story.
 
 ## Architecture
 

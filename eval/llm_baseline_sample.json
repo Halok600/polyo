@@ -1,0 +1,1402 @@
+[
+  {
+    "id": 0,
+    "language": "python",
+    "code": "luckyNums = [4, 7, 44, 47, 74, 77, 444, 447, 474, 477, 744, 747, 774, 777]\n\nchk = False\nnum = int(input())\nfor i in range(len(luckyNums)):\n    if num % luckyNums[i] == 0.0:\n        chk = True\n        \nif chk:\n    print('YES')\nelse:\n    print('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 1,
+    "language": "python",
+    "code": "from collections import Counter\nimport math\nfrom collections import Counter\nimport os\nimport sys\nfrom io import BytesIO, IOBase\n\nBUFSIZE = 8192\n\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\n##########################################################\n#for  _ in range(int(input())):\nfrom collections import Counter\n#arr=list(map(int,input().split())\nt = int(input())\nfor _ in range(t):\n    n,m,a,b= map(int, input().split())\n    start=0\n    end=m\n    if n*a!=m*b:\n        print(\"NO\")\n    else:\n        print(\"YES\")\n\n        for i in range(n):\n            l = [0] * m\n            for i in range(a):\n                if start == m:\n                    start = 0\n                l[start] = 1\n                start += 1\n            print(\"\".join(str(i) for i in l))\n\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 2,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n,k=map(int,input().split())\n    if n>=k:\n        if (n-(k-1))%2>0:\n            print(\"YES\")\n            for i in range(k-1):print(1,end=' ')\n            print(n-(k-1))\n        elif (n-2*(k-1))>0 and (n-2*(k-1))%2==0:\n            print(\"YES\")\n            for i in range(k-1):print(2,end=' ')\n            print(n-2*(k-1))\n        else:print(\"NO\")\n    else:print(\"NO\")",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 3,
+    "language": "python",
+    "code": "def make_divisors(n):\n    divisors = []\n    for i in range(1, int(n ** 0.5) + 1):\n        if n % i == 0:\n            divisors.append(i)\n            if i != n // i:\n                divisors.append(n // i)\n    return divisors\n\nn,m,k = map(int, input().split())\ndata = input().split()\ndatb = input().split()\n\ndivs = make_divisors(k)\nrects = []\n# \u9762\u7a4dk\u306e\u56db\u89d2\u5f62(x,y)\u3092\u5217\u6319\nfor x in divs:\n    rects.append((x, k // x))\n\nfrom collections import Counter, defaultdict\n\n# \u914d\u5217a,b\u304b\u3089\u9023\u7d9a\u3057\u305f1\u306e\u9577\u3055\u306e\u500b\u6570\u3092\u30ab\u30a6\u30f3\u30c8\u3059\u308b\u8f9e\u66f8\u3092\u751f\u6210\n# [1,1,1,0,1,1,1,0,1,1] -> [3,3,2]\u306e\u9577\u3055\u306a\u306e\u3067 -> {3:2, 2:1}\u3068\u3044\u3046\u8f9e\u66f8\u306b\u306a\u308b\nda = defaultdict(int)\ndb = defaultdict(int)\ncnt = 0\nl = len(data)\nfor i in range(l):\n    if data[i] == \"1\":\n        cnt += 1\n    if data[i] == \"0\" or i == l - 1:\n        da[cnt] += 1\n        cnt = 0\n\ncnt = 0\nl = len(datb)\nfor i in range(l):\n    if datb[i] == \"1\":\n        cnt += 1\n    if datb[i] == \"0\" or i == l - 1:\n        db[cnt] += 1\n        cnt = 0\n\n# \u6570\u3048\u308b\nres = 0\nfor lx in da:\n    for ly in db:\n        for x, y in rects:\n            # a\u3068b\u304b\u3089\u4f5c\u3089\u308c\u308bx*y\u306e\u56db\u89d2\u5f62\u306e\u6570\n            reccount = da[lx] * db[ly]\n            #print(\"{0} x {1} count = {4}, find {2} x {3} rect\".format(lx, ly, x, y, reccount))\n            cx = lx - x\n            cy = ly - y\n            if cx > -1 and cy > -1:\n                # \u4f5c\u308c\u308b\u306a\u3089\u8db3\u3059\n                cannum = (cx + 1) * (cy + 1) * reccount\n                res += cannum\nprint(res)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 4,
+    "language": "python",
+    "code": "import itertools\nN=int(input())\nL = list(map(int, input().split()))\nans=0\nfor i in itertools.combinations(L, 3):\n    x,y,z=i\n    if x==y or x==z or y==z:\n        continue\n    if x+y>z and x+z>y and y+z>x:\n        ans+=1\n\nprint(ans)\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n log n)"
+  },
+  {
+    "id": 5,
+    "language": "python",
+    "code": "n, x = map(int, input().split())\ns = input()\nans = 0\npoka = s.find('T')\nforing = s.find('G')\nif(poka < foring):\n    for i in range(foring-x, -1, -x):\n        if(s[i] == '#'):\n            break\n        elif(s[i] == 'T'):\n            ans = 1\n            break\nelse:\n    for i in range(foring+x, n, x):\n        if(s[i] == '#'):\n            break\n        elif(s[i] == 'T'):\n            ans = 1\n            break\nif(ans):print(\"YES\")\nelse:print(\"NO\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 6,
+    "language": "python",
+    "code": "n = int(input())\ng = input()\nprint(n+1)",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 7,
+    "language": "python",
+    "code": "n = input()\nn = int(n)\na = input().split()\n\nnums = {}\n\nfor num in a:\n    nums[int(num)] = num\n\nnums = list(nums.keys())\n\n\nif len(nums) > 3:\n    print(-1)\nelif len(nums) == 3:\n    nums.sort()\n    if nums[1] - nums[0]  == nums[2] - nums[1]:\n        print(nums[2] - nums[1])\n    else:\n        print(-1)\nelif len(nums) == 2:\n    nums.sort()\n    if (nums[1] - nums[0]) / 2 == int((nums[1] - nums[0]) / 2):\n        print(int((nums[1] - nums[0]) / 2))\n    else:\n        print(nums[1] - nums[0])\nelif len(nums) == 1:\n    print(0)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 8,
+    "language": "python",
+    "code": "## necessary imports\nimport sys\ninput = sys.stdin.readline\n# import random\n# from math import log2, log, ceil\n\n# swap_array function\ndef swaparr(arr, a,b):\n    temp = arr[a];\n    arr[a] = arr[b];\n    arr[b] = temp\n\n## gcd function\ndef gcd(a,b):\n    if a == 0:\n        return b\n    return gcd(b%a, a)\n\n## prime factorization\ndef primefs(n):\n    ## if n == 1    ## calculating primes\n    primes = {}\n    while(n%2 == 0):\n        primes[2] = primes.get(2, 0) + 1\n        n = n//2\n    for i in range(3, int(n**0.5)+2, 2):\n        while(n%i == 0):\n            primes[i] = primes.get(i, 0) + 1\n            n = n//i\n    if n > 2:\n        primes[n] = primes.get(n, 0) + 1\n    ## prime factoriazation of n is stored in dictionary\n    ## primes and can be accesed. O(sqrt n)\n    return primes\n\n## DISJOINT SET UNINON FUNCTIONS\ndef swap(a,b):\n    temp = a\n    a = b\n    b = temp\n    return a,b\n\n# find function\ndef find(x, link):\n    while(x != link[x]):\n        x = link[x]\n    return x\n\n# the union function which makes union(x,y)\n# of two nodes x and y\ndef union(x, y, size, link):\n    x = find(x, link)\n    y = find(y, link)\n    if size[x] < size[y]:\n        x,y = swap(x,y)\n    if x != y:\n        size[x] += size[y]\n        link[y] = x\n\n## returns an array of boolean if primes or not USING SIEVE OF ERATOSTHANES\ndef sieve(n): \n    prime = [True for i in range(n+1)] \n    p = 2\n    while (p * p <= n): \n        if (prime[p] == True): \n            for i in range(p * p, n+1, p): \n                prime[i] = False\n        p += 1\n    return prime\n\n#### PRIME FACTORIZATION IN O(log n) using Sieve ####\nMAXN = int(1e6 + 5)\ndef spf_sieve():\n    spf[1] = 1;\n    for i in range(2, MAXN):\n        spf[i] = i;\n    for i in range(4, MAXN, 2):\n        spf[i] = 2;\n    for i in range(3, ceil(MAXN ** 0.5), 2):\n        if spf[i] == i:\n            for j in range(i*i, MAXN, i):\n                if spf[j] == j:\n                    spf[j] = i;\n    ## function for storing smallest prime factors (spf) in the array\n\n################## un-comment below 2 lines when using factorization #################\n# spf = [0 for i in range(MAXN)] \n# spf_sieve() \ndef factoriazation(x):\n    ret = {};\n    while x != 1:\n        ret[spf[x]] = ret.get(spf[x], 0) + 1;\n        x = x//spf[x]\n    return ret\n    ## this function is useful for multiple queries only, o/w use\n    ## primefs function above. complexity O(log n)\n\n## taking integer array input\ndef int_array():\n    return list(map(int, input().strip().split()))\n## taking string array input\ndef str_array():\n    return input().strip().split();\n\n#defining a couple constants\nMOD = int(1e9)+7;\nCMOD = 998244353;\nINF = float('inf'); NINF = -float('inf');\n\n\n################# ---------------- TEMPLATE ENDS HERE ---------------- #################\n\nn = int(input()); a = int_array();\narr = []; count = 0; first = 0;\nfor i in a:\n    if i == 1:\n        first = 1;\n        if count > 0:\n            arr.append(count);\n            count = 0;\n    else:\n        if first != 0:\n            count += 1;\nif len(arr) == 0:\n    if 1 in a:\n        print(1)\n    else:\n        print(0)\nelse:\n    ans = 1; \n    for i in arr:\n        ans *= (i+1)\n    print(ans);",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 9,
+    "language": "python",
+    "code": "x, y, z = map(int, input().split())\nif x == y and z == 0:\n    print('0')\nelif x > y + z:\n    print('+')\nelif y > x + z:\n    print('-')\nelse:\n    print('?')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 10,
+    "language": "python",
+    "code": "n = int(input())\nweights = [int(i) for i in input().split()]\nweights.sort(reverse=True)\npossibleOutputs = set()\n\nfor x in range(2*n):\n    for y in range(x,2*n):\n        if x != y:\n            tempList = []\n\n            for i in range(2*n):\n                if i != x:\n                    if i != y:\n                        tempList.append(weights[i])\n\n            possibleOutputs.add(sum([tempList[2*i]-tempList[2*i+1] for i in range(n-1)]))\n\nprint(min(possibleOutputs))",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 11,
+    "language": "python",
+    "code": "#Lucky Division\nn=int(input())\nsum=0\nif(n%4==0 or n%7==0 or n%44==0 or n%47==0 or n%74==0 or n%77==0 or n%444==0 or n%447==0 or n%474==0 or n%477==0 or n%744==0 or n%747==0 or n%774==0 or n%777==0):\n\tprint('YES')\nelse:\n\tprint('NO')\t\t\t\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 12,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n  n,k=map(int,input().split())\n  l=list(map(int,input().split()))\n  d=dict()\n  curmax=0\n  for i in l:\n    temp = k-(i%k)\n    if temp==k:\n      continue\n    if temp in d:\n      t = temp\n      temp+=(d[temp]*k)\n      d[t]+=1\n    curmax = max(temp,curmax)\n    d[temp]=1\n  if curmax==0:\n    print(0)\n  else:\n    print(curmax+1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 13,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n, k = map(int,input().split())\n    if k%2 == 0 and n%2 == 1:\n        print(\"NO\")\n    else:\n        if k%2 == 0:\n            if k > n:\n                print(\"NO\")\n            else:\n                ans = [1 for i in range(k-1)]\n                ans.append(n-(k-1))\n                print(\"YES\")\n                print(*ans)\n        else:\n            if n%2 == 1:\n                if k > n:\n                    print(\"NO\")\n                else:\n                    ans = [1 for i in range(k-1)]\n                    ans.append(n-(k-1))\n                    print(\"YES\")\n                    print(*ans)\n            else:\n                if k*2 > n:\n                    print(\"NO\")\n                else:\n                    ans = [2 for i in range(k-1)]\n                    ans.append(n-2*(k-1))\n                    print(\"YES\")\n                    print(*ans)\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 14,
+    "language": "python",
+    "code": "t=int(input())\nfor _ in range(t):\n    n,k=map(int,input().split())\n    if n%k==0:\n        print(\"YES\")\n        m=[]\n        l=n//k\n        while k>0:\n            m.append(l)\n            k=k-1\n        print(*m)\n    elif k%2!=0 and n%2==0:\n        m=[]\n        while k>1:\n            m.append(2)\n            k=k-1\n        if n-sum(m)>0 and (n-sum(m))%2==0:\n            print(\"YES\")\n            m.append(n-sum(m))\n            print(*m)\n        else:\n            print(\"NO\")\n    elif (n%2!=0 and k%2!=0) or (n%2==0 and k%2==0):\n        m=[]\n        while k>1:\n            m.append(1)\n            k=k-1\n        if n-sum(m)>0 and (n-sum(m))%2!=0:\n            print(\"YES\")\n            m.append(n-sum(m))\n            print(*m)\n        else:\n            print(\"NO\")\n    else:\n        print(\"NO\")",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 15,
+    "language": "python",
+    "code": "import io, sys, atexit, os\n\nimport math as ma\nfrom sys import exit\nfrom decimal import Decimal as dec\nfrom itertools import permutations\n\n\ndef li ():\n\treturn list (map (int, input ().split ()))\n\n\ndef num ():\n\treturn map (int, input ().split ())\n\n\ndef nu ():\n\treturn int (input ())\n\n\ndef find_gcd ( x, y ):\n\twhile (y):\n\t\tx, y = y, x % y\n\treturn x\n\n\nmm = 1000000007\n\n\ndef solve ():\n\tt = 1\n\tfor tt in range (t):\n\t\tn=nu()\n\t\ta=li()\n\t\ta.sort()\n\t\tbf=-1\n\t\tfor i in range(0,1001):\n\t\t\tx1=a[0]+i\n\t\t\tx2=a[0]-i\n\t\t\tx3=a[0]\n\t\t\tzp=[0]*n\n\t\t\tfor ii in range(n):\n\t\t\t\tzp[ii]=a[ii]\n\t\t\tfor ii in range(n):\n\t\t\t\tif(zp[ii]==x1):\n\t\t\t\t\tcontinue\n\t\t\t\tif(zp[ii]>x1):\n\t\t\t\t\tzp[ii]-=i\n\t\t\t\t\tcontinue\n\t\t\t\tif(zp[ii]<=x1):\n\t\t\t\t\tzp[ii]+=i\n\t\t\t\t\tcontinue\n\t\t\tfl=True\n\t\t\tfor ii in range(n):\n\t\t\t\tif(zp[ii]!=zp[0]):\n\t\t\t\t\tfl=False\n\t\t\t\t\tbreak\n\t\t\tif(fl):\n\t\t\t\tbf=i\n\t\t\t\tbreak\n\t\t\tzp = [ 0 ] * n\n\t\t\tfor ii in range (n):\n\t\t\t\tzp [ ii ] = a [ ii ]\n\t\t\tfor ii in range (n):\n\t\t\t\tif (zp [ ii ] == x2):\n\t\t\t\t\tcontinue\n\t\t\t\tif (zp [ ii ] > x2):\n\t\t\t\t\tzp [ ii ] -= i\n\t\t\t\t\tcontinue\n\t\t\t\tif (zp [ ii ] <= x2):\n\t\t\t\t\tzp [ ii ] += i\n\t\t\t\t\tcontinue\n\t\t\tfl = True\n\t\t\tfor ii in range (n):\n\t\t\t\tif (zp [ ii ] != zp [ 0 ]):\n\t\t\t\t\tfl = False\n\t\t\t\t\tbreak\n\t\t\tif (fl):\n\t\t\t\tbf=i\n\t\t\t\tbreak\n\t\t\tzp = [ 0 ] * n\n\t\t\tfor ii in range (n):\n\t\t\t\tzp [ ii ] = a [ ii ]\n\t\t\tfor ii in range (n):\n\t\t\t\tif (zp [ ii ] == x3):\n\t\t\t\t\tcontinue\n\t\t\t\tif (zp [ ii ] > x3):\n\t\t\t\t\tzp [ ii ] -= i\n\t\t\t\t\tcontinue\n\t\t\t\tif (zp [ ii ] <= x3):\n\t\t\t\t\tzp [ ii ] += i\n\t\t\t\t\tcontinue\n\t\t\tfl = True\n\t\t\tfor ii in range (n):\n\t\t\t\tif (zp [ ii ] != zp [ 0 ]):\n\t\t\t\t\tfl = False\n\t\t\t\t\tbreak\n\t\t\tif (fl):\n\t\t\t\tbf=i\n\t\t\t\tbreak\n\t\tprint(bf)\n\n\n\n\n\nif __name__ == \"__main__\":\n\tsolve ()",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 16,
+    "language": "python",
+    "code": "f=input().split()\nn=int(f[0])\nm=int(f[1])\nO=int(0)\nl=int(0)\nif(n%2==0):\n     l=n//2\nelse:\n     l=(n//2)+1\nfor i in range(l,n+1):\n     if(i%m==0):\n         print(i)\n         O+=1\n         break;\nif(O==0):\n     print(-1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 17,
+    "language": "python",
+    "code": "d=int(input())\nn=int(input())\nr=0\nfor x in map(int,input().split()):r+=d-x\nprint(r-d+x)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 18,
+    "language": "python",
+    "code": "k = int(input())\nif k>36:\n\tprint(-1)\nelif k%2==0:\n\tprint((k//2)*'8')\nelse:\n\tprint(((k//2)*'8')+'6')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 19,
+    "language": "python",
+    "code": "def check(x):\n    ok = 1\n    while x:\n        if x%10 != 4 and x %10 != 7:\n            ok = 0\n        x //= 10\n    return ok\na = int(input())\nans = check(a)\nfor i in range(4,a):\n    if a%i == 0:\n        ans |= check(i)\nif ans:\n    print('YES')\nelse:\n    print('NO')",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 20,
+    "language": "python",
+    "code": "\nfor i in range(int(input())):\n    n,k=map(int,input().split())\n    l=[]\n    p=0\n    if k>n or (n%2!=0 and k%2==0):\n        print(\"NO\")\n    else:\n        if n==k:\n            for j in range(k):\n                l.append(1)\n        elif k%2!=0 and n%2!=0:\n            for j in range(k):\n                if j==0:\n                    l.append(n+1-k)\n                else:\n                    l.append(1)\n        elif n%2==0 and k%2==0:\n            a=((n+2)-2*k)\n            b=(n+1-k)\n            if a>0:\n                for j in range(k):\n                    if j==0:\n                        l.append((n+2)-2*k)\n                    else:\n                        l.append(2)\n            elif b>0:\n                for j in range(k):\n                    if j==0:\n                        l.append(n+1-k)\n                    else:\n                        l.append(1)\n                \n            \n        else:\n            for j in range(k):\n                if j==0:\n                    l.append((n+2)-2*k)\n                else:\n                    l.append(2)\n        for j in l:\n            if j<=0:\n                p+=1\n        if p>=1:\n            print(\"NO\")\n        else:\n            print(\"YES\")\n            print(*l)",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 21,
+    "language": "python",
+    "code": "n=input()\ns=0\nfor i in range (0,len(n)):\n    if(n[i]=='4' or n[i]=='7'):\n        s=s+1\nif(s==len(n)):\n    \tprint ('YES')\nelse:\n    if(int(n)<4):\n        print ('NO')\n    elif(int(n)>4):\n        a=[]\n        f=0\n        for j in range (4,int(n)):\n            d=0\n            jj=str(j)\n            for k in range (0,len(jj)):\n                if(jj[k]=='4' or jj[k]=='7'):\n                    d=d+1\n            if(d==len(jj)):\n                a.append(jj)\n        for l in range (0,len(a)):\n            if(int(n)%int(a[l])==0):\n                print ('YES')\n                f=0\n                break\n            else:\n                f=1\n        if(f==1):\n            print ('NO')\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 22,
+    "language": "python",
+    "code": "t = int(input())\nfor _ in range(t):\n    n = int(input())\n    # n = _ + 1\n    ans = [0]*n\n    for i in range(0, n, 2):\n        ans[i] = i+1\n    for i in range(1, n, 2):\n        if n % 2 == 1:\n            ans[n-i-1] = i+1\n        else:\n            ans[n-i] = i+1\n    print(*ans)\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 23,
+    "language": "python",
+    "code": "def contains_only_fs(num):\n    if len(set(str(num))) == 2:\n        if '7' in set(str(num)) and '4' in set(str(num)):\n            return True\n    elif len(set(str(num))) == 1:\n        if '7' in set(str(num)) or '4' in set(str(num)):\n            return True\n\n    return False\n\n\ndef divisible_by(num, arr):\n    for i in arr:\n        if num % i == 0:\n            return True\n    return False\n\n\ndef find_lucky_numbers():\n    for num in range(1001):\n        if contains_only_fs(num):\n            lucky_numbers.append(num)\n        if divisible_by(num, lucky_numbers):\n            almost_lucky.append(num)\n\n\nalmost_lucky = []\nlucky_numbers = []\n\nfind_lucky_numbers()\n\nn = int(input())\nif n in almost_lucky:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 24,
+    "language": "python",
+    "code": "import sys\nsys.setrecursionlimit(10 ** 7)\ninput = sys.stdin.readline\nfrom bisect import bisect_left\n\nN = int(input())\nXD = [[int(i) for i in input().split()] for _ in range(N)]\nXD.sort()\nMOD = 998244353\n\ndef make():\n    edge = [[] for _ in range(N)]\n    parent = [-1] * N\n    MAXIDX = N\n    sorted_X = [X for X,_ in XD]\n    for i in range(N-1, -1, -1):\n        idx = bisect_left(sorted_X, XD[i][0] + XD[i][1])\n        for j in range(i+1, min(idx, MAXIDX)):\n            if parent[j] < 0:\n                parent[j] = i\n        if idx >= MAXIDX:\n            MAXIDX = i + 1\n    for i,par in enumerate(parent):\n        if par < 0:\n            continue\n        edge[par].append(i)\n    \n    return parent, edge\n\nparent, edge = make()\n\ndef cnt(node):\n    if not edge[node]:\n        return 2\n\n    res = 1\n    for v in edge[node]:\n        res = (res * cnt(v)) % MOD\n    res += 1\n\n    return res % MOD\n\ndef main():\n    ans = 1\n    for i,par in enumerate(parent):\n        if par < 0:\n            ans = (ans * cnt(i)) % MOD\n\n    print(ans)\n\nif __name__ == \"__main__\":\n    main()",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 25,
+    "language": "python",
+    "code": "x,y,z=map(int,input().split())\nif(x>y):\n    if(y+z<x):\n        print(\"+\")\n    else:\n        print(\"?\")\nelif(y>x):\n    if(y>x+z):\n        print(\"-\")\n    else:\n        print(\"?\")\nelse:\n    if(z==0):\n        print(\"0\")\n    else:\n        print(\"?\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 26,
+    "language": "python",
+    "code": "\n\nt = int(input())\nwhile t!=0:\n\n    n,k = map(int,input().split())\n    list1 = list(map(int,input().split()))\n    list2 = list()\n    dicto = {}\n    for i in range(n):\n        list2.append(k - list1[i]%k)\n        if (k-list1[i]%k) in dicto.keys():\n            if list1[i]%k==0:\n                continue\n            dicto[k-list1[i]%k]+=1\n        else:\n            if list1[i]%k==0:\n                continue\n            dicto[k-list1[i]%k]=1\n\n    maxi=0\n    \n    if len(dicto)==0:\n        print(0)\n    else:\n\n        for i in dicto.keys():\n            p = dicto[i]\n\n\n            maxi = max(maxi,i+(dicto[i]-1)*k)\n        print(maxi+1)\n\n\n\n\n\n    t-=1",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 27,
+    "language": "python",
+    "code": "'''\n\n* Author : Ayushman Chahar #\n* About  : IT Sophomore    #\n* Insti  : VIT, Vellore    #\n\n'''\n\nimport os\nimport sys\n# from collections import *\n# from itertools import *\nfrom math import ceil\n# from queue import *\n# from heapq import *\n# from bisect import *\nfrom io import BytesIO, IOBase\n\nBUFSIZE = 8192\n\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\nreadint = lambda: int(sys.stdin.readline().rstrip(\"\\r\\n\"))\nreadints = lambda: map(int, sys.stdin.readline().rstrip(\"\\r\\n\").split())\nreadstr = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\nreadstrs = lambda: map(str, sys.stdin.readline().rstrip(\"\\r\\n\").split())\nreadarri = lambda: [int(_) for _ in sys.stdin.readline().rstrip(\"\\r\\n\").split()]\nreadarrs = lambda: [str(_) for _ in sys.stdin.readline().rstrip(\"\\r\\n\").split()]\n\n\ndef solve():\n    n, m = readints()\n    if(n < m):\n        print(-1); return\n    start = 1\n    while(1):\n        check = start * m\n        if(2 * check >= n):\n            print(check)\n            return\n        start += 1\n\n\ndef main():\n    # orig_stdin = sys.stdin\n    # orig_stdout = sys.stdout\n    # f1 = open(\"D:\\\\n1\\\\New folder\\\\cp\\\\in.txt\", 'r')\n    # f2 = open(\"D:\\\\n1\\\\New folder\\\\cp\\\\out.txt\", 'w')\n    # sys.stdin = f1\n    # sys.stdout = f2\n    t = 1\n    # t = readint()\n    for _ in range(t):\n        # print(\"Case #\" + str(_ + 1) + \": \", end=\"\")\n        solve()\n    # sys.stdin = orig_stdin\n    # sys.stdout = orig_stdout\n    # f1.close()\n    # f2.close()\n\n\nif __name__ == \"__main__\":\n    main()\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 28,
+    "language": "python",
+    "code": "n = int(input())\nx = [0]*n\ny = [0]*n\nfor i in range(n):\n    x[i],y[i] = map(int,input().split())\nx.sort()\ny.sort()\nres = (max(x[-1]-x[0],y[-1]-y[0]))**2\nprint(res)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 29,
+    "language": "python",
+    "code": "n=int(input())\na=[4,7,44,47,74,477,747,774,744,474,447,777]\nf=0\nfor i in a:\n    if n%i==0:\n        f=1\n        break\n    else:\n        f=0\nif f==0:\n    print(\"NO\")\nelse:\n    print(\"YES\")\n    \n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 30,
+    "language": "python",
+    "code": "n = int(input())\nl = [n] + [i for i in range(1,n)]\nprint(' '.join(map(str,l)))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 31,
+    "language": "python",
+    "code": "N,K=map(int,input().split());S=input();u=[S[0]]\nfor c in S:c==u[-1]or u.append(c)\nprint(len(S)-max(len(u)-2*K,1))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 32,
+    "language": "python",
+    "code": "def main():\n\n    n = (int)(input())\n\n    string = input()\n\n    print(n + 1)\n\nif __name__ == '__main__':\n    main()\n\t\t\t   \t\t    \t\t \t\t     \t \t  \t\t",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 33,
+    "language": "python",
+    "code": "def preobr(s):\n    h, m = map(int,s.split())\n    return h * 60 + m\n\n\nn, s = map(int,input().split())\nt = preobr(input())\ns += 1\nfl = False\nif t >= s:\n    res = 0\n    fl = True\nfor i in range(n - 1):\n    new_t = preobr(input())\n    if fl:\n        continue\n    if new_t - t >= 2 * s:\n        res = t + s\n        fl = True\n    else:\n        t = new_t\nif not fl:\n    res = t + s\nprint(res // 60, res % 60)\n        \n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 34,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n,k = map(int,input().split())\n    a = list(map(int,input().split()))\n    dp = {}\n    flag = 0\n    for i in a:\n        if i%k!=0 and  k-(i%k)  in dp :\n            dp[k-(i%k)]= dp[k-(i%k)] + 1\n            flag  = 1\n        elif i%k!=0:\n            dp[k-(i%k)] = 1\n            flag = 1\n       \n    x = 1\n    c = 0\n    o = list(dp.keys())\n    for i in range(0,len(o)):\n        if dp[o[i]]!=0:\n            x = o[i]  + ((dp[o[i]]-1)*k)\n            c = max(c,x)\n    if flag!=0:\n        print(c+1)\n    else:\n        print(0)\n        ",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 35,
+    "language": "python",
+    "code": "def main():\n    n = int(input())\n    d = {}\n    for _ in range(n):\n        x, y = map(int, input().split())\n        if (x,y) not in d:\n            d[(x,y)] = 1\n        else:\n            d[(x,y)] += 1\n    dd = sorted(d.items(), key= lambda x: x[1], reverse= True)\n    print (dd[0][1])\n    \nmain()",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 36,
+    "language": "python",
+    "code": "a=int(input())\nprint(a)\nfor i in range(1,a):\n    print(i)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 37,
+    "language": "python",
+    "code": "from collections import Counter \n# for i in range(int(input())):\nn = int(input())\ns= input()\nd = Counter(s)\nl  = d['L']\nr = d['R']\nprint(l+r+1)\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 38,
+    "language": "python",
+    "code": "request_count = int(input())\n\nfor request in range(request_count):\n    n,m = input().split()\n    n = int(n)#count rids\n    m = int(m)#count columns\n    matrix = []\n    for y in range(n):\n        matrix.append(list(input()))\n    #print(matrix)\n    column = []\n    rid = []\n    for x in range(len(matrix)):\n        rid.append(matrix[x].count('.'))\n    \n    for i in range(m):\n        count = 0\n        for x in range(len(matrix)):\n            if (matrix[x][i] == '.'):\n                count+=1\n        column.append(count)\n        #print(i,count)\n    \n    \"\"\"\n    print(rid)\n    print(column)\n    \"\"\"\n    ans = 0\n    answer = n * m\n    \n    \n    for x in range(len(rid)):\n        for y in range(len(column)):\n            ans = rid[x] + column[y]\n            if (matrix[x][y] == '.'):\n                ans -= 1\n            if ans < answer:\n                answer = ans\n    \n    print(answer)\n        ",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 39,
+    "language": "python",
+    "code": "n = int(input())\n\nmaxCount = -1\ncount = 1\nprevMin = -1\nfor _ in range(n):\n    h, m = list(map(int, input().split()))\n    m = (60*h) + m\n    if prevMin == m:\n        count = count+1\n    else:\n        if maxCount < count:\n            maxCount = count\n        count = 1\n    prevMin = m\n\nif maxCount < count:\n    maxCount = count\nprint(maxCount)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 40,
+    "language": "python",
+    "code": "n = int(input())\nl = list(map(int, input().split()))\ncnts = []\nfor i in range(1,101):\n    cur = -1\n    mb = True\n    for j in range(n):\n        if i == l[j]:continue\n        elif cur == -1:\n            cur = abs(i - l[j])\n        elif cur != abs(i - l[j]):mb = False\n    if mb:\n        if cur == -1:\n            cnts.append(0)\n        else:\n            cnts.append(cur)\nif len(cnts) == 0:\n    print(-1)\nelse:\n    print(min(cnts))",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 41,
+    "language": "python",
+    "code": "def main():\n    _ = int(input())\n    a = sorted(set(list(map(int, input().split()))))\n\n    if len(a) == 1:\n        if a[0] >= 0:\n            print(0)\n        else:\n            print(-a[0])\n    elif len(a) == 2:\n        d = a[1] - a[0]\n        if d % 2 == 0:\n            print(d // 2)\n        else:\n            print(d)\n    elif len(a) == 3 and a[1] - a[0] == a[2] - a[1]:\n        print(a[1] - a[0])\n    else:\n        print(-1)\n\n\nif __name__ == '__main__':\n    main()\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 42,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n = int(input())\n    if n==1: print(1)\n    elif n%2 == 0:\n        print(n//2)\n    else:\n        print((n+1)//2)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 43,
+    "language": "python",
+    "code": "n = int(input())\narr = list(map(int,input().split()))\narr.sort()\nuniq = []\nfor i in arr:\n\tif i not in uniq:\n\t\tuniq.append(i)\n\nif len(uniq)==1:\n\tprint(0)\nelif len(uniq)==2:\n\tif uniq[0]%2==uniq[1]%2==0 or (uniq[1]-uniq[0])%2==0:\n\t\tprint(int((uniq[1]-uniq[0])/2))\n\telse:\n\t\tprint(uniq[1]-uniq[0])\nelif len(uniq)==3:\n\tif 2*uniq[len(uniq)//2]==uniq[0]+uniq[-1]:\n\t\tprint(uniq[len(uniq)//2]-uniq[0])\n\telse:\n\t\tprint(-1)\nelse:\n\tprint(-1)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 44,
+    "language": "python",
+    "code": "def call():\n    n= int(input())\n    if(n%2):\n        print((n//2)+1)\n    else:\n        print(n//2)\nfor _ in range(int(input())):\n    call()",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 45,
+    "language": "python",
+    "code": "import math\nimport random\nimport sys\n\nn=int(input())\ns=str(input())\nt=str(input())\n\nab=[]\nba=[]\nfor i in range(n):\n    if s[i]!=t[i]:\n        if s[i]==\"a\":\n            ab.append(i+1)\n        else:\n            ba.append(i+1)\n\nif len(ab)%2!=len(ba)%2:\n    print(-1)\nelse:\n    print((len(ab)+len(ba))//2+int(len(ab)%2!=0))\n    it=0\n    while len(ab)-1>it:\n        print(ab[it],ab[it+1])\n        it+=2\n    it=0\n    while len(ba)-1>it:\n        print(ba[it],ba[it+1])\n        it+=2\n    if len(ab)%2!=0:\n        print(ab[-1],ab[-1])\n        print(ab[-1],ba[-1])\n\n\n",
+    "time_class": "O(n log n)",
+    "space_class": "O(n log n)"
+  },
+  {
+    "id": 46,
+    "language": "python",
+    "code": "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\\\n\n#a=[]\na=[4,7,44,47,74,77,444,447,474,477,744,747,774,777]\n\nn = int(input())\nf=0\nfor i in a:\n    if n%i==0:\n        f=1\n        break;\nif f==1:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 47,
+    "language": "python",
+    "code": "n = int(input())\na = list(map(int, input().split()))\na.sort()\nif n % 2 == 0:\n    s = int(n / 2) - 1\nelse:\n    s = int(n / 2)\nprint(a[s])\n",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 48,
+    "language": "python",
+    "code": "\"\"\"\n- math -\nfrom math import factorial\nfrom math import gcd\nfrom math import pi\nlarge_p = 10**9 + 7\nfrom itertools import accumulate # \u7d2f\u7a4d\u548c\nfrom operator import mul\n- other -\nfrom collections import Counter\nfrom itertools import combinations\nfrom itertools import combinations_with_replacement\nfrom itertools import permutations\nfrom operator import itemgetter\nfrom functools import reduce\n- list -\nfrom copy import deepcopy\nfrom collections import deque\nfrom heapq import heapify, heappop, heappush\n- output -\np2d = lambda x: print(*x, sep=\"\\n\")\np2line = lambda x: print(*x, sep=\" \")\nprint(*list1, sep=\"\\n\")\n- input -\nimport sys\nread = sys.stdin.read\nreadline = sys.stdin.readline\nreadlines = sys.stdin.readlines\n= map(int, input().split())\n= [tuple(map(int, input().split())) for _ in range(n)]\nm = map(int, read().split()) /ab = zip(m, m) /for a, b in ab:\nps = [line.split() for line in readlines()] # input\u306e\u6700\u5f8c\u307e\u3067\u8aad\u3093\u3067\u3057\u307e\u3046\u306e\u3067\u6ce8\u610f\u3002\nn, k, *h = map(int, read().split()) # 1\u884c\u76ee\u306bn\u3068k,2\u884c\u76ee\u306bh0,h1,,,hn\n- run -\nsys.setrecursionlimit(10**6)\nfrom time import sleep\n\"\"\"\n# ATC04\n\nimport sys\nread = sys.stdin.read\nfrom math import log10,floor\ndef main():\n    a = int(input())\n    for _ in range(a):\n        n, k = map(int, input().split())\n        if n < k:\n            print('NO')\n        elif n == k:\n            print('YES')\n            r = [n // k] * k\n            print(*r, sep=' ')\n        else:\n            p = n / 2\n            if p % 1 == 0 and p >= k:\n                print('YES')\n                print(int((p - k + 1) * 2),end= ' ')\n                r = [2] * (k - 1)\n                print(*r, sep=' ')\n            else:\n                p = (n - k) / 2\n                if p % 1 == 0:\n                    print('YES')\n                    print(int(p * 2 + 1), end=' ')\n                    r = [1] * (k - 1)\n                    print(*r, sep=' ')\n                else:\n                    print('NO')\n\nif __name__ == '__main__':\n    main()\n\n\"\"\"\na = (n // k) * 2\n        x = n - a\n        if x % 2 == 0:\n            print('YES')\n            r1 = a // k + x\n            print(r1, end=' ')\n            r2 = [a//k] * (k - 1)\n            print(*r2, sep=' ')\n        else:\n            if x % k == 0:\n                print('YES')\n                r1 = [a + (n - a // k)] * k\n                print(*r1, sep='')\n            else:\n                print('NO')\n\"\"\"",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 49,
+    "language": "python",
+    "code": "n=int(input())\nak=[]; hkd={}; ans=\"\"\nfor i in range(n):\n    x,y=input().split()\n    ak.append(y)\n    hkd[x]=hkd.get(x,0)+1\nfor i in range(n):\n    ans+=f\"{n-1+hkd.get(ak[i],0)} {n-1-hkd.get(ak[i],0)}\\n\"\nprint(ans)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 50,
+    "language": "python",
+    "code": "import sys,math\n\nI=sys.stdin.readline\n\na,b,c=map(int,I().split())\n\n\ndef extendedGcd(a,b):\n\tif b==0:\n\t\treturn a,1,0\n\tg,x1,y1=extendedGcd(b,a%b)\n\tx=y1\n\ty=x1-(a//b)*y1\n\treturn g,x,y\n\nif c%math.gcd(a,b):\n\tprint(-1)\nelse:\n\td,x,y=extendedGcd(a,b)\n\tprint(x*(-c//d),y*(-c//d))\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 51,
+    "language": "python",
+    "code": "a = input().strip()\nn = len(a)\nans = False\ntry:\n    x = a.index(\"AB\")\n    y = a.rindex(\"BA\")\n    if abs(x - y) > 1:\n        ans = True\nexcept:\n    pass\n\ntry:\n    x = a.index(\"BA\")\n    y = a.rindex(\"AB\")\n    if abs(x - y) > 1:\n        ans = True\nexcept:\n    pass\n\n\nif ans:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 52,
+    "language": "python",
+    "code": "t = int(input())\nwhile t > 0:\n  n = int(input())\n  ans = 0\n  if n % 2 != 0:\n    ans += 1\n    n = n - 1\n  ans += n // 2\n  print(ans)\n  t -= 1",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 53,
+    "language": "python",
+    "code": "import sys\nfrom collections import defaultdict\n\n\ndef stdinWrapper():\n    data = '''9\n\n'''\n    for line in data.split('\\n'):\n        yield line\n\nif '--debug' not in sys.argv:\n    def stdinWrapper():\n        while True:\n            yield input()\n\ninputs = stdinWrapper()\n\ndef inputWrapper():\n    return next(inputs)\n\ndef getType(_type):\n    return _type(inputWrapper())\n\ndef getArray(_type):\n    return [_type(x) for x in inputWrapper().split()]\n\nn = getType(int)\n\n\ndef getForEven(n):\n    return ['2'] * (n//2)\n\ndef getForOdd(n):\n    return getForEven(n-3) + ['3']\n\nresult = getForEven(n) if n%2 == 0 else getForOdd(n)\nprint(len(result))\nprint(' '.join(result))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 54,
+    "language": "python",
+    "code": "# bsdk idhar kya dekhne ko aaya hai, khud kr!!!\n# from math import *\n# from itertools import *\n# import random\nx, y, z = map(int, input().split())\nif z == 0:\n    if x > y:\n        print(\"+\")\n    elif x == y:\n        print(\"0\")\n    else:\n        print(\"-\")\nelse:\n    if x > y:\n        if (x - y) > z:\n            print(\"+\")\n        elif (x - y) <= z:\n            print(\"?\")\n    elif y > x:\n        if (y - x) > z:\n            print(\"-\")\n        elif (y - x) <= z:\n            print(\"?\")\n    else:\n        print(\"?\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 55,
+    "language": "python",
+    "code": "def ans(n, m):\n    a2=0;   a1=0;   b1=0;   b2=0\n    if(m%n == 0) and (n != 1):\n        while n%2 == 0:\n            n = n//2\n            a1 += 1\n        while n%3 == 0:\n            n = n//3\n            b1 += 1\n        while m%2 == 0:\n            m = m//2\n            a2 += 1\n        while m%3 == 0:\n            m = m//3\n            b2 += 1\n        if(n==m):\n            return (a2 - a1) + (b2 - b1)\n        else:\n            return -1\n    elif(n == 1):\n        while m%2 == 0:\n            m = m//2\n            a2 += 1\n        while m%3 == 0:\n            m = m//3\n            b2 += 1\n        if(m == 1):\n            return a2 + b2\n        else:\n            return -1\n    else:\n        return -1\n\nn,m = map(int, input().split())\nprint(ans(n,m))\n",
+    "time_class": "O(log n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 56,
+    "language": "python",
+    "code": "def go():\n    n = int(input())\n    for i in [4, 7, 47, 74, 477, 744]:\n        if n % i == 0:\n            return 'YES'\n    return 'NO'\n\nprint(go())\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 57,
+    "language": "python",
+    "code": "def luck(a):\n\tif a.count('4')+a.count('7')==len(a):  #a.count('x') a\u4e2dx\u51fa\u73b0\u7684\u6b21\u6570\n\t\treturn 1\n\telse:\n\t\treturn 0\n\t    #\u4ee5\u4e0a\u5b9a\u4e49\u4e86\u4e00\u4e2a\u9a8c\u8bc1luck\u6570\u7684\u51fd\u6570\nb=int(input())\nfor i in range(4,1000):\n\tif b%i==0 and luck(str(i))==1:\n\t\tbreak\nif i==999:\n\tprint('NO')\nelse:\n\tprint('YES')\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 58,
+    "language": "python",
+    "code": "import math\n\ndef sticks(n):\n    return math.ceil(n / 2)\n\n\nfor _ in range(int(input())):\n    n = int(input())\n    print(sticks(n))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 59,
+    "language": "python",
+    "code": "# n=int(input())\n# i=1\n# f=0\n# while i<n:\n#     x=0\n#     for j in str(i):\n#         if j not in ['4','7']:\n#             break\n    \n#     i+=1\n\n\n\n\nn=int(input())\ni=1\nf=0\nwhile i<=n:\n    x=0\n    for k in (str(i)):\n        if k=='4' or k=='7':\n            x+=1\n        # print(x,k,k=='4' or k=='7',len(str(i)))\n    # print(\"x\",x,n%i,len(str(i)))\n    if x==len(str(i)) and n%i==0:\n        f=1\n        break\n    i+=1\n\nif f:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n# if int(n)%4==0 or int(n)%7==0:\n#     print(\"YES\")\n# else:\n#     f=0\n#     for i in n:\n#         if i=='4' or i=='7':\n#             continue\n#         else:\n#             f=1\n#             break\n#     if f==1:\n#         print(\"NO\")\n#     else:\n#         print(\"YES\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 60,
+    "language": "python",
+    "code": "t=int(input())\nfor i in range(t):\n    n=int(input())\n    for j in range(n):\n        print(n-j,end=' ')\n    print('\\n')\n    \n    ",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 61,
+    "language": "cpp",
+    "code": "int binary_search(int arr[], int n, int target) {\n    int lo = 0, hi = n - 1;\n    while (lo <= hi) {\n        int mid = (lo + hi) / 2;\n        if (arr[mid] == target) {\n            return mid;\n        }\n        if (arr[mid] < target) {\n            lo = mid + 1;\n        } else {\n            hi = mid - 1;\n        }\n    }\n    return -1;\n}\n",
+    "time_class": "O(log n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 62,
+    "language": "python",
+    "code": "N = int(input())\nans1 = N // 2\nif N % 2 == 0:\n    ans2 = [2 for _ in range(ans1)]\nelse:\n    ans2 = [2 for _ in range(ans1 - 1)]\n    ans2.append(3)\nprint(ans1)\nprint(\" \".join(map(str, ans2)))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 63,
+    "language": "python",
+    "code": "def solve():\n    n, k = map(int, input().split())\n    if n == k:\n        print(\"YES\")\n        print('1 ' * k)\n    elif n < k:\n        print('NO')\n    elif n & 1:\n        if k % 2 == 0:\n            print(\"NO\")\n        else:\n            print(\"YES\")\n            print('1 ' * (k - 1) + str(n - k + 1))\n    else:\n        if k & 1 and n >= 2 * k:\n            print(\"YES\")\n            print('2 ' * (k - 1) + str(n - 2 * (k - 1)))\n        elif k % 2 == 0:\n            print(\"YES\")\n            print('1 ' * (k - 1) + str(n - k + 1))\n        else:\n            print(\"NO\")\n    \n\nif __name__ == '__main__':\n    for _ in range(int(input())):\n        solve()",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 64,
+    "language": "python",
+    "code": "n=int(input())\nvar =0\nfor i in [4,7,47,744,477]:\n    if n%i ==0:\n      var = 1\n      print('YES')\n      break\n\n\nif var ==0:\n  print ('NO')\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 65,
+    "language": "python",
+    "code": "def main():\n    n, k = list(map(int, input().split()))\n    a = input()\n    l = 0\n    r = 0\n    for i in range(n):\n        if (a[i] == 'G'):\n            l = i\n        elif (a[i] == 'T'):\n            r = i\n    if (l < r):\n        if ((r - l) % k == 0):\n            for i in range(l, r + 1, k):\n                if (a[i] == '#'):\n                    print(\"NO\")\n                    return\n            print(\"YES\")\n        else:\n            print(\"NO\")\n    else:\n        if ((r - l) % k == 0):\n            for i in range(r, l + 1, k):\n                if (a[i] == '#'):\n                    print(\"NO\")\n                    return\n            print(\"YES\")\n        else:\n            print(\"NO\")\nmain()",
+    "time_class": "O(n log n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 66,
+    "language": "python",
+    "code": "import math\n# A function to print all prime factors of  \n# a given number n \ndef primeFactors(n): \n    A=[]  \n    # Print the number of two's that divide n \n    while n % 2 == 0: \n        A.append(2)\n        n = n // 2\n          \n    # n must be odd at this point \n    # so a skip of 2 ( i = i + 2) can be used \n    for i in range(3,int(math.sqrt(n))+1,2): \n          \n        # while i divides n , print i ad divide n \n        while n % i== 0: \n            A.append(i) \n            n = n // i \n              \n    # Condition if n is a prime \n    # number greater than 2 \n    if n > 2: \n        A.append(n) \n    return A;    \nn,m=map(int,input().split())\nif(m%n==0):\n    a=m//n\n    b=primeFactors(a)\n    if(set(b)=={2,3} or set(b)=={2} or set(b)=={3}):\n        print(len(b))\n    elif(len(b)==0):\n        print(0)\n    else:\n        print(-1)\nelse:\n    print(-1)",
+    "time_class": "O(log n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 67,
+    "language": "python",
+    "code": "a=int(input())\nif a % 2==0 :\n  print(int(a/2))\n  b=\"\"\n  i=0\n  while i<int(a/2) :\n    b=b+\"2 \"\n    i=i+1\n  print(b)\nelse:\n  print(int(a/2))\n  b=\"\"\n  i=0\n  while i<int(a/2)-1 :\n    b=b+\"2 \"\n    i=i+1\n  b=b+\"3\"\n  print(b)\n\n\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 68,
+    "language": "python",
+    "code": "from collections import deque, defaultdict, Counter\nfrom itertools import product, groupby, permutations, combinations\nfrom math import gcd, floor, inf\nfrom bisect import bisect_right, bisect_left\n\nd = int(input())\nn = int(input())\narr = list(map(int, input().split()))\narr.pop(-1)\narr = [i for i in arr if i != d]\n\n# if len(arr) < 1:\n#     print(0)\n# else:\n#     # arr.pop(0)\nans = 0\nfor num in arr:\n    ans += d- num\n\nprint(ans)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 69,
+    "language": "python",
+    "code": "n = int(input())\narr = list(sorted(set(map(int, input().split()))))\n\nif len(arr) == 1:\n    print(0)\nelif len(arr) == 2:\n    if arr[1] % 2 == arr[0] % 2:\n        print((arr[1] - arr[0]) // 2)\n    else:\n        print(arr[1] - arr[0])\nelif len(arr) == 3:\n    if arr[2] - arr[1] == arr[1] - arr[0]:\n        print(arr[2] - arr[1])\n    else:\n        print(-1)\nelse:\n    print(-1)\n",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 70,
+    "language": "python",
+    "code": "import math\nt=int(input())\nfor k in range(t):\n    # print(k)\n    n=int(input())\n    # l=list(range(1,n+1))\n    if n==1 or n==2:\n        print(1)\n    else:\n        print(int(math.ceil(n-(n/2))))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 71,
+    "language": "python",
+    "code": "#m=1000\n\n#def f(i,n):\n#    if i<n:\n#        a[i],a[i-1]=a[i-1],a[i]\n\n#        f(i+1,n)\nn=int(input())\n#f(1,n)\na=[i for i in range(1,n)]\na.insert(0,n)\nprint(*a[0:n])\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 72,
+    "language": "python",
+    "code": "a,b,x = (int(T) for T in input().split())\nprint((b//x)-(a//x)+(a%x==0))",
+    "time_class": "O(1)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 73,
+    "language": "python",
+    "code": "import math\ndef check_lucky(number):\n\tflag=0\n\tfor i in str(number):\n\t\tif(i!='4' and i!='7'):\n\t\t\treturn 0\n\treturn 1\ndef check_almost_lucky(number):\n\tloop_till=math.floor(math.sqrt(number))+1\n\tfor i in range(1,loop_till):\n\t\tif(number%i==0):\n\t\t\tif(check_lucky(i) or check_lucky(number//i)):\n\t\t\t\treturn 1\n\treturn 0\nnumber=int(input())\noutput=check_almost_lucky(number)\nif output:\n\tprint('YES')\nelse:\n\tprint('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 74,
+    "language": "python",
+    "code": "# ANSHUL GAUTAM\n# IIIT-D\n\nfrom math import *\nfrom copy import *\t\t\t\t\t# ll = deepcopy(l)\nfrom heapq import *\t\t\t\t\t# heappush(hp,x)\nfrom string import *\t\t\t\t# alpha = ascii_lowercase\nfrom random import *\t\t\t\t# l.sort(key=lambda l1:l1[0]-l1[1]) => ex: sort on the basis difference\nfrom bisect import *\t\t\t\t# bisect_left(arr,x,start,end)  => start and end parameters are temporary\nfrom sys import stdin\t\t\t\t# bisect_left return leftmost position where x should be inserted to keep sorted\nfrom sys import maxsize\t\t\t\t# minn = -maxsize\nfrom operator import *\t\t\t\t# d = sorted(d.items(), key=itemgetter(1))\nfrom itertools import *\t\t\t\t# pre = [0] + list(accumulate(l))\nfrom decimal import Decimal \t\t# a = Decimal(a)\t# use this for math questions\nfrom collections import Counter\t\t# d = dict(Counter(l))\nfrom collections import defaultdict # d = defaultdict(list)\n\n'''\n4\n1\n2\n3\n4\n'''\n\ndef solve(x):\n\treturn ceil(x/2)\n\t\n\nT = int(input())\nfor _ in range(T):\n\tN = int(stdin.readline())\n\tprint(solve(N))\n\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 75,
+    "language": "python",
+    "code": "'''input\n4\nLRLR\n'''\n# A coding delight\nfrom sys import stdin, stdout\nimport gc\nfrom copy import deepcopy\nfrom itertools import permutations\ngc.disable()\ninput = stdin.readline\nimport math\n\n\n# Iterative Python3 program \n# to compute modular power \n\n# Iterative Function to calculate \n# (x^y)%p in O(log y) \ndef power(x, y, p) : \n\tres = 1\t # Initialize result \n\n\t# Update x if it is more \n\t# than or equal to p \n\tx = x % p \n\n\twhile (y > 0) : \n\t\t\n\t\t# If y is odd, multiply \n\t\t# x with result \n\t\tif ((y & 1) == 1) : \n\t\t\tres = (res * x) % p \n\n\t\t# y must be even now \n\t\ty = y >> 1\t # y = y/2 \n\t\tx = (x * x) % p \n\t\t\n\treturn res \n\t\n\n# main starts\nn = int(input().strip())\nstring = input().strip()\nl = 0; r = 0\nfor i in  string:\n\tif i == 'L':\n\t\tl += 1\n\telse:\n\t\tr += 1\n\nprint(l + r + 1)",
+    "time_class": "O(n)",
+    "space_class": "O(log n)"
+  },
+  {
+    "id": 76,
+    "language": "python",
+    "code": "import math\nfor i in range(int(input())):\n    x=int(input())\n    if x==2:print(1)\n    else:print(math.ceil(x/2))                                                       ",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 77,
+    "language": "python",
+    "code": "while True:\n    n, p = [int(s) for s in input().strip().split()]\n\n    if n == 0 and p == 0:\n        break\n\n    wan = p\n    cands = [0] * n\n\n    is_decided = False\n    while not is_decided:\n        for i in range(n):\n            if wan == 1 and (cands[i] + 1) == p:\n                print(i)\n                is_decided = True\n                break\n\n            if wan == 0:\n                wan += cands[i]\n                cands[i] = 0\n            else:\n                wan -= 1\n                cands[i] += 1\n\n\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 78,
+    "language": "python",
+    "code": "def contain8(c):\n    if c<0: c=-c\n    while c>0:\n        d = c%10\n        if d==8: return True\n        c = c//10\n    return False\n\na = int(input())\n\n\nb = 1\nfound = False\nwhile not found:\n    a += 1\n    if contain8(a):\n        break\n    b += 1\n\nprint(b)\n\n\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 79,
+    "language": "python",
+    "code": "import re\nn = int(input())\nif re.match('^[4 and 7]*$', str(n)):\n\tprint(\"YES\")\nelif n % 4 == 0 or n % 7 == 0 or n%47 == 0:\n\tprint(\"YES\")\nelse:\n\tprint(\"NO\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 80,
+    "language": "python",
+    "code": "a = int(input())\nb = list(map(int,input().split()))\nc = sorted(b)\nif len(c) % 2 != 0:\n\tprint(c[(len(c)+1)//2-1])\nelse:\n\tprint(c[len(c)//2-1])",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 81,
+    "language": "python",
+    "code": "import sys\ninput = sys.stdin.readline\n\nmod = 998244353\nN = int(input())\nXD = [tuple(map(int, input().split())) for _ in range(N)]\nXD.sort(key=lambda x : x[0])\nchildren = [[] for _ in range(N)]\nstack = []\nfor i, (x, d) in list(enumerate(XD))[::-1]:\n    while stack and stack[-1][0] < x + d:\n        y, j = stack.pop()\n        children[i].append(j)\n    stack.append((x, i))\nval = [0] * N\nfor i in range(N)[::-1]:\n    res = 1\n    for j in children[i]:\n        res = res * val[j] % mod\n    val[i] = res + 1\nans = 1\nfor x, i in stack:\n    ans = ans * val[i] % mod\nprint(ans)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 82,
+    "language": "python",
+    "code": "def countDigit(n):\n    count = 0\n    while n != 0:\n        n //= 10\n        count += 1\n    return count\nfrom math import gcd as g\nfor _ in range(int(input())):\n    a,b,c = map(int,input().split())\n    if a == b and b == c:\n        A = B = 10**(a-1)\n        print(A,B)\n    else:\n        flag = False\n        i = 10**(a-1)\n        j = 10**(b-1)\n        while i < 10**(a):\n            while j < 10**(b):\n                if c == countDigit(g(i,j)):\n                    A = i\n                    B = j\n                    flag = True\n                    break\n                j += 10**(c-1)\n            if flag:\n                break\n            i += 10**(c-1)\n        print(A,B)\n                \n    \n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 83,
+    "language": "python",
+    "code": "n = int(input())\nflag = 0\nfor i in range(1, n+1):\n\tif(n%i == 0):\n\t\td = n//i\n\t\ta = 0\n\t\ts = str(d)\n\t\tfor j in range(len(s)):\n\t\t\tif(s[j]==\"4\" or s[j]==\"7\"):\n\t\t\t\ta+=1\n\t\t\telse:\n\t\t\t\tbreak\n\t\tif(a==len(s)):\n\t\t\tflag = 1\n\t\t\tbreak\nif(flag==1):\n\tprint(\"YES\")\nelse:\n\tprint(\"NO\")",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 84,
+    "language": "python",
+    "code": "N = int(input())\nif N==3:\n    print(1)\n    print(3)\nelif N%2:\n    num = (N-5)//2+2\n    print(num)\n    for i in range(num-2):\n        print(2, end=' ')\n    print(2, 3)\nelse:\n    num = N//2\n    print(num)\n    for i in range(num):\n        print(2, end=' ')\n    print()\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 85,
+    "language": "python",
+    "code": "\ndef checkLuckyNum(n):\n    flag = True\n    while (True):\n        if(n==0):\n            break\n        else:\n            du = n % 10\n            if(du == 4 or du == 7):\n                n = n // 10\n            else:\n                flag = False\n                break\n    return flag\n\ndef checkAlmostLuckyNum(n):\n    if (checkLuckyNum(n) == True):\n        return True\n    else:\n        for i in range(1, n+1):\n            if(n % i == 0):\n                if (checkLuckyNum(i) == True):\n                    return True\n        return False\n\nn = int(input())\nif(checkAlmostLuckyNum(n) == True):\n    print((\"YES\"))\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 86,
+    "language": "python",
+    "code": "n=int(input());\nl=[4,7,44,47,74,77,444,447,474,477,744,747,774,777];\nans=False;\nfor i in range(len(l)):\n\tif(n%l[i]==0):\n\t\tans=True;\n\t\tbreak;\n\nif(ans):\n\tprint(\"YES\")\nelse:\n\tprint(\"NO\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 87,
+    "language": "python",
+    "code": "n=int(input())\nl=input()\nprint(l.count(\"L\")+l.count(\"R\")+1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 88,
+    "language": "python",
+    "code": "#!/usr/bin/python3\n\nn = int(input())\ns = input()\nprint(len([1 for i in range(n, len(s), n) if len(set(list(s[i - 3:i]))) == 1]))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 89,
+    "language": "python",
+    "code": "n=int(input())\nl=list(map(int, input().split()))\nl.sort()\ncnt=0\nfor i in range(n):\n  for j in range(i+1,n):\n    for k in range(j+1,n):\n      if l[i]<l[j] and l[j]<l[k]:\n        if l[i]+l[j]>l[k]:\n          cnt+=1\nprint(cnt)",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 90,
+    "language": "python",
+    "code": "n=int(input())\nl=list(input())\na=l.count(\"L\")\nb=l.count(\"R\")\ncount=a+b+1\nprint(count)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 91,
+    "language": "python",
+    "code": "import heapq\nn,m = map(int,input().split())\na = [int(i) * (-1) for i in input().split()]\n \nheapq.heapify(a)\n\nfor _ in range(m):\n\ta_min = heapq.heappop(a)\n\theapq.heappush(a,(-(-a_min//2)))\n\nprint(-sum(a))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 92,
+    "language": "python",
+    "code": "from collections import Counter\nimport os\nimport sys\nfrom io import BytesIO, IOBase\n\nBUFSIZE = 8192\nimport math\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\ndef divs(n, start=2):\n    divisors = []\n    for i in range(start, int(math.sqrt(n) + 1)):\n        if n % i == 0:\n            if n / i == i:\n                divisors.append(i)\n            else:\n                divisors.extend([i, n // i])\n    return divisors\n#import sys\n#inf = float(\"inf\")\n#mod = 1000000007\n#def array(): return list(map(int, sys.stdin.readline().split()))\n#def intt(): return map(int, sys.stdin.readline().split())\n#from bisect import bisect_left\n#import sys\n##########################################################\n#it=iter(t)\n#if all(c in it for c in s):\n#ls.sort(key=lambda x: (x[0], x[1]))\n# ls.sort(key=lambda x: (x[0], x[1]))\n#n, k = map(int, sys.stdin.readline().split())\n#arr = list(map(int, sys.stdin.readline().split()))\n#u,v = map(int, sys.stdin.readline().split())\n#n = int(sys.stdin.readline())\n#arr = list(map(int, sys.stdin.readline().split()))\n#n=int(sys.stdin.readline())\nimport sys\nfor i in range(int(input())):\n    n=int(input())\n    if n==1:\n        print(1)\n    elif n%2!=0:\n        print((n//2)+1)\n    else:\n        print(n//2)\n    #n,k=map(int, input().split())\n    #arr = list(map(int, sys.stdin.readline().split()))\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 93,
+    "language": "python",
+    "code": "n=int(input())\na=list(map(int,input().split()))\na.sort()\nif(n & 1):\n    print(a[(n//2)])\nelse:\n    print(a[(n//2)-1])\n\n \t \t \t\t\t \t \t\t \t \t\t\t    \t \t\t\t \t",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 94,
+    "language": "python",
+    "code": "num = input()\nif '0' not in num and '1' not in num and '2' not in num and '3' not in num\\\n and '5' not in num and '6' not in num and '8' not in num and '9' not in num:\n    print('YES')\nelse:\n    digit = int(num)\n    if digit % 4 == 0 or digit % 7 == 0 or digit % 47 == 0 or digit % 74 == 0\\\n     or digit % 44 == 0 or digit % 77 == 0 or digit % 444 == 0 or digit % 447 == 0\\\n      or digit % 474 == 0 or digit % 477 == 0:\n        print('YES')\n    else:\n        print('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 95,
+    "language": "python",
+    "code": "s = input()\nl = len(s)\na = s[0:(l-1)//2]\nb = len(a)\nprint(\"Yes\" if s == s[::-1] and a == a[::-1] else \"No\")",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 96,
+    "language": "python",
+    "code": "z=list(map(int,input().split()))\n\nif (z[0]==z[1]) :\n\tif (z[2]==0):\n\t\tprint(0)\n\telse :\n\t\tprint(\"?\")\nelif (z[0]>z[1]) :\n\tif (z[0]>z[1]+z[2]) :\n\t\tprint(\"+\")\n\telse :\n\t\tprint(\"?\")\nelse :\n\tif (z[0]+z[2]<z[1]) :\n\t\tprint(\"-\")\n\telse :\n\t\tprint(\"?\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 97,
+    "language": "python",
+    "code": "from math import ceil\ns = str(input())\ntemp = s.split()\nn = int(temp[0])\nm = int(temp[1])\nmin_steps = n//2 + n%2 \nsteps = ceil(min_steps/m)*m\nif m>n:\n    print(-1)\nelse:\n    print(steps)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 98,
+    "language": "python",
+    "code": "from sys import maxsize, stdout, stdin,stderr\nmod = int(1e9 + 7)\ndef I(): return int(stdin.readline())\ndef lint(): return [int(x) for x in stdin.readline().split()]\ndef S(): return input().strip()\ndef grid(r, c): return [lint() for i in range(r)]\nfrom collections import defaultdict\nimport math\nl = [2,16,128,1024,16384,131072,1048576,16777216,134217728]\nt = I()\nfor _ in range(t):\n    a,b,c= lint()\n    c-=1\n    c=l[c]\n    a1 = l[a-1]\n    b-=1\n    b1=c\n    while(b1/10**b<1):\n        b1*=3\n    print(a1,b1)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 99,
+    "language": "python",
+    "code": "# -*- coding: utf-8 -*-\ntmp = input().split(' ')\nn = int(tmp[0])\na = int(tmp[1])\nb = int(tmp[2])\nstr = input()\n\nif str[a-1] == str[b-1]:\n    print('0')\nelse:\n    print('1')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 100,
+    "language": "python",
+    "code": "a=int(input())\nprint(a//2,\"\\n\"+\"2 \"*int(a/2) if a%2==0 else \"\\n\"+\"2 \"*(a//2-1)+\"3\")",
+    "time_class": "O(1)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 101,
+    "language": "python",
+    "code": "n, k = [int(s) for s in input().split(' ')]\ns = input()\ng = s.index('G')\nt = s.index('T')\nif (g - t) % k == 0 and '#' not in s[min(g, t): max(g, t) + 1: k]:\n    print('YES')\nelse:\n    print('NO')\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 102,
+    "language": "python",
+    "code": "t = int(input())\nwhile(t>0):\n    t = t-1\n    s = (input().split(\" \"))\n    n,k = int(s[0]),int(s[1])\n    # k = int(input())\n    if(n<k):\n        print(\"NO\")\n        continue\n    a = k-1\n    b = (k-1)*2\n    a = n-a\n    b = n-b\n    if(a%2!=0 and a>0):\n        print(\"YES\")\n        s = \"1 \"* (k-1)\n        print(s,end=\"\")\n        print(a)\n    elif(b%2==0 and b>0):\n        print(\"YES\")\n        s = \"2 \"*(k-1)\n        print(s,end=\"\")\n        print(b)\n    else:\n        print(\"NO\")",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 103,
+    "language": "python",
+    "code": "t = int(input())\ns = list(map(int,input().split()))\npositive = 0\nnegative = 0\nd = []\nfor j in s:\n    if j >= 0 :\n        positive += j\n        d.append(positive)\n    elif j < 0:\n        negative = positive + j\n        d.append(negative)\nprint(*d)\n            ",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 104,
+    "language": "python",
+    "code": "def main():\n    n, m = map(int, input().split())\n    aa = list(map(int, input().split()))\n    bb = list(map(int, input().split()))\n    v = max(min(aa) * 2, max(aa))\n    if min(bb) <= v:\n        print(-1)\n    else:\n        print(v)\n\n\nif __name__ == '__main__':\n    main()\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 105,
+    "language": "python",
+    "code": "n = int(input())\na = list(map(int, input().split()))\na.sort()\nif n == 1:\n\tprint(a[0])\nelse:\n\tif n % 2 == 0:\n\t\tprint(a[(n // 2) - 1])\n\telse:\n\t\tprint(a[n // 2])",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 106,
+    "language": "python",
+    "code": "def main(n):\n    l = []\n    if n <= 3:\n        l.append(n)\n        return l\n    if n % 2 == 1:\n        l.append(3)\n        n -= 3\n    if n >= 2:\n        l = l + ([2] * (n // 2))\n    return l\n\nl = main(int(input()))\nprint(len(l))\nprint(' '.join(list(map(str,l))))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 107,
+    "language": "python",
+    "code": "q = int(input())\nfor _ in range(q):\n    n, m = map(int, input().split())\n    a = []\n    for __ in range(n):\n        a.append(input())\n    nn = []\n    for i in range(n):\n        here = 0\n        for j in range(m):\n            if a[i][j] == \"*\":\n                here += 1\n        nn.append(here)\n    mm = []\n    for j in range(m):\n        here = 0\n        for i in range(n):\n            if a[i][j] == \"*\":\n                here += 1\n        mm.append(here)\n    ans = 0\n    for i in range(n):\n        for j in range(m):\n            cur = nn[i] + mm[j]\n            if a[i][j] == \"*\":\n                cur -= 1\n            ans = min(ans, -cur)\n    ans += n + m - 1\n    print(str(ans))\n    \n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 108,
+    "language": "python",
+    "code": "import itertools\nn = int(input())\nif (n%4==0)  or (n%7== 0)  or (n%44== 0)  or (n % 47== 0)  or (n % 74== 0)  or (n % 77== 0 ) or (n % 444== 0)  or (n % 447== 0)  or (n % 474== 0)  or (n % 477 == 0) or (n % 744== 0)  or (n % 747 == 0) or (n % 777 == 0) or( n % 774 == 0):\n    print('YES')\nelse:\n    print('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 109,
+    "language": "python",
+    "code": "import atexit\nimport io\nimport sys\n\nn = int(input())\narr = input().split()\nfinal_arr = []\n\nstart = arr[0]\nmaxV = int(start)\nfinal_arr.append(int(start))\n\nfor x, i in enumerate(arr):\n    if (x == 0):\n        continue\n    int_i = int(i)\n    int_i = int_i + maxV\n    if (int_i > maxV):\n        maxV = int_i\n    final_arr.append(int(int_i))\n\nprint(' '.join(map(str, final_arr)))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 110,
+    "language": "python",
+    "code": "q = int(input())\nfor _ in range(q):\n    n, m = map(int, input().split())\n    arr = [input() for i in range(n)]\n    x = set()\n    x_sum = -1\n    for i in range(m):\n        new_sum = sum(arr[j][i] == '*' for j in range(n))\n        if x_sum < new_sum:\n            x = {i}\n            x_sum = new_sum\n        elif x_sum == new_sum:\n            x.add(i)\n    y = set()\n    y_sum = -1\n    for j in range(n):\n        new_sum = sum(arr[j][i] == '*' for i in range(m))\n        if y_sum < new_sum:\n            y = {j}\n            y_sum = new_sum\n        elif y_sum == new_sum:\n            y.add(j)\n    if '.' not in [arr[j][i] for j in y for i in x]:\n        print(m + n - x_sum - y_sum)\n    else:\n        print(m + n - x_sum - y_sum - 1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 111,
+    "language": "python",
+    "code": "from math import sqrt, ceil;\n\n\ndef check_good(s):\n    for char in str(int(s)):\n        if not (char == '4' or char == '7'):\n            return False\n    return True\n\n\ndef check_almost_good(n):\n    if check_good(n): return True\n    for i in range(1, ceil(sqrt(n)) + 1):\n        if n % i == 0 and (check_good(i) or check_good(n // i)):\n            return True\n    return False\n\n\nprint(\"YES\" if check_almost_good(int(input())) else \"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 112,
+    "language": "python",
+    "code": "import bisect\nimport os\nimport gc\nimport sys\nfrom io import BytesIO, IOBase\nfrom collections import Counter\nfrom collections import deque\nimport heapq\nimport math\nimport statistics\n\ndef sin():\n    return input()\n\ndef ain():\n    return list(map(int, sin().split()))\n\ndef sain():\n    return input().split()\n\ndef iin():\n    return int(sin())\n\n\nMAX = float('inf')\nMIN = float('-inf')\nMOD = 1000000007\n\ndef readTree(n, m):\n    adj = [deque([]) for _ in range(n+1)]\n    for _ in range(m):\n        u,v = ain()\n        adj[u].append(v)\n        adj[v].append(u)\n    return adj\n\ndef main():\n    for _ in range(iin()):\n        s = sin()\n        x = set()\n        c = 0\n        ix = 0\n        iy = 0\n        p = 0\n        for i in s:\n            if i == 'N':\n                p = (ix, ix, min(iy, iy+1), max(iy, iy+1))\n                iy += 1\n            elif i == 'S':\n                p = (ix, ix, min(iy, iy-1), max(iy, iy-1))\n                iy -= 1\n            elif i == 'E':\n                p = (min(ix, ix+1), max(ix, ix+1), iy, iy)\n                ix += 1\n            else:\n                p = (min(ix, ix-1), max(ix, ix-1), iy, iy)\n                ix -= 1\n            if p in x:\n                c += 1\n            else:\n                c += 5\n                x.add(p)\n        print(c)\n\n\n        \n        \n        \n        \n\n\n        \n\n\n\n\n\n\n\n\n\n\n# Fast IO Template starts\n\nBUFSIZE = 8192\n\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\n\n# Fast IO Template ends\n\nif __name__ == \"__main__\":\n    main()\n",
+    "time_class": "O(n)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 113,
+    "language": "python",
+    "code": "\nimport math\nfor _ in range(int(input())):\n\n    n=int(input())\n\n    if n==1 or n==2:\n        print(\"1\")\n\n    else:\n\n        print(math.ceil(n/2))\n            \n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 114,
+    "language": "python",
+    "code": "def good(x):\n\twhile x>0:\n\t\tif x%10!=4 and x%10!=7:\n\t\t\treturn(False)\n\t\tx=x//10\n\treturn(True)\n\nn=int(input())\nl=[]\nq=True\nfor i in range(1,n+1):\n\tif n%i==0:\n\t\tl.append(i)\nfor i in range(len(l)):\n\tif good(l[i]):\n\t\tprint('YES')\n\t\tq=False\n\t\tbreak\nif q:\n\tprint('NO')",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 115,
+    "language": "python",
+    "code": "n = int(input())\ncount_homes = [0] * 100001\naway = [0] * n\nfor i in range(n):\n    x, y = map(int, input().split())\n    count_homes[x] += 1\n    away[i] = y\n\nfor i in range(n):\n    a, b = n - 1, n - 1\n    odds = count_homes[away[i]]\n    a += odds\n    b -= odds\n    print(a, b)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 116,
+    "language": "python",
+    "code": "# -*- coding: utf-8 -*-\n\nimport sys\n\ndef input(): return sys.stdin.readline().strip()\ndef list2d(a, b, c): return [[c] * b for i in range(a)]\ndef list3d(a, b, c, d): return [[[d] * c for j in range(b)] for i in range(a)]\ndef list4d(a, b, c, d, e): return [[[[e] * d for j in range(c)] for j in range(b)] for i in range(a)]\ndef ceil(x, y=1): return int(-(-x // y))\ndef INT(): return int(input())\ndef MAP(): return map(int, input().split())\ndef LIST(N=None): return list(MAP()) if N is None else [INT() for i in range(N)]\ndef Yes(): print('Yes')\ndef No(): print('No')\ndef YES(): print('YES')\ndef NO(): print('NO')\nsys.setrecursionlimit(10 ** 9)\nINF = 10 ** 18\nMOD = 10 ** 9 + 7\n\nN = INT()\nS = input()\nlcnt = S.count('L')\nrcnt = S.count('R')\n\nans = 1 + lcnt + rcnt\nprint(ans)\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 117,
+    "language": "python",
+    "code": "n = int(input()) \nli = [int(x) for x in input().split()] \nli.sort() \ni = int((n-1)/2) \t\nprint(li[i])",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 118,
+    "language": "python",
+    "code": "\"\"\"\nAuthor    : co_devil Chirag Garg\nInstitute : JIIT\n\"\"\"\nfrom math import *\nfrom sys import stdin, stdout\nimport itertools, os, sys, threading\nfrom collections import deque, Counter, OrderedDict, defaultdict\nfrom heapq import *\n#from math import ceil, floor, log, sqrt, factorial, pow, pi, gcd\n# from bisect import bisect_left,bisect_right\n# from decimal import *,threading\nfrom fractions import Fraction\nmod=100000009\ndef ii(): return int(input())\ndef si(): return str(input())\ndef mi(): return map(int, input().split())\ndef li(): return list(mi())\ndef fii(): return int(stdin.readline())\ndef fsi(): return str(stdin.readline())\ndef fmi(): return map(int, stdin.readline().split())\ndef fli(): return list(fmi())\nabd = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7, 'i': 8, 'j': 9, 'k': 10, 'l': 11, 'm': 12,\n       'n': 13, 'o': 14, 'p': 15, 'q': 16, 'r': 17, 's': 18, 't': 19, 'u': 20, 'v': 21, 'w': 22, 'x': 23, 'y': 24,\n       'z': 25}\ndef getKey(item): return item[0]\ndef sort2(l): return sorted(l, key=getKey)\ndef d2(n, m, num): return [[num for x in range(m)] for y in range(n)]\ndef isPowerOfTwo(x): return (x and (not (x & (x - 1))))\ndef decimalToBinary(n): return bin(n).replace(\"0b\", \"\")\ndef ntl(n): return [int(i) for i in str(n)]\ndef powerMod(x, y, p):\n    res = 1\n    x %= p\n    while y > 0:\n        if y & 1:\n            res = (res * x) % p\n        y = y >> 1\n        x = (x * x) % p\n    return res\ngraph = defaultdict(list)\nvisited = [0] * 1000000\ncol = [-1] * 1000000\ndef bfs(d, v):\n    q = []\n    q.append(v)\n    visited[v] = 1\n    while len(q) != 0:\n        x = q[0]\n        q.pop(0)\n        for i in d[x]:\n            if visited[i] != 1:\n                visited[i] = 1\n                q.append(i)\n        print(x)\ndef make_graph(e):\n    d = {}\n    for i in range(e):\n        x, y= mi()\n        if x not in d:\n            d[x]=[y]\n        else:\n            d[x].append(y)\n        if y not in d:\n            d[y]=[x]\n        else:\n            d[y].append(x)\n    return d\ndef gr2(n):\n    d = defaultdict(list)\n    for i in range(n):\n        x, y = mi()\n        d[x].append(y)\n    return d\ndef connected_components(graph):\n    seen = set()\n    def dfs(v):\n        vs = set([v])\n        component = []\n        while vs:\n            v = vs.pop()\n            seen.add(v)\n            vs |= set(graph[v]) - seen\n            component.append(v)\n        return component\n \n    ans = []\n    for v in graph:\n        if v not in seen:\n            d = dfs(v)\n            ans.append(d)\n    return ans\ndef primeFactors(n):\n    s = set()\n    while n % 2 == 0:\n        s.add(2)\n        n = n // 2\n    for i in range(3, int(sqrt(n)) + 1, 2):\n        while n % i == 0:\n            s.add(i)\n            n = n // i\n    if n > 2:\n        s.add(n)\n    return s\ndef find_all(a_str, sub):\n    start = 0\n    while True:\n        start = a_str.find(sub, start)\n        if start == -1: return\n        yield start\n        start += len(sub)\ndef SieveOfEratosthenes(n, isPrime):\n    isPrime[0] = isPrime[1] = False\n    for i in range(2, n):\n        isPrime[i] = True\n    p = 2\n    while (p * p <= n):\n        if (isPrime[p] == True):\n            i = p * p\n            while (i <= n):\n                isPrime[i] = False\n                i += p\n        p += 1\n    return isPrime\ndef dijkstra(edges, f, t):\n    g = defaultdict(list)\n    for l,r,c in edges:\n        g[l].append((c,r))\n \n    q, seen, mins = [(0,f,())], set(), {f: 0}\n    while q:\n        (cost,v1,path) = heappop(q)\n        if v1 not in seen:\n            seen.add(v1)\n            path = (v1, path)\n            if v1 == t: return (cost, path)\n \n            for c, v2 in g.get(v1, ()):\n                if v2 in seen: continue\n                prev = mins.get(v2, None)\n                next = cost + c\n                if prev is None or next < prev:\n                    mins[v2] = next\n                    heappush(q, (next, v2, path))\n    return float(\"inf\")\n\nn=ii()\ns=si()\nl,r=0,0\nfor i in range(n):\n    if s[i]=='L':\n        l+=1\n    if s[i]=='R':\n        r+=1\nprint(l+r+1)",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 119,
+    "language": "python",
+    "code": "# Legends Always Come Up with Solution\n# Author: Manvir Singh\n\nimport os\nimport sys\nfrom io import BytesIO, IOBase\n\ndef main():\n    l=int(input())\n    a=list(map(int,input().rstrip()))\n    n=len(a)\n    if n%l:\n        print((\"1\"+\"0\"*(l-1))*(n//l+1))\n    else:\n        z=a[:l]*(n//l)\n        if z>a:\n            print(\"\".join(map(str,z)))\n        else:\n            if a[:l]==[9]*l:\n                print((\"1\"+\"0\"*(l-1))*(n//l+1))\n            else:\n                b,c=[],1\n                for i in range(l-1,-1,-1):\n                    b.append((a[i]+c)%10)\n                    c=(a[i]+c)//10\n                if c:\n                    b.append(c)\n                b.reverse()\n                print(*(b*(n//l)),sep=\"\")\n\n\n# FASTIO REGION\n\nBUFSIZE = 8192\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\n\nif __name__ == \"__main__\":\n    main()",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 120,
+    "language": "python",
+    "code": "x=int(input())\nlist1=[4,7,44,47,74,77,444,447,474,744,477,747,774,777]\nn=len(list1)\nif x in list1:\n    print(\"YES\")\nelse:\n    for i in range(0,n,1):\n        if x%list1[i]==0:\n            print(\"YES\")\n            break\n        if i==n-1 and x%list1[i]!=0:\n            print(\"NO\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 121,
+    "language": "python",
+    "code": "from sys import maxsize, stdout, stdin\nmod = int(1e9 + 7)\ndef I(): return int(stdin.readline())\ndef lint(): return [int(x) for x in stdin.readline().split()]\ndef S(): return input().strip()\ndef grid(r, c): return [lint() for i in range(r)]\nx,y,z= map(int,S().split())\nif z==0:\n    if x>y:print('+')\n    elif y > x:print('-')\n    else:print(0)\nelse:\n    if x >y+z:print('+')\n    elif y > x+z:print('-')\n    else:print('?')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 122,
+    "language": "python",
+    "code": "N = int(input())\nnumbers = list(map(int, input().split(' ')[:N]))\nfor x in range(1, N):\n    if x % 2 == 0:\n        numbers.remove(min(numbers))\n    else:\n        numbers.remove(max(numbers))\nprint(numbers[0])",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 123,
+    "language": "python",
+    "code": "n = int(input())\nif n % 4 == 0 or n % 7 == 0:\n    print(\"YES\")\nelif n % 44 == 0 or n % 77 == 0:\n    print(\"YES\")\nelif n % 47 == 0 or n % 74 == 0:\n    print(\"YES\")\nelif n % 444 == 0 or n % 447 == 0 or n % 477 == 0:\n    print(\"YES\")\nelif n % 777 == 0 or n % 774 == 0 or n % 744 == 0:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 124,
+    "language": "python",
+    "code": "def mostFrequent(arr, n): \n  \n   \n    arr.sort() \n  \n    \n    max_count = 1; res = arr[0]; curr_count = 1\n      \n    for i in range(1, n):  \n        if (arr[i] == arr[i - 1]): \n            curr_count += 1\n              \n        else : \n            if (curr_count >= max_count):  \n                max_count = curr_count \n                res = arr[i - 1] \n              \n            curr_count = 1\n      \n \n    if (curr_count >= max_count): \n      \n        max_count = curr_count \n        res = arr[n - 1] \n      \n    return res \n  \n  \ndef f(al,k):\n    ll=[]\n    for i in al:\n        tp=k-i%k\n        if tp==k:\n            tp=0\n        if tp!=0:\n            ll.append(tp)\n    if len(ll)==0:\n        return 0\n    res=mostFrequent(ll,len(ll))\n    ct=0\n    for i in ll:\n        if i==res:\n            ct=ct+1\n    return (ct-1)*k+res+1\n    \n    \nfor tc in range(int(input())):\n    al=list(map(int,input().split()))\n    k=al[1]\n    al=list(map(int,input().split()))\n    print(f(al,k))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 125,
+    "language": "python",
+    "code": "x=int(input())\nt=0\nl=[4,7,44,47,77,74,444,447,474,477,744,747,774,777]\nfor i in l:\n    if x%i==0:\n        print(\"YES\")\n        t=9\n        break\nif t==0:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 126,
+    "language": "python",
+    "code": "for t in range(int(input())):\n    n = int(input())-1\n    print((n//2)+1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 127,
+    "language": "python",
+    "code": "import math\nt = int(input())\ncases = []\nfor i in range(t):\n    cases.append(int(input()))\n \ndef solve(case):\n    print(math.ceil(case/2))\n \nfor case in cases:\n    solve(case)\n \n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 128,
+    "language": "python",
+    "code": "data = input().split()\n\nN, M = int(data[0]), int(data[1])\n\ndivisable_by_M = []\n\nif N == M:\n    print(M)\nelse:\n    for i in range(M, N):\n        if i%M == 0:\n            divisable_by_M.append(i)\n\n    if len(divisable_by_M) == 0:\n        print('-1')\n    else:\n        print(divisable_by_M[len(divisable_by_M)//2])\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 129,
+    "language": "python",
+    "code": "# map(int, input().split())\n# list(map(int, input().split()))\n# for _ in range(int(input())):\n# print(' '.join([str(x) for x in ans]))\n\nn = int(input())\na = input()\nprint(a.count('L') + a.count('R') + 1)\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 130,
+    "language": "python",
+    "code": "n = int(input())\n\nnum = ''\nif n >= 37:\n    print(-1)\nelse :\n    if n % 2 == 0:\n        num += '8'*(n//2)\n        print(num)\n    else:\n        num += '4'\n        num += '8' * (n // 2)\n        print(num)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 131,
+    "language": "python",
+    "code": "s=str(input())\nif int(s[5:7])>4:\n  print('TBD')\nelse:\n  print('Heisei')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 132,
+    "language": "python",
+    "code": "\ndef func():\n    n = int(input())\n    nums = [int(i) for i in input().split(' ')]\n\n    mx = max(nums)\n    mn = min(nums)\n    md = (mx + mn) / 2\n    res = (mx - mn) // 2\n\n    count = dict()\n    for i in nums:\n        if not count.get(i):\n            count[i] = 0\n        count[i] += 1\n\n    if len(count) == 2:\n        if md == int(md):\n            return int(res)\n        s = list(count.items())\n        return int(abs(s[0][0] - s[1][0]))\n\n    if md != int(md):\n        return -1\n    \n    for i in nums:\n        if i != mn and i != mx and i != md:\n            return -1\n    return res\n\nprint(func())\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 133,
+    "language": "python",
+    "code": "t = int(input())\n\ndef solve(n, k):\n    if n % 2 == 0:\n        if k % 2 == 1:\n            # must use even numbers\n            if n < k * 2:\n                print(\"NO\"); return\n            print(\"YES\", flush=False)\n            for _ in range(k-1):\n                print(\"2\", end=\" \", flush=False)\n            print(n - 2 * (k-1), flush=False); return\n        # otherwise may use even or odd numbers\n        # i will use odd numbers\n        if n < k:\n            print(\"NO\"); return\n        print(\"YES\", flush=False)\n        for _ in range(k-1):\n            print(\"1\", end=\" \", flush=False)\n        print(n-(k-1), flush=False); return\n    # otherwise n % 2 == 1\n    if k % 2 == 0:\n        print(\"NO\"); return\n    # otherwise must use odd numbers\n    if n < k:\n        print(\"NO\"); return\n    print(\"YES\", flush=False)\n    for _ in range(k-1):\n        print(\"1\", end=\" \", flush=False)\n    print(n-(k-1), flush=False); return\n\nfor _ in range(t):\n    n, k = input().split(\" \")\n    n = int(n)\n    k = int(k)\n    solve(n, k)\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 134,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n,m,a,b = map(int,input().split())\n    if b*m!=a*n:\n        print(\"NO\")\n        continue\n    ans = [['1']*m for i in range(n)]\n    curr_row = [m]*n\n    curr_col = [n]*m\n    row = 0\n    col = 0\n    while col<m:\n        while curr_col[col]>b:\n            if curr_row[row]>a:\n                ans[row][col] = '0'\n                curr_row[row]-=1\n                curr_col[col]-=1\n                row = (row+1)%n\n        col+=1\n    print(\"YES\")\n    s = ''\n    for e in ans:\n        for ee in e:\n            s+=ee\n        s+='\\n'\n    print(s)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 135,
+    "language": "python",
+    "code": "import sys\n\n#sys.stdin = open('input1.txt', 'r') \n#sys.stdout = open('output.txt', 'w')\n\na=int(input())\nprint(a+1)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 136,
+    "language": "python",
+    "code": "n=int(input())\nprint('NO' if n%4 and n%7 and n%47 and n%74 and n%447 and n%474 and n%477 and n%744 and n%747 and n%774 else 'YES')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 137,
+    "language": "python",
+    "code": "a = int(input())\nb = input()\nprint(len(b)+1)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 138,
+    "language": "python",
+    "code": "s = input()\n\nprint(\"2018/01/\" + s[8::])",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 139,
+    "language": "python",
+    "code": "import sys\nfrom collections import deque\nt=int(input())\ndef inp(): return sys.stdin.readline().strip()\n    \nfor _ in range(t):\n    n, k=map(int, inp().split())\n    a=list(map(int, inp().split()))\n    a=[(k-i%k)%k for i in a]\n    a.sort()\n    for i in range(n):\n        if(a[i]!=0):\n            a=a[i:]\n            break\n        if(i==n-1):\n            a=[]\n    if(len(a)==0):\n        print(0)\n        continue\n    adict=dict()\n    maxx=(0,-1)\n    maxt=-1\n    for i in a:\n        g=adict.get(i,0)\n        adict[i]=g+1\n        maxx=max(maxx,(g+1, i))\n    if(maxx[0]==1):\n        print(maxx[1]+1)\n    else:\n        print(k*(maxx[0]-1)+maxx[1]+1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 140,
+    "language": "python",
+    "code": "n = int(input())\n\nfor i in range(1, n+1):\n    if n%i==0:\n        for j in str(i):\n            if j not in \"47\":\n                break\n        else:\n            print(\"YES\")\n            break\nelse:\n    print(\"NO\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 141,
+    "language": "python",
+    "code": "n = int(input())\narr = list()\ncount=0\n\nwhile n>=1:\n    n-=2\n    count+=1\n    if n==1:\n        arr.append(3)\n        break\n    else:\n        arr.append(2)\n        \nprint(count)\nfor x in arr:\n    print(x)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 142,
+    "language": "python",
+    "code": "for i in range(int(input())):\n    n = int(input())\n    if n==1:\n        print(1)\n    elif n==2:\n        print(1)\n    elif n==3:\n        print(2)\n    elif n==4:\n        print(2)\n    else:\n        if n%2==0:\n            print(n//2)\n        else:\n            print(n//2+1)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 143,
+    "language": "python",
+    "code": "t=int(input())\nfor j in range(t):\n    # n,m,k = map(int, input().split())\n    n=int(input())\n    if(n%2==0):\n        print(int(n/2))\n    else:\n        print(int((n+1)/2))",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 144,
+    "language": "python",
+    "code": "n=int(input())\ns=[x for x in range(778) if sorted(set(str(x)))==sorted(str(47)) or sorted(set(str(x)))==['4'] or sorted(set(str(x)))==['7']]\nfor i in s:\n    if n%i==0:\n        print('YES')\n        break\nelse:\n    print('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 145,
+    "language": "python",
+    "code": "n, k = map(int, input().split())\nA = list(map(int, input().split()))\nfrom collections import Counter\nC = Counter(A).most_common()\ndif = len(C) - k\nif dif <= 0:\n\tprint(0)\nelse:\n\ts = 0\n\tfor i in range(dif):\n\t\ts += C[-(i + 1)][1]\n\tprint(s)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 146,
+    "language": "python",
+    "code": "\"\"\"\n    Author: Sagar Pandey\n\n\"\"\"\n# ---------------------------------------------------Import Libraries---------------------------------------------------\nimport sys\nimport os\nfrom math import sqrt, log, log2, log10, gcd, floor, pow, sin, cos, tan, pi, inf, factorial\nfrom copy import copy, deepcopy\nfrom sys import exit, stdin, stdout\nfrom collections import Counter, defaultdict, deque\nfrom itertools import permutations\nimport heapq\nfrom bisect import bisect_left as bl\n# If the element is already present in the list,\n# the left most position where element has to be inserted is returned.\nfrom bisect import bisect_right as br\nfrom bisect import bisect\n\n# If the element is already present in the list,\n# the right most position where element has to be inserted is r\n\n# ---------------------------------------------------Global Variables---------------------------------------------------\n# sys.setrecursionlimit(100000000)\nmod = 1000000007\n# ---------------------------------------------------Helper Functions---------------------------------------------------\niinp = lambda: int(sys.stdin.readline())\ninp = lambda: sys.stdin.readline().strip()\nstrl = lambda: list(inp().strip().split(\" \"))\nintl = lambda: list(map(int, inp().split(\" \")))\nmint = lambda: map(int, inp().split())\nflol = lambda: list(map(float, inp().split(\" \")))\nflush = lambda: stdout.flush()\n\n\ndef permute(nums):\n    def fun(arr, nums, cur, v):\n        if len(cur) == len(nums):\n            arr.append(cur.copy())\n        i = 0\n        while i < len(nums):\n            if v[i]:\n                i += 1\n                continue\n            else:\n                cur.append(nums[i])\n                v[i] = 1\n                fun(arr, nums, cur, v)\n                cur.pop()\n                v[i] = 0\n                i += 1\n            # while i<len(nums) and nums[i]==nums[i-1]:i+=1    # Uncomment for unique permutations\n        return arr\n\n    res = []\n    nums.sort()\n    v = [0] * len(nums)\n    return fun(res, nums, [], v)\n\n\ndef subsets(res, index, arr, cur):\n    res.append(cur.copy())\n    for i in range(index, len(arr)):\n        cur.append(arr[i])\n        subsets(res, i + 1, arr, cur)\n        cur.pop()\n    return res\n\n\ndef sieve(N):\n    root = int(sqrt(N))\n    primes = [1] * (N + 1)\n    primes[0], primes[1] = 0, 0\n    for i in range(2, root + 1):\n        if primes[i]:\n            for j in range(i * i, N + 1, i):\n                primes[j] = 0\n    return primes\n\n\ndef bs(arr, l, r, x):\n    if x < arr[0] or x > arr[len(arr) - 1]:\n        return -1\n    while l <= r:\n        mid = l + (r - l) // 2\n        if arr[mid] == x:\n            return mid\n        elif arr[mid] < x:\n            l = mid + 1\n        else:\n            r = mid - 1\n    return -1\n\n\ndef isPrime(n):\n    if n <= 1: return False\n    if n <= 3: return True\n    if n % 2 == 0 or n % 3 == 0: return False\n    p = int(sqrt(n))\n    for i in range(5, p + 1, 6):\n        if n % i == 0 or n % (i + 2) == 0:\n            return False\n    return True\n\n\n# -------------------------------------------------------Functions------------------------------------------------------\n\ndef solve():\n    s=inp()\n    n=len(s)\n    # print(s)\n    print(3)\n    print(\"L\",2)\n    s=s[1]+s\n    # print(s)\n    n=len(s)\n    print(\"R\",2)\n    s+=s[1:n-1][::-1]\n    n=len(s)\n    # print(s)\n    print(\"R\",n-1)\n    s+=s[n-2]\n    # print(s)\n    # print(s[::-1])\n    # if s==s[::-1]:\n    #     print(1)\n\n\n\n\n\n# -------------------------------------------------------Main Code------------------------------------------------------\nsolve()\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 147,
+    "language": "python",
+    "code": "n=int(input())\na=list(map(int,input().split()))\nif(len(a)%2!=0):\n    a.sort()\n    x=len(a)//2\n    print(a[x])\nelse:\n    a.sort()\n    x=len(a)//2\n    x=x-1\n    print(a[x])\n",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 148,
+    "language": "python",
+    "code": "x,y,z=map(int,input().split())\nif x>y:\n\tif x>y+z:\n\t\tprint('+')\n\telse:\n\t\tprint('?')\nelif x<y:\n\tif x+z<y:\n\t\tprint('-')\n\telse:\n\t\tprint('?')\nelse:\n\tif z==0:\n\t\tprint('0')\n\telse:\n\t\tprint('?')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 149,
+    "language": "python",
+    "code": "\nn=int(input())\ni=0\nwhile i<n:\n    x,y=map(int,input().split(\" \"))\n    # print(x,y)\n    if x>=y:\n\n            # print(x-(2*(y-1)))\n            if (x-(2*(y-1)))%2==0 and (x-(2*(y-1)))>0 and x!=y :\n                print(\"YES\")\n                ans=[]\n                ans=[2]*(y-1)\n                ans=[2]*(y-1)\n                ans.append(x-2*(y-1))\n                print(' '.join(map(str,ans)))\n            elif (x - (y - 1)) % 2 != 0 and x!=y:\n                print(\"YES\")\n                ans = []\n                ans = [1]*(y-1)\n                ans.append(x - (y-1))\n                print(' '.join(map(str,ans)))\n            elif x==y:\n                print(\"YES\")\n                ans=[]\n                ans=[1]*y\n                print(' '.join(map(str,ans)))\n\n\n            else:\n                print(\"NO\")\n\n    else:\n        print(\"NO\")\n\n    i=i+1\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 150,
+    "language": "python",
+    "code": "s = input()\nprint(s[:3]+'8'+s[-6:])",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 151,
+    "language": "python",
+    "code": "def pwm(a, n, mod):\n    ans = 1\n    while n:\n        if n & 1:\n            ans = ans*a % mod\n\n        a = a*a % mod\n        n >>= 1\n    return ans\n\n\nn = int(input())\n\nl = [int(x) for x in input().split()]\n\nl.sort()\n\na, b = l[:n], l[n:]\nans = 0\nmod = 998244353\ndnom = 1\nnom = 1\nfor i in range(n):\n    ans += (b[i] % mod - a[i] % mod) % mod\n    nom = nom * (i+1) % mod * (2*n - i) % mod\n    dnom = dnom*(i+1) % mod * (i+1) % mod\ngg = (nom % mod)*pwm(dnom, mod-2, mod) % mod\nfans = (ans*gg) % mod\n\n# print(ans)\n# print(gg)\nprint(fans)\n",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 152,
+    "language": "python",
+    "code": "S = input()\nprint(S[:2] + '18' +S[4:])",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 153,
+    "language": "python",
+    "code": "x, y, z = map(int, input().split())\n\nif x - y + z < 0:\n    print(\"-\")\nelif x - y - z > 0:\n    print(\"+\")\nelif x - y + z == 0 and x - y - z == 0:\n    print(\"0\")\nelse:\n    print(\"?\")",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 154,
+    "language": "python",
+    "code": "n=int(input())\ns=list(map(int,input().split()))\nif(n==1):\n    print(s[0])\nelse:\n    k=0\n    s.sort()\n    while k<n-1 :\n        a=len(s)\n        if k%2==0:\n            del(s[a-1])\n        else:\n            del(s[0])\n        k=k+1\n    print(s[0])",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 155,
+    "language": "python",
+    "code": "n=int(input())\nif len(str(n))==1:\n    if str(n)[0] in '47':\n        con=True\n    else:\n        con=False\nelif len(str(n))==2:\n    if str(n)[0] in '47' and str(n)[1] in '47':\n        con=True\n    else:\n        con=False\nelif len(str(n))==3:\n    if str(n)[0] in '47' and str(n)[1] in '47' and str(n)[2] in '47':\n        con=True\n    else:\n        con=False\nelse:\n    con=False\nif con:\n    print(\"YES\")\nelse:\n    luckynums=[]\n    for i in range(1,100):\n        if i ==4 or i==7 or i==47 or i==74:\n            luckynums.append(i)\n    for i in range(100,1000):\n        if str(i)[0] in '47' and str(i)[1] in '47' and str(i)[2] in '47':\n            luckynums.append(i)\n    for j in luckynums:\n        if n%j==0:\n            con=True\n            break\n    if con:\n        print(\"YES\")\n    else:\n        print(\"NO\")\n        \n        \n\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 156,
+    "language": "python",
+    "code": "c = ''\nm = 0\nb = 0\nfor i in range(int(input())):\n    s = input()\n    if s == c:\n        b += 1\n    else:\n        if b > m:\n            m = b\n        c = s\n        b = 1\nprint(max(m, b))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 157,
+    "language": "python",
+    "code": "import sys\ninput = sys.stdin.buffer.readline\ndef prog():\n    for  _ in range(int(input())):\n        n,m,a,b = map(int,input().split())\n        if n*a == m*b:\n            print('YES')\n            string = '1'*a + '0'*(m-a)\n            for i in range(n):\n                print(string)\n                string = string[m-a:] + string[:m-a]\n        else:\n            print('NO')\nprog()\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 158,
+    "language": "python",
+    "code": "n,m=[int(x) for x in input().split()]\nif m%n!=0:\n\tprint(-1)\nelse:\n\tans=0\n\tfact = m//n\n\twhile fact:\n\t\tif fact==1:\n\t\t\tbreak\n\t\telif fact%2==0:\n\t\t\tfact/=2\n\t\t\tans+=1\n\t\telif fact%3==0:\n\t\t\tfact/=3\n\t\t\tans+=1\n\t\telse:\n\t\t\tans=-1\n\t\t\tbreak\n\tprint(ans)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 159,
+    "language": "python",
+    "code": "a,b,c=map(int,input().split())\nprint('Yes' if (c>a+b and (c-a-b)**2>4*a*b) else 'No')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 160,
+    "language": "python",
+    "code": "n = int(input())\nstr = input()\nls = str.count('L')\nrs = str.count('R')\nprint(ls+rs+1)",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 161,
+    "language": "python",
+    "code": "a, b, x = map(int, input().split())\n\nl = (a+x-1)//x\nr = b//x\n\nprint(r-l+1)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 162,
+    "language": "python",
+    "code": "N, K = map(int, input().split())\nS = input()\nprint(min(sum([1 for i in range(1, N) if S[i] == S[i-1]]) + K*2, N-1))",
+    "time_class": "O(n log n)",
+    "space_class": "O(n log n)"
+  },
+  {
+    "id": 163,
+    "language": "python",
+    "code": "n = int(input())\nListOf_n = list(map(int, input().split()))\ndel ListOf_n[n:]\n# print(ListOf_n)\nfor i in range(n - 1):\n    if i%2 == 0:\n        max_num1 = max(ListOf_n)\n        try:\n            ListOf_n.remove(max_num1)\n        except Exception as e:\n            print(e)\n    else:\n        min_num1 = min(ListOf_n)\n        try:\n            ListOf_n.remove(min_num1)\n        except Exception as e:\n            print(e)\n\nprint(ListOf_n[0])\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 164,
+    "language": "python",
+    "code": "num_tests = int(input())\ntests = []\ntime_records = []\n\ndef compare(a,b):\n    if a>b:\n        return a\n    else:\n        return b\n\nfor i in range(num_tests):\n    tests.append(input())\n\nfor string in tests:\n    visited_set = set([])\n    len_string = len(string)\n    position = [0,0]\n    timer = 0\n    for j in range(len(string)):\n        if string[j] == \"N\":\n            point1 = str(position[0]) + \":\" + str(position[1])\n            point2 = str(position[0]) + \":\" + str(position[1]+1)\n            direction = point1 + \"->\" + point2\n            reversed_direction = point2 + \"->\" + point1\n            if direction not in visited_set:\n                visited_set.add(direction)\n                visited_set.add(reversed_direction)\n                timer = timer + 5\n            else:\n                timer = timer + 1\n            position[1] = position[1] + 1\n        elif string[j] == \"S\":\n            point1 = str(position[0]) + \":\" + str(position[1])\n            point2 = str(position[0]) + \":\" + str(position[1]-1)\n            direction = point1 + \"->\" + point2\n            reversed_direction = point2 + \"->\" + point1\n            if direction not in visited_set:\n                visited_set.add(direction)\n                visited_set.add(reversed_direction)\n                timer = timer + 5\n            else:\n                timer = timer + 1\n            position[1] = position[1] - 1\n        elif string[j] == \"W\":\n            point1 = str(position[0]) + \":\" + str(position[1])\n            point2 = str(position[0]-1) + \":\" + str(position[1])\n            direction = point1 + \"->\" + point2\n            reversed_direction = point2 + \"->\" + point1\n            if direction not in visited_set:\n                visited_set.add(direction)\n                visited_set.add(reversed_direction)\n                timer = timer + 5\n            else:\n                timer = timer + 1\n            position[0] = position[0] - 1\n        elif string[j] == \"E\":\n            point1 = str(position[0]) + \":\" + str(position[1])\n            point2 = str(position[0]+1) + \":\" + str(position[1])\n            direction = point1 + \"->\" + point2\n            reversed_direction = point2 + \"->\" + point1\n            if direction not in visited_set:\n                visited_set.add(direction)\n                visited_set.add(reversed_direction)\n                timer = timer + 5\n            else:\n                timer = timer + 1\n            position[0] = position[0] + 1\n    time_records.append(timer)\n\nfor i in time_records:\n    print(i)\n\n\n\n\n\n\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 165,
+    "language": "python",
+    "code": "T = int(input())\nfor t in range(T):\n\tn = int(input())\n\tfor num in range(1,n+1):\n\t\tprint(num)",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 166,
+    "language": "python",
+    "code": "n = int(input())\nif n > 36: print(-1)\nelif n > 1: print('8' * (n // 2) if not n % 2 else '8' * (n // 2) + '0')\nelse: print(6)\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 167,
+    "language": "python",
+    "code": "n=int(input())\narr=list(map(int,input().split()))\na=list(set(arr))\na.sort()\nif len(a)==1:\n    print(0)\nelif len(a)==2:\n    if(a[0]+a[1])%2==0:\n        print(int(abs((a[0]+a[1])/2-a[0])))\n    else:\n        print(abs(a[1]-a[0]))\nelif len(a)==3:\n    if(a[1]-a[0])==(a[2]-a[1]):\n        print(a[2]-a[1])\n    else:\n        print(-1)\nelse:\n    print(-1)\n        \n    ",
+    "time_class": "O(n log n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 168,
+    "language": "python",
+    "code": "nums=[4,7,47,44,444,447,474,477]\nn=int(input())\nfor i in nums:\n    if n%i==0:\n        print('YES')\n        break\n    elif nums.index(i)==len(nums)-1:\n        print('NO')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 169,
+    "language": "python",
+    "code": "n,m=map(int,input().split())\nc=0\nk=m//n\nif m%n==0:\n    while(k>1):\n        if(k%2==0):\n            k/=2\n        else:\n            k/=3\n        c+=1\n    if k==1:\n        print(c)\n    else:\n        print(-1)\nelse:\n    print(-1)",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 170,
+    "language": "python",
+    "code": "n = input()\nlucky_numbers = ['4', '7', '44', '47', '74', '77', '444', '447', '474', '477', '744', '747', '774', '777']\n\nout = 'NO'\n\nif n in lucky_numbers:\n    out = 'YES'\nelse:\n    for i in range(0, len(lucky_numbers)):\n        if int(n) % int(lucky_numbers[i]) == 0:\n            out = 'YES'\n            break\n\nprint(out)",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 171,
+    "language": "python",
+    "code": "n=int(input())\nif(n%7==0 or n%4==0 or n%47==0 or n%74==0\n   or n%447==0 or n%744==0 or n%477==0 or n%774==0):\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 172,
+    "language": "python",
+    "code": "for t in range(int(input())):\n    n=int(input())\n    s=\"\"\n    for i in range(1,n):\n        s+=str(i)+\" \"\n    s+=str(n)\n    print(\"\".join(s))",
+    "time_class": "O(n^2)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 173,
+    "language": "python",
+    "code": "def f(n):\n    if n & 1:\n        return n // 2 + 1\n    return n // 2\n\n\nt = int(input())\nfor _ in range(t):\n    n = int(input())\n    print(f(n))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 174,
+    "language": "python",
+    "code": "print(int(input())+1)\n\n# My code says who am I\n# I want to burn and born at this way\n# In my eye there is not any things Except love ...",
+    "time_class": "O(1)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 175,
+    "language": "python",
+    "code": "import math\nx,y,z=map(int,input().split())\nxx=x-y \nif abs(xx)>z or z==0:\n    if xx<0:\n        print(\"-\")\n    elif xx==0:\n        print(0)\n    else:\n        print('+')\nelse:\n    print('?')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 176,
+    "language": "python",
+    "code": "import sys\nimport math\nimport random\nfrom typing import List\n\n# sys.stdin = open('input.txt', 'r')\n# sys.stdout = open('output.txt', 'w')\n\ninput = sys.stdin.readline\n\ndef is_palindrome(s):\n\tN = len(s)\n\tfor i in range(N // 2):\n\t\tif s[i] != s[N-1-i]:\n\t\t\treturn False\n\treturn True\n\n\ndef go(steps, s):\n\tif is_palindrome(s):\n\t\tprint(' ' * steps, s, steps)\n\t\tprint(' ->\\n'.join(A))\n\tif steps >= 3:\n\t\treturn\n\tN = len(s)\n\tfor i in range(1, N-1):\n\t\tnext_s = ''.join(reversed(s[1:i+1])) + s\n\t\tA.append(next_s)\n\t\tgo(steps + 1, next_s)\n\t\tA.pop()\n\n\tfor i in range(1, N-1):\n\t\tnext_s = s + ''.join(reversed(s[i:N-1]))\n\t\tA.append(next_s)\n\t\tgo(steps + 1, next_s)\n\t\tA.pop()\n\n\nS = input().strip()\nN = len(S)\n# A = [S]\n# go(0, S)\nprint(3)\nprint('L 2')\nprint('R 2')\nprint('R %d' % (2*N - 1))\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 177,
+    "language": "python",
+    "code": "import traceback\nimport math\nfrom collections import defaultdict\nfrom functools import lru_cache\nimport os\nimport sys\nfrom io import BytesIO, IOBase\n\nBUFSIZE = 8192\n\nclass FastIO(IOBase):\n    newlines = 0\n\n    def __init__(self, file):\n        self._fd = file.fileno()\n        self.buffer = BytesIO()\n        self.writable = \"x\" in file.mode or \"r\" not in file.mode\n        self.write = self.buffer.write if self.writable else None\n\n    def read(self):\n        while True:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            if not b:\n                break\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines = 0\n        return self.buffer.read()\n\n    def readline(self):\n        while self.newlines == 0:\n            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n            self.newlines = b.count(b\"\\n\") + (not b)\n            ptr = self.buffer.tell()\n            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)\n        self.newlines -= 1\n        return self.buffer.readline()\n\n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.buffer.getvalue())\n            self.buffer.truncate(0), self.buffer.seek(0)\n\n\nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        self.write = lambda s: self.buffer.write(s.encode(\"ascii\"))\n        self.read = lambda: self.buffer.read().decode(\"ascii\")\n        self.readline = lambda: self.buffer.readline().decode(\"ascii\")\n\n\nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip(\"\\r\\n\")\n\ndef geti():\n    return int(input())\n\ndef gets():\n    return input()\n\ndef getil():\n    return list(map(int, input().split()))\n\ndef getsl():\n    return input().split()\n\n\ndef get2d(nrows, ncols, n=0):\n    return [[n] * ncols for r in range(nrows)]\n\ninf = float('inf')\nmod = 10 ** 9 + 7\n\n\n\n\ndef main():\n    w = gets()\n    m = geti()\n\n    W = [i+1 for i, k in enumerate(w) if k=='1']\n    \n    def do(totl, totr, prv, turn, k):\n        if k == m:\n            return True, []\n        # print(totl, totr, prv, turn, k)\n        for w in W:\n            if w == prv: continue\n            if turn==0 and totl+w>totr:\n                st, path = do(totl+w, totr, w, 1, k+1)\n                if st:\n                    return True, [w] + path\n            if turn==1 and totr+w>totl:                \n                st, path = do(totl, totr+w, w, 0, k+1)\n                if st:\n                    return True, [w] + path\n        return False, []\n    \n    return do(0, 0, -1, 0, 0)\n\ntry:\n    ans, arr = main()\n    ans = 'YES' if ans else 'NO'\n    print(ans)\n    if arr:\n        print(*arr)\nexcept Exception as e:\n    traceback.print_exc()",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 178,
+    "language": "python",
+    "code": "def lucky(n):\n    while n:\n        if (n % 10 != 4) and (n % 10 != 7):\n            return False\n        n //= 10\n    return True\n\n\ndef luckCheck(n):\n    if lucky(n):\n        return True\n    for i in range(4, n):\n        if n % i == 0 and lucky(i):\n            return True\n    return False\n\n\nN = int(input())\nif luckCheck(N):\n    print('YES')\nelse:\n    print('NO')\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 179,
+    "language": "python",
+    "code": "n, a , b = map(int, input().split())\ns=input()\nw=int(s[a-1])\nx=int(s[b-1])\nprint(abs(w-x))\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 180,
+    "language": "python",
+    "code": "print('Heisei' if int(input()[5:7]) <= 4 else 'TBD')",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 181,
+    "language": "python",
+    "code": "import sys\ninput = sys.stdin.readline\n\nt = int(input())\nfor _ in range(t):\n    n, k = map(int, input().rstrip().split())\n    l = []\n    if (k > n):\n        print('NO')\n        continue\n    for _ in range(k-1):\n        l.append(1)\n    if ((n-sum(l))%2 == 1 and (n-sum(l)) > 0):\n        print('YES')\n        for num in l:\n            print(num, end=' ')\n        print(n-sum(l))\n        continue\n\n    l = []\n    for _ in range(k-1):\n        l.append(2)\n    if ((n-sum(l))%2 == 0 and (n-sum(l)) > 0):\n        print('YES')\n        for num in l:\n            print(num, end=' ')\n        print(n-sum(l))\n        continue\n    print('NO')\n",
+    "time_class": "O(n^2)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 182,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n,m,a,b=map(int,input().split())\n    if(n*a!=m*b):\n        print(\"NO\")\n    else:\n        st='1'*a+'0'*(m-a)\n        print(\"YES\")\n        st=st+st\n        for i in range(n):\n            print(st[(a*i)%m:m+(a*i)%m])",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 183,
+    "language": "python",
+    "code": "for _ in range(int(input())):\n    n=int(input())\n    if n==1:\n        print(1)\n    else:\n        if n%2==1:\n            print((n//2)+1)\n        else:\n            print(n//2)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 184,
+    "language": "python",
+    "code": "n, m = map(int, input().split())\nif m % n == 0:\n    n = m // n\n    ans = 0\n    while True:\n        if n == 1:\n            print(ans)\n            break\n        elif n % 2 == 0:\n            ans += 1\n            n //= 2\n        elif n % 3 == 0:\n            ans += 1\n            n //= 3\n        else:\n            print(-1)\n            break\nelse:\n    print(-1)",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 185,
+    "language": "python",
+    "code": "w = {\n     ('rock', 'scissors'): True,\n     ('scissors', 'rock'): False,\n     ('paper', 'rock'): True,\n     ('rock', 'paper'): False,\n     ('scissors', 'paper'): True,\n     ('paper', 'scissors'): False     \n}\nf = input()\nm = input()\ns = input()\nif (f, m) in w and w[(f, m)] and (f, s) in w and w[(f, s)]:\n    print('F')\nelif (m, f) in w and w[(m, f)] and (m, s) in w and w[(m, s)]:\n    print('M')\nelif (s, m) in w and w[(s, m)] and (s, f) in w and w[(s, f)]:\n    print('S')\nelse:\n    print('?')\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 186,
+    "language": "python",
+    "code": "n = int(input())\nt= n//2\nprint(t)\na = [2]*t\nif(n&1):\n    a[-1] = 3\nprint(*a)\n\n\n\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 187,
+    "language": "python",
+    "code": "# Hey, there Stalker!!!\n# This Code was written by:\n# \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\n# \u2592\u2592\u2554\u2557\u2554\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557\u2592\u2592\u2592\u2554\u2557\u2592\u2592\u2592\n# \u2592\u2554\u255d\u2551\u2551\u2554\u2550\u2557\u2551\u2554\u2550\u2557\u2560\u2557\u2592\u2592\u2551\u2551\u2592\u2592\u2592\n# \u2592\u255a\u2557\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2560\u256c\u2550\u2550\u2563\u2551\u2554\u2557\u2592\n# \u2592\u2592\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2551\u2560\u2563\u2551\u2550\u2563\u255a\u255d\u255d\u2592\n# \u2592\u2554\u255d\u255a\u2563\u255a\u2550\u255d\u2551\u255a\u2550\u255d\u2551\u2551\u2551\u2550\u2563\u2554\u2557\u2557\u2592\n# \u2592\u255a\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2563\u2560\u2550\u2550\u2569\u255d\u255a\u255d\u2592\n# \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2554\u255d\u2551\u2592\u2592\u2592\u2592\u2592\u2592\u2592\n# \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u255a\u2550\u255d\u2592\u2592\u2592\u2592\u2592\u2592\u2592\n# \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\n#from __future__ import division, print_function\n#mod=int(1e9+7)\n#import resource\n#resource.setrlimit(resource.RLIMIT_STACK, [0x100000000, resource.RLIM_INFINITY])\n#import threading\n#threading.stack_size(2**26)\n#fact=[1]\n#for i in range(1,100001):\n#    fact.append((fact[-1]*i)%mod)\n#ifact=[0]*100001\n#from collections import deque, defaultdict, Counter, OrderedDict\n#from math import ceil, sqrt, hypot, factorial, pi, sin, cos, radians, gcd\n#from heapq import heappush, heappop, heapify, nlargest, nsmallest\n#ifact[100000]=pow(fact[100000],mod-2,mod)\n#for i in range(100000,0,-1):\n#    ifact[i-1]=(i*ifact[i])%mod\n# sys.setrecursionlimit(10**6) \nfrom sys import stdin, stdout\nimport bisect            #c++ upperbound\nfrom bisect import bisect_left as bl              #c++ lowerbound bl(array,element)\nfrom bisect import bisect_right as br             #c++ upperbound\nimport itertools\nfrom collections import Counter\nimport collections\nimport math\nimport heapq\nimport re\ndef modinv(n,p):\n    return pow(n,p-2,p)\ndef cin():\n    return map(int,sin().split())\ndef ain():                           #takes array as input\n    return list(map(int,sin().split()))\ndef sin():\n    return input()\ndef inin():\n    return int(input())\n  \ndef Divisors(n) : \n    l = []  \n    for i in range(1, int(math.sqrt(n) + 1)) :\n        if (n % i == 0) : \n            if (n // i == i) : \n                l.append(i) \n            else : \n                l.append(i)\n                l.append(n//i)\n    return l\n \ndef most_frequent(list):\n    return max(set(list), key = list.count) \ndef GCD(x,y):\n    while(y):\n        x, y = y, x % y\n    return x\n \ndef ncr(n,r,p):                      \n    t=((fact[n])*((ifact[r]*ifact[n-r])%p))%p\n    return t\n \ndef Convert(string): \n    li = list(string.split(\"\")) \n    return li \n \ndef SieveOfEratosthenes(n): \n    global prime\n    prime = [True for i in range(n+1)] \n    p = 2\n    while (p * p <= n): \n        if (prime[p] == True): \n            for i in range(p * p, n+1, p): \n                prime[i] = False\n        p += 1\n    f=[]\n    for p in range(2, n): \n        if prime[p]: \n            f.append(p)\n    return f\nprime=[]\nq=[]\ndef dfs(n,d,v,c):\n    global q\n    v[n]=1\n    x=d[n]\n    q.append(n)\n    j=c\n    for i in x:\n        if i not in v:\n            f=dfs(i,d,v,c+1)\n            j=max(j,f)\n            # print(f)\n    return j\n\n\n#Implement heapq\n#grades = [110, 25, 38, 49, 20, 95, 33, 87, 80, 90] \n#print(heapq.nlargest(3, grades)) #top 3 largest\n#print(heapq.nsmallest(4, grades))\n#Always make a variable of predefined function for  ex- fn=len\n#n,k=map(int,input().split())\n\"\"\"*******************************************************\"\"\"\ndef main():\n   #Write Your Code Here\n        n=inin()\n        a=ain()\n        for i in range(n):\n                if i==0:\n                        print(a[i+1]-a[i],a[n-1]-a[i])\n                elif i==n-1:\n                        print(a[i]-a[i-1],a[i]-a[0])\n                else:\n                        print(min(a[i+1]-a[i],a[i]-a[i-1]),max(a[n-1]-a[i],a[i]-a[0]))             \n        \n\n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n######## Python 2 and 3 footer by Pajenegod and c1729\npy2 = round(0.5)\nif py2:\n    from future_builtins import ascii, filter, hex, map, oct, zip\n    range = xrange\n \nimport os, sys\nfrom io import IOBase, BytesIO\n \nBUFSIZE = 8192\nclass FastIO(BytesIO):\n    newlines = 0\n \n    def __init__(self, file):\n        self._file = file\n        self._fd = file.fileno()\n        self.writable = \"x\" in file.mode or \"w\" in file.mode\n        self.write = super(FastIO, self).write if self.writable else None\n \n    def _fill(self):\n        s = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))\n        self.seek((self.tell(), self.seek(0,2), super(FastIO, self).write(s))[0])\n        return s\n \n    def read(self):\n        while self._fill(): pass\n        return super(FastIO,self).read()\n \n    def readline(self):\n        while self.newlines == 0:\n            s = self._fill(); self.newlines = s.count(b\"\\n\") + (not s)\n        self.newlines -= 1\n        return super(FastIO, self).readline()\n \n    def flush(self):\n        if self.writable:\n            os.write(self._fd, self.getvalue())\n            self.truncate(0), self.seek(0)\n \nclass IOWrapper(IOBase):\n    def __init__(self, file):\n        self.buffer = FastIO(file)\n        self.flush = self.buffer.flush\n        self.writable = self.buffer.writable\n        if py2:\n            self.write = self.buffer.write\n            self.read = self.buffer.read\n            self.readline = self.buffer.readline\n        else:\n            self.write = lambda s:self.buffer.write(s.encode('ascii'))\n            self.read = lambda:self.buffer.read().decode('ascii')\n            self.readline = lambda:self.buffer.readline().decode('ascii')\n \n \nsys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)\ninput = lambda: sys.stdin.readline().rstrip('\\r\\n')\nif __name__== \"__main__\":\n  main()\n#threading.Thread(target=main).start()",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 188,
+    "language": "python",
+    "code": "n=int(input())\nc=0\nline=[4,7,47,74,447,477,474,744,747,774]\nfor i in line:\n    if n%i==0:\n        c=1\nif c==1:\n    print('YES')\nelse:\n    print('NO')\n    \n\n    \n        \n    \n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 189,
+    "language": "python",
+    "code": "n=int(input())\nprint(n//2)\nfor i in range(n//2-1):\n    print(2,end=' ')\nif n%2==0:\n    print(2)\nelse:\n    print(3)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 190,
+    "language": "python",
+    "code": "n=int(input())\nd=[]\nif n%2==0:\n    k=n//2\n    n=k\n    for i in range(k):\n        d.append(2)\nelse:\n    k=(n-3)//2\n    n=k+1\n    for i in range(k):\n        d.append(2)\n    d.append(3)\n\nprint(n)\nprint(*d)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 191,
+    "language": "python",
+    "code": "from collections import deque\nfrom bisect import bisect_left\n\nn=int(input())\nd=deque()\nfor i in range(n):\n  a=int(input())\n  b=bisect_left(d,a)\n  if b==0:\n    d.appendleft(a)\n  else:\n    d[b-1]=a \nprint(len(d))\n",
+    "time_class": "O(n)",
+    "space_class": "O(n^2)"
+  },
+  {
+    "id": 192,
+    "language": "python",
+    "code": "n=int(input())\nlst=[]\nprint(n//2)\nif n%2==0:\n    while n>0:\n        lst.append(2)\n        n=n-2\nelse:\n    while n>3:\n        lst.append(2)\n        n=n-2\n    lst.append(3)\ns=''\nfor i in range(len(lst)):\n    s+=str(lst[i])+\" \"\nprint(s)",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  },
+  {
+    "id": 193,
+    "language": "python",
+    "code": "import itertools\nimport math\nimport sys\nfrom collections import defaultdict\n\n \ndef is_debug():\n    return '--debug' in sys.argv\n\ndef stdin_wrapper():\n    data = '''hannah\n\n\n'''\n    \n    for line in data.split('\\n'):\n        yield line\n \nif not is_debug():\n    def stdin_wrapper():\n        while True:\n            yield sys.stdin.readline()\n \ninputs = stdin_wrapper()\n \ndef input_wrapper():\n    return next(inputs)\n \n\n\ndef get_str():\n    if is_debug():\n        return input_wrapper()\n\n    return input()\n\ndef get(_type):\n    if _type == str:\n        return get_str()\n\n    return _type(input_wrapper())\n \ndef get_arr(_type):\n    return [_type(x) for x in input_wrapper().split()]\n \n\ndef tuplerize(method):\n    def wrap(*args, **kwargs):\n        res = method(*args, **kwargs)\n        if not isinstance(res, (tuple, list)):\n            res = (res, )\n\n        return res\n    return wrap\n\n''' Solution '''\n@tuplerize\ndef solve(s):\n    def is_palindrome(x):\n        for i in range(len(x)//2):\n            if x[i] != x[-1-i]:\n                return False\n\n        return True\n\n    def execute(d, cmds):\n        for cmd in cmds:\n            _dir, l = cmd.split(' ')\n            l = int(l)\n            \n            if _dir == 'R':\n                d = d + ''.join([x for x in reversed(d[l-1:-1])])\n            else:\n                d = ''.join([x for x in reversed(d[1:l])]) + d\n            \n\n        return d\n\n    if is_palindrome(s):\n        return 0\n\n    res = [\n        'R {}'.format(len(s) - 1),\n        'L {}'.format(len(s)),\n        'L 2'\n    ]\n\n    if is_debug():\n        p = execute(s, res)\n        print('Verify', p, is_palindrome(p))\n\n    return '{}\\n{}'.format(\n        len(res),\n        '\\n'.join(res))\n\nprint(*solve(get_str()))",
+    "time_class": "O(n)",
+    "space_class": "O(log n)"
+  },
+  {
+    "id": 194,
+    "language": "python",
+    "code": "# https://codeforces.com/problemset/problem/550/A\n\ndef soln(s):\n    founds1 = []\n    founds2 = []\n    j = float('-inf') \n    for i in range(len(s) - 1):\n        # print(i, j)\n        c1 = s[i]\n        c2 = s[i + 1]\n        if c1 == 'A' and c2 == 'B':\n            founds1.append(i)\n        elif c1 == 'B' and c2 == 'A':\n            founds2.append(i)\n    if len(founds1) == 0 or len(founds2) == 0:\n        return 'NO'\n    if len(founds1) >= 3 or len(founds2) >= 3:\n        return 'YES'\n    # if abs(founds1[0] - founds2[0]) == 1:\n    #     return 'NO'\n    for i in founds1:\n        for j in founds2:\n            if abs(i - j) > 1:\n                return 'YES'\n    return 'NO'\n\ndef main():\n    s = input()\n    result = soln(s)\n    print(result)\n\nif __name__ == '__main__':\n    main()",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 195,
+    "language": "python",
+    "code": "string = input()\nif string.find('AB') != -1 and string.find('BA', string.find('AB') + 2) != -1:\n    print(\"YES\")\nelif string.find('BA') != -1 and string.find('AB', string.find('BA') + 2) != -1:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(n)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 196,
+    "language": "python",
+    "code": "number = int(input())\nif number%4==0:\n    print(\"YES\")\nelif number%7==0:\n    print(\"YES\")\nelif number%47==0:\n    print(\"YES\")\nelif number%74==0:\n    print(\"YES\")\nelif number%444==0:\n    print(\"YES\")\nelif number%474==0:\n    print(\"YES\")\nelif number%447==0:\n    print(\"YES\")\nelif number%477==0:\n    print(\"YES\")\nelif number%744==0:\n    print(\"YES\")\nelif number%774==0:\n    print(\"YES\")\nelif number%777==0:\n    print(\"YES\")\nelse:\n    print(\"NO\")\n",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 197,
+    "language": "python",
+    "code": "try:\n\t\n\tline=input()\n\tn=line.count('n')\n\ti=line.count('i')\n\te=line.count('e')\n\tt=line.count('t')\n\t#print(n,e,t,i)\n\tc=0\n\tz=1\n\tf=0\n\twhile(z!=0):\n\t\tif f==0:\n\t\t\tn=n-3\n\t\t\tf=1\n\t\telse:\n\t\t\tn=n-2\n\t\te=e-3\n\t\tt=t-1\n\t\ti=i-1\n\t\tif n>=0 and e>=0 and t>=0 and i>=0:\n\t\t\t#print(n,e,t,i)\n\t\t\tc=c+1\n\t\t\tcontinue\n\t\telse:\n\t\t\tbreak\n\tprint(c)\n\n\t'''if n>=2 and e>=3 and t>=1 and i>=1:\n\t\tprint(min(n,i,e,t))\n\telse:\n\t\tprint(0)'''\nexcept:\n\tpass",
+    "time_class": "O(n)",
+    "space_class": "O(log n)"
+  },
+  {
+    "id": 198,
+    "language": "python",
+    "code": "def votes(aa):\n    x, y, z = aa[0], aa[1], aa[2]\n    if x > y:\n        if x > y+z:\n            return \"+\"\n        return \"?\"\n    elif x < y:\n        if y > x+z:\n            return \"-\"\n        return \"?\"\n    elif x == y and z == 0:\n        return 0\n    else:\n        return \"?\"\n\nn = list(map(int, input().split()))\nprint(votes(n))",
+    "time_class": "O(1)",
+    "space_class": "O(1)"
+  },
+  {
+    "id": 199,
+    "language": "python",
+    "code": "n = int(input())\na = input()\nl = a.count(\"L\")\nm = a.count(\"R\")\nprint(l+m+1)\n",
+    "time_class": "O(n)",
+    "space_class": "O(n)"
+  }
+]

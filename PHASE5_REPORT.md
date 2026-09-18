@@ -40,6 +40,21 @@ Parsing/feature-extraction survival rate per split (`models/dataset.py`):
 
 ![space confusion matrix, rung 3](eval/figures/confusion_space_rung3_gnn.png)
 
+## LLM zero-shot baseline
+
+BigO(Bench) found frontier LLMs themselves struggle at this task; this project never had its own number for that until now. 200 held-out test examples (fixed seed 42, `eval/sample_llm_baseline.py`) were classified by Claude Sonnet 5 -- zero-shot, code only, no execution, no fine-tuning -- via 10 parallel subagents each blind to the ground truth (`eval/llm_baseline_unlabeled.json` has no label fields at all, so there's no answer key sitting next to the code being read). Scored with the exact same `eval/report.py:compute_metrics` every rung above uses.
+
+**Methodology note, stated plainly:** this is Claude classifying the code directly, not a scripted call to a hosted LLM API -- chosen deliberately to avoid needing an API key or incurring cost, and it is otherwise the same zero-shot task BigO(Bench) used to test GPT-4/Claude. **Sample composition, also stated plainly:** a genuine random sample of the test set is 199 Python + 1 C++ (the corpus is ~96% Python) -- this is a Python-only comparison in practice, not a multi-language LLM eval.
+
+| Variant | n | Accuracy | Macro-F1 | Mean ordinal distance | ECE |
+|---|---|---|---|---|---|
+| time | 200 | 0.615 | 0.365 | 0.690 | n/a |
+| space | 200 | 0.630 | 0.265 | 0.690 | n/a |
+
+**Reading these numbers honestly -- not the clean "beats an LLM" story this section expected to tell:** on *time*, the LLM baseline (0.365 macro-F1) is within noise of rung 3's full-test-set number (0.377) and actually above rung 3's own Python-only transfer-experiment number (0.325, see below) -- at n=200 vs. rung 3's ~25K, this is a real result, not a rounding error, but it is *not* a case of the served model clearly beating an LLM at the task. On *space*, the gap is real and in the expected direction: 0.265 vs. rung 3's 0.336 (or 0.335 Python-only) -- a ~0.07 macro-F1 gap, and the LLM's per-class F1 is exactly 0.000 on O(log n), O(n log n), *and* O(n^2) space (three of five classes, never once correct on any of them in this sample), which rung 3 doesn't show the same total collapse on.
+
+So the honest summary: PolyO's served model is clearly better than an LLM zero-shot baseline at *space* complexity, roughly comparable at *time* complexity, and in both cases achieves this with a model reimplemented in pure numpy that runs in milliseconds with no per-request LLM call, no API cost, and no dependency on a third party's model being available. That's a real, defensible advantage -- it just isn't "crushes an LLM at 1/1000th the cost" on every dimension, and this report says so rather than only reporting the dimension that tells a cleaner story.
+
 ## Ablation: multi-task vs. single-task
 
 Shared encoder + two heads, trained jointly, vs. two independent single-head models (plan §9: "does joint training beat two independent models? Either answer is a result.").
