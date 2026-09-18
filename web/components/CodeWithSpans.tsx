@@ -1,8 +1,14 @@
 // Renders the submitted code with the attribution's driving spans
-// highlighted (plan §11, item 4). Spans are `[start_line, start_col,
-// end_line, end_col]`, 0-indexed (tree-sitter's own convention, passed
-// through unchanged from `core/ir.py`'s `IRNode.span`) -- converted to
-// flat character offsets here since a span can cross multiple lines.
+// highlighted. Spans are `[start_line, start_col, end_line, end_col]`,
+// 0-indexed (tree-sitter's own convention, passed through unchanged from
+// `core/ir.py`'s `IRNode.span`) -- converted to flat character offsets
+// here since a span can cross multiple lines.
+//
+// Each span reveals as a scanner pass, not a block fade: a thin amber
+// underline sweeps left-to-right, then the highlight fill lands a beat
+// later, staggered in source order -- "now watch, this is what drove it."
+
+import type { CSSProperties } from "react";
 
 import type { AttributionItem } from "@/lib/types";
 
@@ -66,13 +72,14 @@ export function CodeWithSpans({ code, attribution }: CodeWithSpansProps) {
     segments.push({ text: code.slice(cursor) });
   }
 
+  let spanIndex = 0;
+
   return (
     <pre
       style={{
         margin: 0,
         padding: 16,
-        borderRadius: 8,
-        background: "var(--surface-1)",
+        background: "var(--surface-2)",
         border: "1px solid var(--border)",
         overflowX: "auto",
         fontSize: 13,
@@ -81,23 +88,43 @@ export function CodeWithSpans({ code, attribution }: CodeWithSpansProps) {
       }}
     >
       <code>
-        {segments.map((segment, i) =>
-          segment.feature ? (
+        {segments.map((segment, i) => {
+          if (!segment.feature) return <span key={i}>{segment.text}</span>;
+          const delayMs = 300 + Math.min(spanIndex, 8) * 50;
+          spanIndex += 1;
+          const style = { "--span-delay": `${delayMs}ms` } as CSSProperties;
+          return (
             <mark
               key={i}
               title={`Drives the prediction via: ${segment.feature}`}
               style={{
-                background: "var(--series-predicted-fill)",
+                ...style,
+                position: "relative",
+                background: "transparent",
                 color: "var(--text-primary)",
-                borderRadius: 3,
+                animation: "bench-fill-fade 200ms linear forwards",
+                animationDelay: "var(--span-delay)",
               }}
             >
               {segment.text}
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 2,
+                  background: "var(--signal)",
+                  transform: "scaleX(0)",
+                  transformOrigin: "left",
+                  animation: "bench-underline-sweep 220ms var(--ease-sweep) forwards",
+                  animationDelay: "var(--span-delay)",
+                }}
+              />
             </mark>
-          ) : (
-            <span key={i}>{segment.text}</span>
-          ),
-        )}
+          );
+        })}
       </code>
     </pre>
   );

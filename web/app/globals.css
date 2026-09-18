@@ -1,51 +1,108 @@
+/* PolyO -- "Bench": an oscilloscope/lab-instrument reading, not a SaaS
+   card. Hue carries meaning: amber ("--signal") is always the model's own
+   data (predicted curve, headline numbers); cyan ("--calibration") is
+   always the instrument's own UI state (focus, active toggle, sampling).
+   Nothing else gets a saturated color. Dark ("Console") is the primary,
+   designed-for-first experience; light ("Graph paper") is a full second
+   surface, not an inverted afterthought -- see the theme-init script in
+   app/layout.tsx for how `data-theme` gets set before first paint. */
+
 :root {
-  color-scheme: light;
-  --surface-1: #fcfcfb;
-  --page-plane: #f9f9f7;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --gridline: #e1e0d9;
-  --baseline: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --series-predicted: #2a78d6;
-  --series-predicted-fill: #cde2fb;
-  --series-ghost: #c3c2b7;
-  --status-good: #0ca30c;
+  color-scheme: dark;
+
+  --page-plane: #0a0b0d;
+  --surface-1: #12141a;
+  --surface-2: #0d0e11;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --grid-minor: rgba(148, 178, 190, 0.08);
+  --grid-major: rgba(148, 178, 190, 0.22);
+
+  --text-primary: #f2f1ec;
+  --text-secondary: #a9aeb4;
+  --text-muted: #6b7078;
+
+  --signal: #ff9130;
+  --signal-fill: rgba(255, 145, 48, 0.16);
+  --calibration: #2fd9ce;
+  --ghost-trace: rgba(87, 112, 138, 0.55);
+  --status-good: #35d6a0;
+  --status-error: #ff5c5c;
+
+  --font-body: var(--font-display), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-stack: var(--font-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-sweep: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-snap: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --surface-1: #1a1a19;
-    --page-plane: #0d0d0d;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --gridline: #2c2c2a;
-    --baseline: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --series-predicted: #3987e5;
-    --series-predicted-fill: #184f95;
-    --series-ghost: #52514e;
-    --status-good: #0ca30c;
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --page-plane: #f4f1e6;
+    --surface-1: #fbfaf4;
+    --surface-2: #ece9dc;
+    --border: rgba(20, 20, 15, 0.12);
+    --border-strong: rgba(20, 20, 15, 0.28);
+    --grid-minor: rgba(50, 60, 55, 0.08);
+    --grid-major: rgba(50, 60, 55, 0.22);
+
+    --text-primary: #14140f;
+    --text-secondary: #4b4a42;
+    --text-muted: #83806f;
+
+    --signal: #c1560a;
+    --signal-fill: rgba(193, 86, 10, 0.14);
+    --calibration: #0e7c86;
+    --ghost-trace: rgba(138, 143, 120, 0.7);
+    --status-good: #1f8f5e;
+    --status-error: #c23b3b;
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page-plane: #f4f1e6;
+  --surface-1: #fbfaf4;
+  --surface-2: #ece9dc;
+  --border: rgba(20, 20, 15, 0.12);
+  --border-strong: rgba(20, 20, 15, 0.28);
+  --grid-minor: rgba(50, 60, 55, 0.08);
+  --grid-major: rgba(50, 60, 55, 0.22);
+
+  --text-primary: #14140f;
+  --text-secondary: #4b4a42;
+  --text-muted: #83806f;
+
+  --signal: #c1560a;
+  --signal-fill: rgba(193, 86, 10, 0.14);
+  --calibration: #0e7c86;
+  --ghost-trace: rgba(138, 143, 120, 0.7);
+  --status-good: #1f8f5e;
+  --status-error: #c23b3b;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-1: #1a1a19;
-  --page-plane: #0d0d0d;
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
-  --gridline: #2c2c2a;
-  --baseline: #383835;
-  --border: rgba(255, 255, 255, 0.1);
-  --series-predicted: #3987e5;
-  --series-predicted-fill: #184f95;
-  --series-ghost: #52514e;
-  --status-good: #0ca30c;
+  --page-plane: #0a0b0d;
+  --surface-1: #12141a;
+  --surface-2: #0d0e11;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --grid-minor: rgba(148, 178, 190, 0.08);
+  --grid-major: rgba(148, 178, 190, 0.22);
+
+  --text-primary: #f2f1ec;
+  --text-secondary: #a9aeb4;
+  --text-muted: #6b7078;
+
+  --signal: #ff9130;
+  --signal-fill: rgba(255, 145, 48, 0.16);
+  --calibration: #2fd9ce;
+  --ghost-trace: rgba(87, 112, 138, 0.55);
+  --status-good: #35d6a0;
+  --status-error: #ff5c5c;
 }
 
 * {
@@ -63,16 +120,414 @@ body {
   min-height: 100%;
   color: var(--text-primary);
   background: var(--page-plane);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 220ms var(--ease-settle), color 220ms var(--ease-settle);
 }
 
 code,
 pre {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-mono-stack);
 }
 
 a {
   color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+.mono-nums {
+  font-family: var(--font-mono-stack);
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Corner-bracket "instrument case" frame: four L-shaped legs that snap in
+   clockwise from top-left when a panel mounts, instead of the generic
+   fade+slide-up every AI-generated dashboard reaches for. */
+.bench-panel {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  padding: 20px;
+}
+
+.bench-corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+}
+
+.bench-corner.tl {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid var(--border-strong);
+  border-left: 1.5px solid var(--border-strong);
+}
+
+.bench-corner.tr {
+  top: -1px;
+  right: -1px;
+  border-top: 1.5px solid var(--border-strong);
+  border-right: 1.5px solid var(--border-strong);
+}
+
+.bench-corner.br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid var(--border-strong);
+  border-right: 1.5px solid var(--border-strong);
+}
+
+.bench-corner.bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 1.5px solid var(--border-strong);
+  border-left: 1.5px solid var(--border-strong);
+}
+
+@keyframes bench-corner-snap {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bench-reveal .bench-corner {
+  animation: bench-corner-snap 200ms var(--ease-settle) forwards;
+  animation-delay: var(--corner-delay, 0ms);
+}
+
+.bench-channel-label {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  padding: 0 6px;
+  background: var(--page-plane);
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@keyframes bench-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bench-reveal-row {
+  opacity: 0;
+  animation: bench-fade-up 320ms var(--ease-settle) forwards;
+  animation-delay: var(--row-delay, 0ms);
+}
+
+@keyframes bench-underline-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes bench-fill-fade {
+  from {
+    background-color: transparent;
+  }
+  to {
+    background-color: var(--signal-fill);
+  }
+}
+
+@keyframes bench-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.bench-shell {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px 64px;
+}
+
+.bench-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.bench-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .bench-shell {
+    padding: 0 16px 48px;
+  }
+  .bench-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bench-corner {
+    animation: none !important;
+    opacity: 1;
+    transform: scale(1);
+  }
+  .bench-reveal-row {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+/* View Transitions -- the theme toggle's circular wipe and the landing/tool
+   scene morph both ride the same native API (lib/motion.ts's
+   withViewTransition), but need different root behaviour. Neither block
+   needs a prefers-reduced-motion guard here: the JS side never starts a
+   transition at all when reduced motion is on, same escape hatch as every
+   other bespoke animation in this app. */
+
+html.vt-theme::view-transition-group(root) {
+  animation-duration: 560ms;
+}
+
+html.vt-theme::view-transition-old(root),
+html.vt-theme::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.vt-theme::view-transition-new(root) {
+  animation: vt-circle-reveal 560ms var(--ease-settle);
+}
+
+@keyframes vt-circle-reveal {
+  from {
+    clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--vt-r, 150%) at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+}
+
+/* Landing's CTA and the tool's "RUN ANALYSIS" button share this name, so
+   the CTA visually shrinks and settles into the submit button's position
+   during the scene morph -- the browser interpolates geometry itself, no
+   FLIP math needed. */
+.vt-run-cta {
+  view-transition-name: run-cta;
+}
+
+html.vt-scene::view-transition-group(run-cta) {
+  animation-duration: 480ms;
+  animation-timing-function: var(--ease-settle);
+}
+
+/* Landing scene */
+
+.landing-hero {
+  padding: 56px 0 40px;
+  max-width: 640px;
+}
+
+.landing-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--calibration);
+  margin-bottom: 14px;
+}
+
+.landing-title {
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: 18px;
+  color: var(--text-primary);
+}
+
+.landing-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 54ch;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 44px;
+}
+
+.landing-cta-row {
+  padding-bottom: 64px;
+}
+
+.landing-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border: none;
+  border-radius: 0;
+  background: var(--signal);
+  color: var(--page-plane);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-settle), opacity 150ms var(--ease-settle);
+}
+
+.landing-cta:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Custom language listbox -- replaces the native <select> so open/close can
+   actually animate. */
+
+.lang-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease-settle);
+}
+
+.lang-select-trigger:hover,
+.lang-select-trigger[aria-expanded="true"] {
+  border-color: var(--border-strong);
+}
+
+.lang-select-caret {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 180ms var(--ease-settle);
+  display: inline-block;
+}
+
+.lang-select-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.lang-select-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-height: 240px;
+  overflow-y: auto;
+  transform-origin: top;
+  animation: lang-select-open 160ms var(--ease-settle);
+}
+
+@keyframes lang-select-open {
+  from {
+    opacity: 0;
+    transform: scaleY(0.92) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+.lang-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.lang-select-option.is-active {
+  background: var(--signal-fill);
+  color: var(--text-primary);
+}
+
+.lang-select-marker {
+  width: 10px;
+  color: var(--signal);
+  font-size: 10px;
+}
+
+.lang-select-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-select-panel {
+    animation: none;
+  }
+}
+
+/* CodeMirror frame -- sits inside a zero-padding BenchPanel so the editor's
+   own surface bleeds to the instrument-case border. */
+
+.code-editor-frame .cm-editor {
+  height: 340px;
+  font-size: 13px;
+}
+
+.code-editor-frame .cm-scroller {
+  overflow: auto;
 }
