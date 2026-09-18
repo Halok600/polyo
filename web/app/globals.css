@@ -520,6 +520,22 @@ html.vt-scene::view-transition-group(run-cta) {
   }
 }
 
+.example-chip {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease-settle), color 150ms var(--ease-settle);
+}
+
+.example-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
 /* CodeMirror frame -- sits inside a zero-padding BenchPanel so the editor's
    own surface bleeds to the instrument-case border. */
 

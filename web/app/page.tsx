@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { BenchPanel } from "@/components/BenchPanel";
@@ -28,6 +28,103 @@ const EXAMPLE_CODE = `def two_sum(nums, target):
     return []
 `;
 
+// One demo per served language -- the pitch is "multi-language," so the
+// demo should let a visitor actually see that instead of only ever
+// running the one hardcoded Python snippet.
+const EXAMPLES: { language: string; label: string; code: string }[] = [
+  { language: "python", label: "Python — hash lookup", code: EXAMPLE_CODE },
+  {
+    language: "go",
+    label: "Go — merge sort",
+    code: `package main
+
+func mergeSort(nums []int) []int {
+	if len(nums) <= 1 {
+		return nums
+	}
+	mid := len(nums) / 2
+	left := mergeSort(nums[:mid])
+	right := mergeSort(nums[mid:])
+	result := make([]int, 0, len(nums))
+	i, j := 0, 0
+	for i < len(left) && j < len(right) {
+		if left[i] <= right[j] {
+			result = append(result, left[i])
+			i++
+		} else {
+			result = append(result, right[j])
+			j++
+		}
+	}
+	result = append(result, left[i:]...)
+	result = append(result, right[j:]...)
+	return result
+}
+`,
+  },
+  {
+    language: "java",
+    label: "Java — nested loop",
+    code: `public class Solution {
+    public static int countPairs(int[] nums) {
+        int count = 0;
+        for (int i = 0; i < nums.length; i++) {
+            for (int j = i + 1; j < nums.length; j++) {
+                if (nums[i] + nums[j] == 0) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+}
+`,
+  },
+  {
+    language: "cpp",
+    label: "C++ — binary search",
+    code: `#include <vector>
+using namespace std;
+
+int binarySearch(vector<int>& nums, int target) {
+    int lo = 0, hi = nums.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[mid] < target) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}
+`,
+  },
+  {
+    language: "javascript",
+    label: "JavaScript — memoized recursion",
+    code: `function fibMemo(n, memo = new Map()) {
+  if (n <= 1) return n;
+  if (memo.has(n)) return memo.get(n);
+  const result = fibMemo(n - 1, memo) + fibMemo(n - 2, memo);
+  memo.set(n, result);
+  return result;
+}
+`,
+  },
+  {
+    language: "c",
+    label: "C — linear search",
+    code: `#include <stddef.h>
+
+int linear_search(int *nums, size_t n, int target) {
+    for (size_t i = 0; i < n; i++) {
+        if (nums[i] == target) return (int)i;
+    }
+    return -1;
+}
+`,
+  },
+];
+
 // "Better" (lower rank, faster) neighbour of a predicted class, if the
 // curve series has one -- "what faster looks like".
 function betterNeighbour(seriesKeys: string[], predictedClass: string, allRanked: string[]) {
@@ -53,7 +150,9 @@ export default function Home() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [status, setStatus] = useState<Status>("ready");
   const [runId, setRunId] = useState(0);
+  const [wakingUp, setWakingUp] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     // Fetched unconditionally, before `entered` flips -- the language list
@@ -63,6 +162,55 @@ export default function Home() {
       .catch(() => setLanguages([]));
   }, []);
 
+  // Render's free tier sleeps after 15 minutes idle -- the first request
+  // after that can take ~40s to wake the container. A generic spinner past
+  // a few seconds reads as broken, not slow, so the copy changes once it's
+  // clearly not a normal-latency request.
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = window.setTimeout(() => setWakingUp(true), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [loading]);
+
+  // Cancels any still-in-flight request before starting a new one -- without
+  // this, submitting twice in quick succession (a fast double-click, or
+  // changing language and resubmitting before the first response lands)
+  // races two responses against each other and whichever resolves last wins,
+  // even if it's stale.
+  const runAnalysis = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setLoading(true);
+    setWakingUp(false);
+    setStatus("sampling");
+    setError(null);
+    try {
+      const response = await predict(language, code, controller.signal);
+      setResult(response);
+      setRunId((id) => id + 1);
+      setStatus("done");
+      window.setTimeout(() => setStatus("ready"), 1400);
+    } catch (err) {
+      if (controller.signal.aborted) return; // superseded by a newer request
+      setError(err instanceof ApiError ? err.message : "something went wrong");
+      setResult(null);
+      setStatus("ready");
+    } finally {
+      if (abortControllerRef.current === controller) setLoading(false);
+    }
+  }, [language, code]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!entered || !(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+      event.preventDefault();
+      if (!loading && code.trim().length > 0) void runAnalysis();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [entered, runAnalysis, loading, code]);
+
   function handleEnter() {
     withViewTransition(() => flushSync(() => setEntered(true)), reducedMotion, "vt-scene");
   }
@@ -71,24 +219,14 @@ export default function Home() {
     return <Landing onEnter={handleEnter} />;
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
-    setStatus("sampling");
-    setError(null);
-    try {
-      const response = await predict(language, code);
-      setResult(response);
-      setRunId((id) => id + 1);
-      setStatus("done");
-      window.setTimeout(() => setStatus("ready"), 1400);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "something went wrong");
-      setResult(null);
-      setStatus("ready");
-    } finally {
-      setLoading(false);
-    }
+    void runAnalysis();
+  }
+
+  function loadExample(example: (typeof EXAMPLES)[number]) {
+    setLanguage(example.language);
+    setCode(example.code);
   }
 
   return (
@@ -107,31 +245,48 @@ export default function Home() {
           <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
             Static, multi-language time &amp; space complexity prediction. No LLM, no code execution.
           </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span className="mono-nums" style={{ color: "var(--text-muted)", fontSize: 11, letterSpacing: "0.08em" }}>
+              EXAMPLES
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {EXAMPLES.map((example) => (
+                <button key={example.language} type="button" onClick={() => loadExample(example)} className="mono-nums example-chip">
+                  {example.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <LanguageSelector languages={languages} value={language} onChange={setLanguage} />
           <BenchPanel channel="CH.00 — INPUT">
             <CodeEditor value={code} onChange={setCode} language={language} />
           </BenchPanel>
-          <button
-            type="submit"
-            disabled={loading || code.trim().length === 0}
-            className="mono-nums vt-run-cta"
-            style={{
-              alignSelf: "flex-start",
-              padding: "11px 22px",
-              borderRadius: 0,
-              border: "none",
-              background: "var(--signal)",
-              color: "var(--page-plane)",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              cursor: loading ? "default" : "pointer",
-              opacity: loading ? 0.65 : 1,
-              transition: "opacity 150ms var(--ease-settle)",
-            }}
-          >
-            {loading ? "SAMPLING…" : "RUN ANALYSIS"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="submit"
+              disabled={loading || code.trim().length === 0}
+              className="mono-nums vt-run-cta"
+              style={{
+                alignSelf: "flex-start",
+                padding: "11px 22px",
+                borderRadius: 0,
+                border: "none",
+                background: "var(--signal)",
+                color: "var(--page-plane)",
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                cursor: loading ? "default" : "pointer",
+                opacity: loading ? 0.65 : 1,
+                transition: "opacity 150ms var(--ease-settle)",
+              }}
+            >
+              {loading ? (wakingUp ? "WAKING SERVER…" : "SAMPLING…") : "RUN ANALYSIS"}
+            </button>
+            <span className="mono-nums" style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {wakingUp ? "free-tier host was asleep — first request can take ~40s" : "⌘/Ctrl + Enter"}
+            </span>
+          </div>
           {error ? (
             <p role="alert" className="mono-nums" style={{ fontSize: 12, color: "var(--status-error)", borderLeft: "2px solid var(--status-error)", paddingLeft: 8 }}>
               [!] {error}
