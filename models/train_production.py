@@ -119,7 +119,7 @@ def _train_and_export_gnn(
             print(json.dumps(result.as_dict(), indent=2), flush=True)
         conformal[dimension] = {
             "classes": list(model.classes),
-            "steps_by_alpha": conformal_calibration.steps_by_alpha,
+            "mass_threshold_by_alpha": conformal_calibration.mass_threshold_by_alpha,
         }
 
     export_gnn(time_model.core, time_model.edge_kinds, ARTIFACTS_DIR / "gnn.npz")

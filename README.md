@@ -68,12 +68,15 @@ baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
   only return one class + a raw softmax score — it returns the smallest
   *ordinally contiguous* set of classes (e.g. `O(n log n) – O(n^2)`)
   guaranteed, distribution-free, to contain the true answer at a chosen
-  coverage rate. Honestly reported too: at 90% target coverage, time's
-  average set is 4 of 7 classes — a real finding about task difficulty at
-  that operating point, not a number rounded up to look better.
-  [`PHASE5_REPORT.md`](PHASE5_REPORT.md) has the risk-coverage curve and
-  the one place the empirical coverage measurably missed its target on
-  held-out data, named rather than smoothed over.
+  coverage rate, and the set width is adaptive per example (a confident
+  prediction gets a class or two, an unsure one gets more), not a fixed
+  size handed to every request regardless of how sure the model actually
+  is. Honestly reported too: at 90% target coverage, time's average set
+  is 3.86 of 7 classes — a real finding about task difficulty at that
+  operating point, not a number rounded up to look better.
+  [`PHASE5_REPORT.md`](PHASE5_REPORT.md) has the risk-coverage curve, the
+  full per-example set-size distribution, and the adaptivity bug an
+  earlier version of this shipped with, before it was caught and fixed.
 
 ## Architecture
 

@@ -74,7 +74,8 @@ def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
     conformal_raw = json.loads(conformal_path.read_text(encoding="utf-8"))
     conformal = {
         dimension: ConformalCalibration(
-            classes=tuple(entry["classes"]), steps_by_alpha=entry["steps_by_alpha"]
+            classes=tuple(entry["classes"]),
+            mass_threshold_by_alpha=entry["mass_threshold_by_alpha"],
         )
         for dimension, entry in conformal_raw.items()
     }

@@ -59,22 +59,23 @@ So the honest summary: PolyO's served model is clearly better than an LLM zero-s
 
 `mean_ordinal_distance` above (0.78 time / 0.52 space) says the model is usually within one class even when its single top pick is wrong -- but the served API used to only ever show that one pick plus a raw softmax confidence, which reads like a coin flip on a hard example. `models/conformal.py` implements split-conformal prediction to say the honest version of that instead: not "O(n^2), 43% confident" but the smallest **ordinally contiguous** interval of classes -- e.g. "O(n log n) - O(n^2)" -- guaranteed, marginally and distribution-free, to contain the true class at a chosen coverage rate, regardless of whether the model itself is well-calibrated. This is deliberately not the textbook Adaptive Prediction Sets construction, which sorts by predicted probability and can return a non-contiguous, unreadable set like `{O(1), O(n log n), O(2^n)}` -- see that module's own docstring for the full reasoning. Calibrated on the val split (reusing the same split temperature scaling already uses, and reported here on the held-out *test* split, which neither step touches), fit against the already-exported served numpy model with no GPU retrain needed (`models/fit_conformal.py`).
 
+The nonconformity score is a cumulative **probability mass**, not a class count: the interval grows outward from the point prediction, absorbing whichever adjacent class holds more probability, until its own mass clears a calibrated threshold. That's what makes the returned set size adaptive per example -- a confident, peaked prediction clears the threshold within a class or two; an unsure, flat one needs more. (An earlier version of this calibrated a fixed *number of classes* per α instead of a probability threshold -- which meant nearly every prediction, confident or not, got the same-width set, and the live abstention flag below fired on almost every request regardless of how sure the model actually was. Caught before it stayed shipped; `tests/test_conformal.py::test_predict_set_size_adapts_to_how_peaked_the_prediction_is` is the regression test.)
+
 | Dimension | α (target) | n | Empirical coverage | Average set size |
 |---|---|---|---|---|
-| time (7 classes) | 0.05 | 25452 | 0.9135 | 4.0 |
-| time | 0.10 | 25452 | 0.9135 | 4.0 |
-| time | 0.20 | 25452 | 0.8085 | 3.0 |
-| space (5 classes) | 0.05 | 24574 | 0.9641 | 4.0 |
-| space | 0.10 | 24574 | 0.9310 | 3.0 |
-| space | 0.20 | 24574 | 0.9310 | 3.0 |
+| time (7 classes) | 0.05 | 25452 | 0.9733 | 4.55 |
+| time | 0.10 | 25452 | 0.9222 | 3.86 |
+| time | 0.20 | 25452 | 0.8828 | 3.34 |
+| space (5 classes) | 0.05 | 24574 | 0.9975 | 4.57 |
+| space | 0.10 | 24574 | 0.9653 | 3.70 |
+| space | 0.20 | 24574 | 0.9363 | 3.16 |
 
 ![risk-coverage curve](eval/figures/risk_coverage.png)
 
-**Reading these numbers honestly, including the part that doesn't fit the theory cleanly:**
+**Reading these numbers honestly:**
 
-- **At 90% target coverage (α=0.10, the live default -- see `api/predict.py`), time's average set is 4 of 7 classes.** That's wide. It is not a failure of the method -- it's an honest, measured finding about how separated this model's own probability mass actually is at a high-confidence operating point, exactly the kind of result this project reports rather than hides (same spirit as the failure-bucket analysis below). Space does better: 3 of 5 classes at the same target.
-- **Time's empirical coverage at α=0.05 (95% target) is 91.35% -- short of the target, on the held-out test split.** Stated plainly rather than rounded up: split-conformal's coverage guarantee requires the calibration (val) and evaluation (test) sets to be exchangeable draws from the same distribution. This project's split is a deterministic hash of `(source, problem_id)` (`data/build.py`) with no explicit stratification forcing val and test to share an identical local difficulty mix -- a real, plausible source of the gap, not a bug in the conformal implementation itself (`tests/test_conformal.py` verifies the procedure hits its target on a controlled synthetic distribution where calibration and test genuinely are exchangeable). Space, in contrast, *overshoots* every target (96.4%/93.1%/93.1% vs. 95%/90%/80%) -- the safer direction to be wrong in, and further evidence this is a val/test distribution-mix effect specific to each dimension's label mix, not a systematic flaw in the method.
-- **α=0.05 and α=0.10 land on the identical set for time (both step=3), and α=0.10/α=0.20 coincide for space (both step=2).** The nonconformity score here is a small integer (how many ordinal steps out from the point prediction), so the calibration quantile can only take a handful of distinct values -- two target coverage levels landing on the same achievable threshold is an expected artifact of that discreteness, not a computation error (see the merged `α=` labels on repeated points in the figure above).
+- **At 90% target coverage (α=0.10, the live default -- see `api/predict.py`), time's average set is 3.86 of 7 classes -- still wide, and an honest, measured finding about how separated this model's own probability mass actually is at a high-confidence operating point, not a method failure.** What the adaptivity fix actually changes is the *distribution* behind that average, not just its value: over the full held-out test set, time's set sizes range from 1 to 7 (249 examples get a single class, 11 get all 7), and 74.41% of examples land at size ≥4 and get `abstain: true` -- meaning the flag now tracks the model's real per-example uncertainty instead of firing on nearly everyone. Space is similar: average 3.70 of 5 classes at α=0.10, 67.79% abstained.
+- **Empirical coverage now meets or exceeds every nominal target on the held-out test split, for both dimensions** -- e.g. time at α=0.05 (95% target) lands at 97.33%, space at 99.75%. Split-conformal's guarantee is a *lower bound* ("at least 1-α"), so overshooting is expected and the safer direction to land in, not a sign the method is loose; it's called out here rather than left implicit, same as this report calls out every other number plainly (`tests/test_conformal.py` verifies the procedure hits its nominal target on a controlled synthetic distribution).
 
 Served live at α=0.10 (90% target coverage) alongside the existing single-class prediction -- never a replacement for it, the honest complement. A set of 4 or more classes is flagged as `abstain: true` in the response (surfaced in the UI as "too uncertain to narrow down") rather than presented with false precision.
 

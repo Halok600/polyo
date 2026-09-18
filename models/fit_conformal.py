@@ -118,7 +118,7 @@ def main(argv: list[str]) -> int:
 
         conformal[dimension] = {
             "classes": list(classes),
-            "steps_by_alpha": conformal_calibration.steps_by_alpha,
+            "mass_threshold_by_alpha": conformal_calibration.mass_threshold_by_alpha,
         }
 
     out_path = args.artifacts_dir / "conformal.json"

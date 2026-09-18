@@ -95,6 +95,30 @@ def test_predict_set_always_includes_the_point_prediction():
         assert _CLASSES[int(row.argmax())] in pred_set
 
 
+def test_predict_set_size_adapts_to_how_peaked_the_prediction_is():
+    """Regression test for a real shipped bug: an earlier version calibrated
+    a FIXED number of classes per alpha (an integer step count), so nearly
+    every prediction -- confident or not -- got the same-sized set. The
+    nonconformity score must be a probability MASS so a peaked prediction
+    reaches the calibrated threshold sooner than a flat one and gets a
+    narrower set at the same alpha."""
+    rng = np.random.default_rng(9)
+    n = 2000
+    true_idx = rng.integers(0, len(_CLASSES), n)
+    proba = _synthetic_proba(true_idx, sharpness=0.5, seed=10)
+    labels = [_CLASSES[i] for i in true_idx]
+    calibration = fit_conformal(proba, labels, _CLASSES, alphas=(0.1,))
+
+    k = len(_CLASSES)
+    confident = np.full(k, 0.01 / (k - 1))
+    confident[3] = 0.99  # near-certain, same argmax rank as `flat` below
+    flat = np.full(k, 1.0 / k)  # uniform -- the model has no idea
+
+    confident_set = calibration.predict_set(confident, alpha=0.1)
+    flat_set = calibration.predict_set(flat, alpha=0.1)
+    assert len(confident_set) < len(flat_set), (confident_set, flat_set)
+
+
 def test_predict_set_raises_for_an_alpha_never_fit():
     calibration = fit_conformal(
         np.tile(np.eye(len(_CLASSES))[0], (10, 1)), [_CLASSES[0]] * 10, _CLASSES, alphas=(0.1,)
