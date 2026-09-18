@@ -8,8 +8,6 @@ worst-case **time and space** complexity: a class, a calibrated confidence,
 the code spans that drove the prediction, and a growth chart — computed by a
 model that only ever *reads* the code.
 
-<!-- 🎬 demo GIF goes here -->
-
 **Live demo:** _pending deployment — see [Status](#status) below._
 
 ## Why this exists
@@ -36,11 +34,17 @@ baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
 
 - A **GNN message-passing over the IR graph** (rung 3) beats a rule baseline,
   TF-IDF over IR symbols, and IR-features+LightGBM on the same held-out,
-  problem-level test split — **0.377 / 0.339 macro-F1** (time / space) on the
+  problem-level test split — **0.377 / 0.336 macro-F1** (time / space) on the
   full multi-language corpus.
-- **Zero-shot cross-language transfer**: trained on Python+Java only, still
-  scores above-chance on C++, JavaScript, Go and C it never saw one training
-  example of — the IR is genuinely language-agnostic, not just in theory.
+- **Zero-shot cross-language transfer**: trained on Python+Java only,
+  evaluated on C++, JavaScript, Go, and C it never saw during training.
+  Directionally consistent with a language-agnostic IR, but honestly
+  caveated: `data/scrape.py` (a real-code source for those languages) was
+  never built, so those test cells are the ~5-example synthetic corpus —
+  **illustrative, not a statistically robust result**. Python and Java, the
+  languages with real corpus-scale test data, transfer as expected.
+  [`PHASE5_REPORT.md`](PHASE5_REPORT.md) reports the per-language numbers
+  plainly rather than only the aggregate.
 - Calibrated: temperature-scaled confidence, ECE reported, not just accuracy
   (never bare accuracy — a fixed-rule baseline can *win* on accuracy while
   losing badly on macro-F1, and the model card shows exactly that failure
