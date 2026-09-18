@@ -1,0 +1,18 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec) -- lets Render
+# provision the API service automatically from this file ("New +" ->
+# "Blueprint" in the Render dashboard) instead of clicking through the
+# manual "New Web Service" flow. See DEPLOY.md for the full walkthrough,
+# including the parts this file can't do for you (ALLOWED_ORIGINS depends
+# on the Vercel URL, which doesn't exist until the frontend is deployed).
+services:
+  - type: web
+    name: polyo-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Set once the frontend's Vercel URL is known -- see DEPLOY.md.
+      # Unset, CORS still allows http://localhost:3000 for local dev.
+      - key: ALLOWED_ORIGINS
+        sync: false

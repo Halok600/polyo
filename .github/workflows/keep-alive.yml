@@ -1,0 +1,29 @@
+name: Keep API awake
+
+# Render's free tier sleeps a web service after 15 minutes idle; waking it
+# back up costs the next real visitor a ~40s cold start (see api/main.py's
+# /health -- deliberately model-free so this stays instant once warm).
+# Pings it every 10 minutes so that visitor is never the one paying for it.
+#
+# Needs a repository *variable* (not secret -- it's not sensitive) named
+# API_HEALTH_URL, e.g. https://polyo-api.onrender.com/health, set after
+# deploying (see DEPLOY.md). No-ops cleanly before that's set, so this
+# workflow doesn't start failing the moment it's merged.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        env:
+          HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "API_HEALTH_URL repository variable is not set yet -- see DEPLOY.md. Skipping."
+            exit 0
+          fi
+          curl -fsS --max-time 55 "$HEALTH_URL"

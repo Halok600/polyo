@@ -92,6 +92,6 @@ commercially.
 All seven build phases are code-complete and CI-verified (see commit
 history and `MODEL_CARD.md`/`PHASE5_REPORT.md` for what each phase actually
 shipped, with real numbers, not just a checklist). What's left before this
-has a live URL: deploying the already-built API (Render) and frontend
-(Vercel) — both free-tier, both already Dockerized/configured
-(`Dockerfile`, `.dockerignore`, `ALLOWED_ORIGINS`/`NEXT_PUBLIC_API_URL`).
+has a live URL is account-level, not code-level: see
+[`DEPLOY.md`](DEPLOY.md) for the exact steps (Render for the API, Vercel
+for the frontend, both free-tier, both already Dockerized/configured).
