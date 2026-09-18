@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Trains rungs 0-2, evaluates on held-out test data, and writes the model
 card (plan §14 Phase 3: "Model card v1 with first confusion matrices").
+Shipped Python-only in Phase 3; the corpus and per-language breakdown
+below have grown with it through Phase 4's multi-language IR mappings and
+Phase 5's synthetic-generator expansion, with no code changes needed here
+-- this script always just reports whatever `data/build.py` produced.
 
 Pipeline per dimension (time, space): fit rung 1 (TF-IDF+logreg) and rung 2
 (IR features+LightGBM) on `data/build.py`'s train split, temperature-scale
@@ -8,6 +12,14 @@ each on the val split, then score everything -- including rung 0's fixed
 rule, which needs no fitting -- on the held-out test split. Only the test
 split's numbers go in the model card; val is spent entirely on calibration,
 never scored.
+
+Rung 3 (the GNN, plan §8) and everything built on top of it -- ablations,
+zero-shot cross-language transfer, failure buckets -- live in a separate
+report, `PHASE5_REPORT.md` (`eval/phase5_report.py`), not here: training
+it needs a GPU for reasonable wall-clock (see project memory), which this
+script's rungs 0-2 don't. The GNN is the model actually served in
+production (`api/`, plan §10) -- see that report for why it was chosen
+over rung 2.
 """
 from __future__ import annotations
 
@@ -20,7 +32,14 @@ from pathlib import Path
 import numpy as np
 
 from data.corpus import CorpusRecord, read_jsonl
-from eval.report import SPACE_CLASSES, TIME_CLASSES, Metrics, compute_metrics, plot_confusion_matrix
+from eval.report import (
+    SPACE_CLASSES,
+    TIME_CLASSES,
+    Metrics,
+    compute_metrics,
+    per_language_metrics,
+    plot_confusion_matrix,
+)
 from models import gbdt, rule, tfidf
 from models.calibrate import Calibrator, fit_temperature
 from models.dataset import ParsedExample, build_examples, space_labels, time_labels, with_label
@@ -37,6 +56,7 @@ _DIMENSIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
 @dataclass(frozen=True, slots=True)
 class RungResult:
     metrics: Metrics
+    predictions: list[str]
     temperature: float | None = None
     feature_importance: dict[str, float] | None = None
 
@@ -44,6 +64,7 @@ class RungResult:
 @dataclass(frozen=True, slots=True)
 class DimensionResult:
     rungs: dict[str, RungResult]
+    test_labels: list[str]
     test_languages: list[str]
 
 
@@ -93,7 +114,9 @@ def _evaluate_dimension(
 
     # Rung 0: fixed rule, no fitting, no probability output -- no ECE.
     rule_pred = _rule_predictions(test_ex, dimension)
-    rungs["rung0_rule"] = RungResult(metrics=compute_metrics(dimension, test_y, rule_pred, classes))
+    rungs["rung0_rule"] = RungResult(
+        metrics=compute_metrics(dimension, test_y, rule_pred, classes), predictions=rule_pred
+    )
 
     # Rung 1: TF-IDF + logistic regression.
     tfidf_model = tfidf.fit(train_ex, train_y)
@@ -107,6 +130,7 @@ def _evaluate_dimension(
     )
     rungs["rung1_tfidf_logreg"] = RungResult(
         metrics=compute_metrics(dimension, test_y, tfidf_pred, classes, tfidf_conf),
+        predictions=tfidf_pred,
         temperature=tfidf_calibrator.temperature,
     )
 
@@ -120,10 +144,13 @@ def _evaluate_dimension(
     gbdt_pred, gbdt_conf = _score_with_calibration(gbdt_test_scores, gbdt_classes, gbdt_calibrator)
     rungs["rung2_gbdt"] = RungResult(
         metrics=compute_metrics(dimension, test_y, gbdt_pred, classes, gbdt_conf),
+        predictions=gbdt_pred,
         feature_importance=gbdt_model.feature_importance(),
     )
 
-    return DimensionResult(rungs=rungs, test_languages=[e.record.language for e in test_ex])
+    return DimensionResult(
+        rungs=rungs, test_labels=test_y, test_languages=[e.record.language for e in test_ex]
+    )
 
 
 def _metrics_table(rows: dict[str, RungResult]) -> str:
@@ -147,16 +174,21 @@ def _write_model_card(
 ) -> None:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     sections = [
-        "# PolyO model card v1\n",
-        "Phase 3 of 7 (plan §14). Rungs 0-2 (rule -> TF-IDF+logistic regression -> "
-        "IR features+LightGBM), evaluated on a held-out, problem-level test split "
-        "-- see plan §9: solutions to the same problem never cross a split "
-        "boundary, and `tests/test_data_splits.py` enforces it in CI.\n",
+        "# PolyO model card: rungs 0-2\n",
+        "Rungs 0-2 (rule -> TF-IDF+logistic regression -> IR features+LightGBM), "
+        "evaluated on a held-out, problem-level test split -- see plan §9: "
+        "solutions to the same problem never cross a split boundary, and "
+        "`tests/test_data_splits.py` enforces it in CI. Rung 3 (the GNN, the "
+        "model actually served in production) and everything built on top of "
+        "it -- ablations, zero-shot cross-language transfer, failure buckets -- "
+        "are in [`PHASE5_REPORT.md`](PHASE5_REPORT.md), not here; this card is "
+        "the classical-ML baseline story rungs 0-3 are compared against.\n",
         "\n## Corpus\n",
-        "Python-only in this phase (plan §7's BigO(Bench) + CodeComplex ingestion, "
-        "`data/ingest_bigobench.py` / `data/ingest_codecomplex.py`); C++ parses "
-        "(Phase 1) but has no labelled corpus yet, so it isn't in this evaluation. "
-        "Split sizes (problem-level, `data/build.py`):\n\n",
+        "Multi-language (plan §7's BigO(Bench) + CodeComplex ingestion, plus "
+        "`data/synth.py`'s parallel synthetic generator across all six Tier "
+        "1/2 languages) -- see `PHASE5_REPORT.md` for the exact per-language "
+        "breakdown of how thin the non-Python/Java slice still is. Split "
+        "sizes (problem-level, `data/build.py`):\n\n",
         "```json\n" + json.dumps(corpus_report, indent=2) + "\n```\n",
         "\nParsing/feature-extraction survival rate on the held-out test split "
         "(`models/dataset.py`) -- a real, arbitrary competitive-programming corpus "
@@ -191,6 +223,24 @@ def _write_model_card(
             rule_img_path,
         )
         sections.append(f"\n![{dimension} confusion matrix, rung 0]({rule_img_path.as_posix()})\n")
+
+        dimension_classes = TIME_CLASSES if dimension == "time" else SPACE_CLASSES
+        by_language = per_language_metrics(
+            dimension,
+            dim_result.test_labels,
+            rungs[best_rung_name].predictions,
+            dim_result.test_languages,
+            dimension_classes,
+        )
+        if len(by_language) > 1:
+            sections.append(f"\n### {best_rung_name}, per language ({dimension})\n\n")
+            sections.append("| language | n | Accuracy | Macro-F1 | Mean ordinal distance |\n")
+            sections.append("|---|---|---|---|---|\n")
+            for language, lang_metrics in sorted(by_language.items()):
+                sections.append(
+                    f"| {language} | {lang_metrics.n} | {lang_metrics.accuracy:.3f} | "
+                    f"{lang_metrics.macro_f1:.3f} | {lang_metrics.mean_ordinal_distance:.3f} |\n"
+                )
 
         importances = rungs["rung2_gbdt"].feature_importance
         if importances:
