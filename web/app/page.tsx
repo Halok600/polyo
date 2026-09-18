@@ -197,19 +197,32 @@ export default function Home() {
       setResult(null);
       setStatus("ready");
     } finally {
-      if (abortControllerRef.current === controller) setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        setWakingUp(false); // otherwise a cold-start run leaves this caption stuck on afterward
+      }
     }
   }, [language, code]);
 
+  // Reads current values through a ref instead of listing them as effect
+  // deps -- `code` changes on every keystroke, and re-subscribing a global
+  // window listener that often is pure churn for no behavioural gain.
+  const shortcutStateRef = useRef({ entered, loading, code, runAnalysis });
+  useEffect(() => {
+    shortcutStateRef.current = { entered, loading, code, runAnalysis };
+  });
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (!entered || !(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+      if (event.repeat || !(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+      const { entered, loading, code, runAnalysis } = shortcutStateRef.current;
+      if (!entered) return;
       event.preventDefault();
       if (!loading && code.trim().length > 0) void runAnalysis();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [entered, runAnalysis, loading, code]);
+  }, []);
 
   function handleEnter() {
     withViewTransition(() => flushSync(() => setEntered(true)), reducedMotion, "vt-scene");
@@ -251,7 +264,13 @@ export default function Home() {
             </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {EXAMPLES.map((example) => (
-                <button key={example.language} type="button" onClick={() => loadExample(example)} className="mono-nums example-chip">
+                <button
+                  key={example.language}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => loadExample(example)}
+                  className="mono-nums example-chip"
+                >
                   {example.label}
                 </button>
               ))}

@@ -20,9 +20,14 @@ EXPOSE 8000
 # TCP peer -- otherwise every request behind Render's edge proxy carries
 # the *same* peer IP, and api/guards.py's per-IP RateLimiter degrades to a
 # single shared bucket (one abusive client locks out everyone else).
-# "*" is safe specifically because Render's containers accept no public
-# ingress except through that proxy -- there's no untrusted hop to spoof
-# X-Forwarded-For from. Harmless for local `uvicorn --reload`/docker-compose
-# use too: with no proxy in front, there's no X-Forwarded-For header to
-# trust in the first place, so Request.client is unaffected.
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+#
+# This is gated behind $TRUST_PROXY_HEADERS (set to "1" only in Render's
+# env, see render.yaml), NOT unconditional: docker-compose.yml exposes this
+# same image's port 8000 directly, with no proxy in front, to whatever
+# network it runs on. Any direct caller there can set X-Forwarded-For to
+# whatever it likes -- trusting it unconditionally would let a single
+# attacker rotate the header per request for unlimited effective rate-limit
+# quota, worse than not trying to fix the proxy case at all. Unset (the
+# docker-compose/local default), Request.client is the real, unspoofable
+# TCP peer, matching pre-fix behaviour.
+CMD ["sh", "-c", "if [ \"$TRUST_PROXY_HEADERS\" = \"1\" ]; then exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*; else exec uvicorn api.main:app --host 0.0.0.0 --port 8000; fi"]

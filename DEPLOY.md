@@ -59,6 +59,15 @@ will:
 3. `.github/workflows/keep-alive.yml` pings it every 10 minutes from then
    on -- no-ops cleanly (doesn't fail) until this variable is set.
 
+**Known blind spot:** GitHub disables a scheduled workflow after 60 days
+with no repository activity (plausible for a portfolio project between
+job-search pushes) -- it stops firing with no alert anywhere, and the only
+symptom is every visitor eating the cold start again. A free
+[UptimeRobot](https://uptimerobot.com) monitor on the same `/health` URL is
+a good independent backstop: it doesn't depend on this repo staying
+active, and it can actually page you if the API is down for a real reason,
+not just asleep.
+
 ## 5. Update the README
 
 Replace the "pending deployment" live-demo line at the top of `README.md`

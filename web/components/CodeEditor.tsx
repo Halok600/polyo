@@ -16,7 +16,7 @@ import { python } from "@codemirror/lang-python";
 import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from "@codemirror/language";
 import { go } from "@codemirror/legacy-modes/mode/go";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
-import { drawSelection, dropCursor, EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { drawSelection, dropCursor, EditorView, type KeyBinding, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef } from "react";
 
@@ -56,6 +56,16 @@ const benchHighlightStyle = HighlightStyle.define([
   { tag: tags.variableName, color: "var(--text-primary)" },
   { tag: tags.invalid, color: "var(--status-error)" },
 ]);
+
+// @codemirror/commands' defaultKeymap binds Mod-Enter to insertBlankLine.
+// page.tsx's own global Cmd/Ctrl+Enter (run analysis) also fires on this
+// key -- CodeMirror's handler calls preventDefault() but not
+// stopPropagation(), so without this the key would BOTH insert a blank
+// line AND submit in the same keystroke. Listed ahead of defaultKeymap so
+// it wins; returning true marks the key handled (blocking insertBlankLine)
+// without doing anything else, leaving page.tsx's window listener as the
+// sole owner of what Mod-Enter does.
+const suppressModEnter: KeyBinding[] = [{ key: "Mod-Enter", run: () => true }];
 
 const benchEditorTheme = EditorView.theme({
   "&": {
@@ -117,7 +127,7 @@ export function CodeEditor({ value, onChange, language }: CodeEditorProps) {
           indentOnInput(),
           bracketMatching(),
           EditorView.lineWrapping,
-          keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+          keymap.of([indentWithTab, ...suppressModEnter, ...defaultKeymap, ...historyKeymap]),
           languageCompartment.current.of(languageExtension(language) ?? []),
           syntaxHighlighting(benchHighlightStyle),
           benchEditorTheme,

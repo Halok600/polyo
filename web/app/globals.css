@@ -536,6 +536,16 @@ html.vt-scene::view-transition-group(run-cta) {
   color: var(--text-primary);
 }
 
+.example-chip:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.example-chip:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
 /* CodeMirror frame -- sits inside a zero-padding BenchPanel so the editor's
    own surface bleeds to the instrument-case border. */
 
