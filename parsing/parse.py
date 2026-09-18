@@ -69,3 +69,41 @@ def parse_source(source: str, language: str) -> Tree:
         raise UnsupportedLanguageError(f"unsupported language: {language!r}") from e
     parser = Parser(ts_language)
     return parser.parse(source.encode("utf-8"))
+
+
+def _error_node_count(tree: Tree) -> int:
+    # tree-sitter is error-tolerant: an ERROR node (wrong grammar) or a
+    # MISSING node (the parser inserted a token to recover) is exactly what
+    # a wrong-language guess produces, and what a genuine syntax error in
+    # the right language also produces -- this heuristic can't tell those
+    # apart, but detect_language_from_source only needs "closest grammar",
+    # not "valid code".
+    count = 0
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
+        if node.is_error or node.is_missing:
+            count += 1
+        stack.extend(node.children)
+    return count
+
+
+def detect_language_from_source(source: str) -> str:
+    """Language auto-detection from raw source text (plan §10's `"auto"`
+    request field) -- `detect_language` above only works from a filename
+    extension, which the API's `/v1/predict` request never has. Parses
+    `source` with every supported grammar and picks the one producing the
+    fewest ERROR/MISSING nodes: cheap (no keyword heuristics to maintain
+    per language), and reuses the same tree-sitter grammars already
+    installed for real parsing rather than a second, separate detector."""
+    source_bytes = source.encode("utf-8")
+    best_language: str | None = None
+    best_errors = -1
+    for language in sorted(SUPPORTED_LANGUAGES):
+        parser = Parser(_LANGUAGE_CAPSULES[language])
+        tree = parser.parse(source_bytes)
+        errors = _error_node_count(tree)
+        if best_language is None or errors < best_errors:
+            best_language, best_errors = language, errors
+    assert best_language is not None  # SUPPORTED_LANGUAGES is never empty
+    return best_language

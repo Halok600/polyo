@@ -1,6 +1,6 @@
 # Serving image -- parses and predicts only. Never executes user code.
-# Kept slim: no torch, no ONNX, no database driver. Checked against a
-# ~300MB budget in CI (see plan SS13).
+# Kept slim: no torch, no ONNX, no scikit-learn, no database driver.
+# Checked against a ~300MB budget in CI (see plan SS13).
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -9,6 +9,9 @@ COPY requirements-api.txt .
 RUN pip install --no-cache-dir -r requirements-api.txt
 
 COPY core ./core
+COPY parsing ./parsing
+COPY features ./features
+COPY models ./models
 COPY api ./api
 
 EXPOSE 8000

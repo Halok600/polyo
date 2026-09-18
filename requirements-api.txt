@@ -1,5 +1,27 @@
-# Serving image deps only — kept minimal, no torch/ONNX, per the free-tier
-# image-size budget (see plan §13, enforced in CI).
+# Serving image deps only — kept minimal, no torch/ONNX/scikit-learn, per
+# the free-tier image-size budget (see plan §13, enforced in CI).
 fastapi>=0.115,<0.116
 uvicorn[standard]>=0.34,<0.35
 pydantic>=2.10,<3
+
+# Parsing (plan §5/§12 `parsing/`) -- Phase 6 wires up real /v1/predict.
+tree-sitter>=0.24,<0.27
+tree-sitter-python>=0.23,<0.26
+tree-sitter-cpp>=0.23,<0.24
+tree-sitter-java>=0.23,<0.24
+tree-sitter-javascript>=0.23,<0.26
+tree-sitter-c>=0.23,<0.25
+tree-sitter-go>=0.23,<0.26
+
+# `models/export_numpy.py`'s pure-numpy GNN forward pass (plan §8 "serving
+# without torch") and `features/tabular.py`'s feature vectors.
+numpy>=2.0,<3
+
+# NOT lightgbm: `api/attribution.py` uses a precomputed, gain-weighted
+# feature-importance JSON (from the production GBDT, trained offline) --
+# not lightgbm's live per-prediction SHAP (`pred_contrib=True`), because
+# `lightgbm/basic.py` unconditionally does `import scipy.sparse` (not
+# guarded, unlike its sklearn integration), and scipy alone measures
+# ~115MB installed -- more than a third of the entire 300MB image budget
+# (plan §13) for an interpretability side-feature, not the headline
+# prediction. See `api/attribution.py`'s module docstring for the tradeoff.

@@ -4,27 +4,21 @@ mypy>=1.13,<2
 pytest>=8.3,<9
 pytest-cov>=6.0,<7
 httpx>=0.28,<0.29
-# Parsing (plan §5/§12 `parsing/`) -- not yet in requirements-api.txt because
-# api/main.py doesn't call the parser until Phase 6 wires up serving; keeping
-# it dev-only until then avoids bloating the image-size-budgeted Docker build.
-tree-sitter>=0.24,<0.27
-tree-sitter-python>=0.23,<0.26
-tree-sitter-cpp>=0.23,<0.24
-tree-sitter-java>=0.23,<0.24
-tree-sitter-javascript>=0.23,<0.26
-tree-sitter-c>=0.23,<0.25
-tree-sitter-go>=0.23,<0.26
 
 # Oracle (plan §6, `oracle/`) -- offline-only driver codegen. Never imported
 # by api/ (see tests/test_isolation.py), so kept out of requirements-api.txt.
 jinja2>=3.1,<4
 
-# Training (plan §8, `models/` `eval/`) -- offline-only until Phase 6 wires
-# a trained model into api/main.py, kept out of requirements-api.txt until
-# then for the same image-size-budget reason as tree-sitter above.
-numpy>=2.0,<3
-scikit-learn>=1.5,<1.6
+# Training (plan §8, `models/` `eval/`) -- offline-only, never imported by
+# api/. tree-sitter and numpy are already pulled in transitively via
+# requirements-api.txt above, now that Phase 6 serves real predictions.
+# lightgbm, scikit-learn and matplotlib stay dev/training-only: `api/`
+# uses only a precomputed, exported feature-importance JSON
+# (`api/attribution.py`), never lightgbm itself, because `lightgbm/basic.py`
+# unconditionally imports `scipy` (~115MB installed) -- too much for a
+# serving-image attribution feature (see that module's docstring).
 lightgbm>=4.5,<5
+scikit-learn>=1.5,<1.6
 matplotlib>=3.9,<4
 
 # GNN training only (plan §8 rung 3, Phase 5, `models/gnn.py`) -- never

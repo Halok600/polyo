@@ -9,6 +9,7 @@ from parsing.parse import (
     SUPPORTED_LANGUAGES,
     UnsupportedLanguageError,
     detect_language,
+    detect_language_from_source,
     parse_source,
 )
 
@@ -77,3 +78,74 @@ def test_parse_source_rejects_unsupported_language():
 def test_parse_source_marks_syntax_errors():
     tree = parse_source("def f(:\n", "python")
     assert tree.root_node.has_error
+
+
+_SOURCE_BY_LANGUAGE = {
+    "python": (
+        "def linear_search(arr, target):\n"
+        "    for i in range(len(arr)):\n"
+        "        if arr[i] == target:\n"
+        "            return i\n"
+        "    return -1\n"
+    ),
+    "cpp": (
+        "int f(std::vector<int>& xs) {\n"
+        "    int total = 0;\n"
+        "    for (int x : xs) {\n"
+        "        total += x;\n"
+        "    }\n"
+        "    return total;\n"
+        "}\n"
+    ),
+    "java": (
+        "class Solution {\n"
+        "    int f(int[] xs) {\n"
+        "        int total = 0;\n"
+        "        for (int x : xs) {\n"
+        "            total += x;\n"
+        "        }\n"
+        "        return total;\n"
+        "    }\n"
+        "}\n"
+    ),
+    "javascript": (
+        "function f(xs) {\n"
+        "    let total = 0;\n"
+        "    for (const x of xs) {\n"
+        "        total += x;\n"
+        "    }\n"
+        "    return total;\n"
+        "}\n"
+    ),
+    "c": (
+        "int f(int* xs, int n) {\n"
+        "    int total = 0;\n"
+        "    for (int i = 0; i < n; i++) {\n"
+        "        total += xs[i];\n"
+        "    }\n"
+        "    return total;\n"
+        "}\n"
+    ),
+    "go": (
+        "func f(xs []int) int {\n"
+        "    total := 0\n"
+        "    for _, x := range xs {\n"
+        "        total += x\n"
+        "    }\n"
+        "    return total\n"
+        "}\n"
+    ),
+}
+
+
+@pytest.mark.parametrize("language", sorted(_SOURCE_BY_LANGUAGE))
+def test_detect_language_from_source_identifies_each_supported_language(language):
+    assert detect_language_from_source(_SOURCE_BY_LANGUAGE[language]) == language
+
+
+def test_detect_language_from_source_returns_some_supported_language_for_garbage_input():
+    # No crash, no exception -- the heuristic picks the *closest* grammar
+    # even for nonsense input; there is no "reject" path by design (plan
+    # §10's auto-detect must always return something the rest of the
+    # pipeline can act on).
+    assert detect_language_from_source("!!! not code at all ???") in SUPPORTED_LANGUAGES
