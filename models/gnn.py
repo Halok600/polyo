@@ -346,11 +346,27 @@ def fit_multitask(
     tau: float = 1.0,
     device: torch.device | None = None,
     verbose: bool = False,
+    seed: int | None = 42,
 ) -> tuple[GnnModel, GnnModel]:
     """Trains one shared encoder with both heads jointly -- the "multi-task"
     arm of the multi-task-vs-single-task ablation (plan §9). Returns
     `(time_model, space_model)`, two `GnnModel` views over the same
-    underlying core."""
+    underlying core.
+
+    `seed` defaults to fixed (not `None`) -- training had NO seed control at
+    all until a live before/after retrain comparison (model v2's data
+    expansion) turned out unfalsifiable: two runs on genuinely different
+    corpora produced different macro-F1, but with `_GnnCore`'s weight init
+    and `_train`'s per-epoch `random.shuffle` both unseeded, there was no
+    way to tell whether the corpus change or plain run-to-run variance
+    caused the difference. Pass `seed=None` to restore the old
+    non-reproducible behaviour (e.g. for deliberately sampling variance
+    across repeated runs)."""
+    if seed is not None:
+        random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
     resolved_device = device or _default_device()
     train_graphs, train_labels = _prepare_dataset(
         train_examples, {"time": train_time_labels, "space": train_space_labels}
@@ -413,16 +429,24 @@ def fit_single_task(
     tau: float = 1.0,
     device: torch.device | None = None,
     verbose: bool = False,
+    seed: int | None = 42,
 ) -> GnnModel:
     """Trains an independent single-head encoder for one dimension only --
     the "single-task" arm of the same ablation. Every example here already
     has a label for this dimension (callers pass pre-filtered
     examples/labels, matching rung 1/2's `with_label` convention), since
-    there is no second head left for an unlabelled example to still help."""
+    there is no second head left for an unlabelled example to still help.
+
+    `seed` defaults to fixed -- see `fit_multitask`'s docstring for why."""
     if len(train_examples) != len(train_labels):
         raise ValueError("train_examples and train_labels must be the same length")
     if dimension not in _CLASSES_BY_DIMENSION:
         raise ValueError(f"unknown dimension: {dimension!r}")
+    if seed is not None:
+        random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
     resolved_device = device or _default_device()
     train_graphs, train_label_map = _prepare_dataset(
         train_examples, {dimension: list(train_labels)}

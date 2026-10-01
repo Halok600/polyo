@@ -11,7 +11,7 @@ those languages' toolchains would be needed to catch it another way.
 from __future__ import annotations
 
 from core.taxonomy import SpaceClass, TimeClass
-from data.synth import ALGORITHMS, build_records
+from data.synth import _DRIVER_WRAPPED_SHAPES, ALGORITHMS, _build_driver_variants, build_records
 from parsing.normalize import normalize_source
 
 _LANGUAGES = ("python", "cpp", "c", "java", "javascript", "go")
@@ -24,7 +24,8 @@ def test_every_algorithm_covers_all_six_languages():
 
 def test_build_records_count_matches_algorithms_times_languages():
     records = build_records()
-    assert len(records) == len(ALGORITHMS) * len(_LANGUAGES)
+    total_algorithms = len(ALGORITHMS) + len(_DRIVER_WRAPPED_SHAPES)
+    assert len(records) == total_algorithms * len(_LANGUAGES)
 
 
 def test_build_records_shares_problem_id_across_languages_per_algorithm():
@@ -32,9 +33,40 @@ def test_build_records_shares_problem_id_across_languages_per_algorithm():
     by_algo: dict[str, set[str]] = {}
     for r in records:
         by_algo.setdefault(r.problem_id, set()).add(r.language)
-    assert len(by_algo) == len(ALGORITHMS)
+    total_algorithms = len(ALGORITHMS) + len(_DRIVER_WRAPPED_SHAPES)
+    assert len(by_algo) == total_algorithms
     for problem_id, languages in by_algo.items():
         assert languages == set(_LANGUAGES), problem_id
+
+
+def test_driver_variants_cover_all_six_languages_and_keep_the_original_label():
+    by_name = {algo.name: algo for algo in ALGORITHMS}
+    for variant in _build_driver_variants():
+        assert set(variant.code_by_language) == set(_LANGUAGES), variant.name
+        base_name = variant.name.removesuffix("_driver")
+        base = by_name[base_name]
+        assert variant.time_class == base.time_class, variant.name
+        assert variant.space_class == base.space_class, variant.name
+
+
+def test_driver_variants_every_language_actually_parses():
+    for variant in _build_driver_variants():
+        for language, code in variant.code_by_language.items():
+            ir = normalize_source(code, language)
+            hist = ir.symbol_histogram()
+            assert hist["FUNC_DEF"] >= 1, f"{variant.name}/{language}: no FUNC_DEF parsed"
+            unknown = hist.get("UNKNOWN", 0)
+            assert not ir.nodes or unknown / len(ir.nodes) <= 0.2, (
+                f"{variant.name}/{language}: too many UNKNOWN nodes ({unknown}/{len(ir.nodes)})"
+            )
+
+
+def test_pairwise_target_search_is_two_nested_n_bound_loops():
+    algo = next(a for a in ALGORITHMS if a.name == "pairwise_target_search")
+    for language, code in algo.code_by_language.items():
+        ir = normalize_source(code, language)
+        hist = ir.symbol_histogram()
+        assert hist.get("LOOP_N_BOUND", 0) == 2, f"{language}: expected 2 LOOP_N_BOUND nodes"
 
 
 def test_build_records_solution_id_is_unique():

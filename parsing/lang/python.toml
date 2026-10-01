@@ -13,6 +13,12 @@
 #          node type. Unused for Python, whose grammar already splits
 #          comparisons and arithmetic into distinct node types, but present
 #          for parity with cpp.toml and future languages that don't.
+# `calls_by_arity`: like `calls`, but the branch also depends on the call's
+#          argument count ("one" vs "many") -- see
+#          parsing/normalize.py:_classify_call.
+# `loop_shape.range_call`: a callee pattern (optional) whose call denotes a
+#          literal iteration count rather than "iterate this container" --
+#          see parsing/normalize.py:_classify_loop.
 
 [nodes]
 function_definition = "FUNC_DEF"
@@ -49,8 +55,22 @@ none = "LITERAL"
 "^bisect\\." = "BINARY_SEARCH"
 "^heapq\\.heappush$" = "HEAP_PUSH"
 "^heapq\\.heappop$" = "HEAP_POP"
-"^(min|max|abs|sum|pow|len)$" = "MATH_OP"
+"^(abs|len)$" = "MATH_OP_CONST"
+"^sum$" = "MATH_OP_LINEAR"
+"^pow$" = "MATH_OP_LOG"
 "\\.append$" = "LIST_APPEND"
+
+[calls_by_arity]
+# min(a, b) is a pairwise scalar compare (O(1)); min(xs) scans an
+# iterable (O(n)) -- argument count alone disambiguates this without
+# needing type inference (see parsing/normalize.py:_classify_call).
+"^(min|max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
+
+[loop_shape]
+# A call to `range(...)` denotes a literal iteration COUNT, not "iterate
+# this container" -- the only case among a for-loop's iterable expression
+# worth checking for a constant (vs. input-derived) bound.
+range_call = "^range$"
 
 [binary_operator_nodes]
 # none for Python -- comparison_operator / boolean_operator / binary_operator

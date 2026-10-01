@@ -7,10 +7,12 @@ examples, not just that it runs.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from core.ir import IR_SYMBOLS
 from data.corpus import CorpusRecord
 from models.dataset import build_examples
-from models.export_numpy import NumpyGnnModel, export_gnn
+from models.export_numpy import NumpyGnnModel, VocabularyMismatchError, export_gnn
 from models.gnn import fit_multitask, fit_single_task
 from models.graph_batch import to_example_graph
 
@@ -62,7 +64,7 @@ def test_numpy_forward_matches_torch_single_task_model(tmp_path):
     model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
 
     npz_path = tmp_path / "gnn.npz"
-    export_gnn(model.core, model.edge_kinds, npz_path)
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
     numpy_model = NumpyGnnModel.load(npz_path)
 
     torch_scores = model.decision_function(examples)
@@ -78,7 +80,7 @@ def test_numpy_forward_matches_torch_multitask_model_on_both_heads(tmp_path):
     time_model, space_model = fit_multitask(examples, time_labels, space_labels, **_FIT_KWARGS)
 
     npz_path = tmp_path / "gnn.npz"
-    export_gnn(time_model.core, time_model.edge_kinds, npz_path)
+    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, npz_path)
     numpy_model = NumpyGnnModel.load(npz_path)
     assert set(numpy_model.heads) == {"time", "space"}
 
@@ -96,7 +98,7 @@ def test_numpy_forward_matches_with_a_restricted_edge_kind_subset(tmp_path):
     model = fit_single_task(examples, labels, "time", edge_kinds=("AST_CHILD",), **_FIT_KWARGS)
 
     npz_path = tmp_path / "gnn.npz"
-    export_gnn(model.core, model.edge_kinds, npz_path)
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
     numpy_model = NumpyGnnModel.load(npz_path)
     assert numpy_model.edge_kinds == ("AST_CHILD",)
 
@@ -111,10 +113,60 @@ def test_export_gnn_writes_a_loadable_file(tmp_path):
     examples, labels = _synthetic_examples()
     model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
     npz_path = tmp_path / "subdir" / "gnn.npz"
-    export_gnn(model.core, model.edge_kinds, npz_path)
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
     assert npz_path.is_file()
     loaded = NumpyGnnModel.load(npz_path)
     assert loaded.num_layers == 3
+
+
+def test_load_succeeds_when_saved_vocabulary_matches_expected(tmp_path):
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
+    numpy_model = NumpyGnnModel.load(npz_path, expected_symbols=IR_SYMBOLS)
+    assert numpy_model.num_layers == 3
+
+
+def test_load_raises_when_saved_vocabulary_differs_from_expected(tmp_path):
+    # The embedding table's row i means "whatever symbol was at position i
+    # in IR_SYMBOLS at export time" -- if that order has since changed
+    # (a symbol renamed, removed, or added), row lookups at serve time
+    # would silently read the wrong symbol's embedding. This must be
+    # caught loudly at load, not discovered later as a quality regression.
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    stale_vocabulary = ("SOME", "STALE", "VOCABULARY")
+    export_gnn(model.core, model.edge_kinds, stale_vocabulary, npz_path)
+    with pytest.raises(VocabularyMismatchError):
+        NumpyGnnModel.load(npz_path, expected_symbols=IR_SYMBOLS)
+
+
+def test_load_raises_for_an_artifact_exported_before_vocabulary_fingerprinting(tmp_path):
+    # Simulates an artifact exported by an older `export_gnn` that never
+    # wrote `_ir_symbols` at all -- must fail loudly and clearly, not with
+    # a bare KeyError, and must not silently skip validation just because
+    # the key happens to be absent.
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    state = model.core.state_dict()
+    arrays = {key: tensor.detach().cpu().numpy() for key, tensor in state.items()}
+    arrays["_edge_kinds"] = np.array(model.edge_kinds)
+    np.savez(npz_path, **arrays)  # deliberately no "_ir_symbols" key
+    with pytest.raises(VocabularyMismatchError):
+        NumpyGnnModel.load(npz_path, expected_symbols=IR_SYMBOLS)
+
+
+def test_load_skips_validation_when_no_expected_symbols_given(tmp_path):
+    # Callers that don't care (or are exercising unrelated behavior, like
+    # every other test in this file) must not be forced to pass this.
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    export_gnn(model.core, model.edge_kinds, ("ANYTHING",), npz_path)
+    NumpyGnnModel.load(npz_path)  # must not raise
 
 
 def test_numpy_model_never_imports_torch():

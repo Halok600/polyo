@@ -23,7 +23,7 @@ def test_normalize_maps_function_def_and_params():
 def test_normalize_maps_loop_branch_and_return():
     ir = normalize_source(LINEAR_SEARCH_PY, "python")
     hist = ir.symbol_histogram()
-    assert hist["LOOP_FOR"] == 1
+    assert hist["LOOP_N_BOUND"] == 1
     assert hist["BRANCH"] == 1
     assert hist["RETURN"] == 2
     assert hist["BLOCK"] == 3
@@ -49,6 +49,23 @@ def test_normalize_detects_direct_recursion():
     ir = normalize_source(src, "python")
     hist = ir.symbol_histogram()
     assert hist["RECURSE"] == 1
+    assert hist["CALL"] == 0
+
+
+def test_normalize_detects_recursion_through_a_qualified_self_call():
+    # A real bug this regression guards: `self.fib(...)` inside a class
+    # method was compared against the bare method name ("fib") by strict
+    # equality and silently fell through to a plain CALL, never RECURSE.
+    src = (
+        "class Solution:\n"
+        "    def fib(self, n):\n"
+        "        if n <= 1:\n"
+        "            return n\n"
+        "        return self.fib(n - 1) + self.fib(n - 2)\n"
+    )
+    ir = normalize_source(src, "python")
+    hist = ir.symbol_histogram()
+    assert hist["RECURSE"] == 2
     assert hist["CALL"] == 0
 
 

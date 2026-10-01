@@ -26,8 +26,6 @@ class IRSymbol(str, Enum):
     CALL = "CALL"
     RECURSE = "RECURSE"
     # Control
-    LOOP_FOR = "LOOP_FOR"
-    LOOP_WHILE = "LOOP_WHILE"
     LOOP_CONST_BOUND = "LOOP_CONST_BOUND"
     LOOP_N_BOUND = "LOOP_N_BOUND"
     LOOP_HALVING = "LOOP_HALVING"
@@ -51,7 +49,9 @@ class IRSymbol(str, Enum):
     HEAP_PUSH = "HEAP_PUSH"
     HEAP_POP = "HEAP_POP"
     QUEUE_OP = "QUEUE_OP"
-    MATH_OP = "MATH_OP"
+    MATH_OP_CONST = "MATH_OP_CONST"
+    MATH_OP_LINEAR = "MATH_OP_LINEAR"
+    MATH_OP_LOG = "MATH_OP_LOG"
     # Memory
     ALLOC_CONST = "ALLOC_CONST"
     ALLOC_N = "ALLOC_N"
@@ -164,9 +164,11 @@ def _ident_occurrences_by_text(
 
 def loop_carry_edges(graph: IRGraph) -> list[IREdge]:
     """Approximates "loop variable -> its uses" (plan SS5) without real
-    dataflow analysis: for each LOOP_FOR/LOOP_WHILE node, every identifier
-    that occurs at least twice anywhere in that loop's full AST subtree gets
-    a LOOP_CARRY edge from the loop node to each of those occurrences.
+    dataflow analysis: for each loop node (LOOP_CONST_BOUND/LOOP_N_BOUND/
+    LOOP_HALVING -- see `parsing/normalize.py`'s bound-shape classification),
+    every identifier that occurs at least twice anywhere in that loop's full
+    AST subtree gets a LOOP_CARRY edge from the loop node to each of those
+    occurrences.
 
     Deliberately UNBOUNDED at nested loops (unlike `data_dependency_edges`'s
     function-scope boundary): a variable touched again inside a nested loop
@@ -179,7 +181,7 @@ def loop_carry_edges(graph: IRGraph) -> list[IREdge]:
     nodes_by_id = {n.id: n for n in graph.nodes}
     edges: list[IREdge] = []
     for node in graph.nodes:
-        if node.symbol not in ("LOOP_FOR", "LOOP_WHILE"):
+        if node.symbol not in ("LOOP_CONST_BOUND", "LOOP_N_BOUND", "LOOP_HALVING"):
             continue
         subtree_ids = _full_subtree_ids(children, node.id)
         for ids in _ident_occurrences_by_text(nodes_by_id, subtree_ids).values():

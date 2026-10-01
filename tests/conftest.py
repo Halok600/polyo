@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 
 from api.models_registry import Calibration, ModelRegistry
+from core.ir import IR_SYMBOLS
 from data.corpus import CorpusRecord
 from models import gbdt, gnn
 from models.calibrate import fit_temperature
@@ -79,8 +80,8 @@ def tiny_registry(tmp_path) -> ModelRegistry:
         conformal[dimension] = fit_conformal(proba, labelled_y, tuple(model.classes))
 
     npz_path = tmp_path / "gnn.npz"
-    export_gnn(time_model.core, time_model.edge_kinds, npz_path)
-    numpy_gnn = NumpyGnnModel.load(npz_path)
+    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, npz_path)
+    numpy_gnn = NumpyGnnModel.load(npz_path, expected_symbols=IR_SYMBOLS)
 
     feature_importance = {}
     for dimension, labels in (("time", time_y), ("space", space_y)):

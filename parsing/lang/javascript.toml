@@ -33,12 +33,16 @@ undefined = "LITERAL"
 
 [calls]
 "\\.sort$" = "SORT"
-"^(Math\\.min|Math\\.max|Math\\.abs|Math\\.pow|Math\\.sqrt|Math\\.log)$" = "MATH_OP"
+"^(Math\\.abs|Math\\.sqrt|Math\\.log)$" = "MATH_OP_CONST"
+"^Math\\.pow$" = "MATH_OP_LOG"
 "\\.(push|unshift)$" = "LIST_APPEND"
 "\\.(has|get)$" = "HASH_LOOKUP"
 "\\.set$" = "HASH_INSERT"
 "\\.concat$" = "STRING_CONCAT"
 "\\.(slice|splice)$" = "SLICE"
+
+[calls_by_arity]
+"^(Math\\.min|Math\\.max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 # `binary_expression` covers both comparison and arithmetic in this grammar;
 # `update_expression` (++/--) does expose a named "operator" field here

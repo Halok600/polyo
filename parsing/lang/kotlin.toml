@@ -35,10 +35,14 @@ null_literal = "LITERAL"
 [calls]
 "\\.sort(ed)?$" = "SORT"
 "^Collections\\.sort$" = "SORT"
-"^(Math\\.min|Math\\.max|Math\\.abs|Math\\.pow|Math\\.sqrt|Math\\.log)$" = "MATH_OP"
+"^(Math\\.abs|Math\\.sqrt|Math\\.log)$" = "MATH_OP_CONST"
+"^Math\\.pow$" = "MATH_OP_LOG"
 "\\.add$" = "LIST_APPEND"
 "\\.(get|containsKey)$" = "HASH_LOOKUP"
 "\\.put$" = "HASH_INSERT"
+
+[calls_by_arity]
+"^(Math\\.min|Math\\.max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 [binary_operator_nodes]
 types = ["binary_expression"]

@@ -41,10 +41,14 @@ nil = "LITERAL"
 "^sort\\.(Ints|Strings|Float64s|Slice|Sort)$" = "SORT"
 "^sort\\.Search$" = "BINARY_SEARCH"
 "^make$" = "ARRAY_ALLOC"
-"^(len|cap)$" = "MATH_OP"
-"^math\\.(Min|Max|Abs|Pow|Sqrt|Log)$" = "MATH_OP"
+"^(len|cap)$" = "MATH_OP_CONST"
+"^math\\.(Abs|Sqrt|Log)$" = "MATH_OP_CONST"
+"^math\\.Pow$" = "MATH_OP_LOG"
 "^append$" = "LIST_APPEND"
 "^copy$" = "COPY"
+
+[calls_by_arity]
+"^math\\.(Min|Max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 [binary_operator_nodes]
 types = ["binary_expression"]

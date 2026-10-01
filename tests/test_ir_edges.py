@@ -24,10 +24,10 @@ def _ast_edges(*pairs: tuple[int, int]) -> list[IREdge]:
 
 
 def test_loop_carry_links_loop_node_to_each_repeated_identifier_occurrence():
-    # LOOP_FOR(0) -> [IDENT "i"(1), IDENT "i"(2), IDENT "j"(3)] -- "i" repeats,
+    # LOOP_N_BOUND(0) -> [IDENT "i"(1), IDENT "i"(2), IDENT "j"(3)] -- "i" repeats,
     # "j" doesn't.
     nodes = [
-        _node(0, "LOOP_FOR"),
+        _node(0, "LOOP_N_BOUND"),
         _node(1, "IDENT", "i"),
         _node(2, "IDENT", "i"),
         _node(3, "IDENT", "j"),
@@ -39,7 +39,7 @@ def test_loop_carry_links_loop_node_to_each_repeated_identifier_occurrence():
 
 
 def test_loop_carry_ignores_identifiers_that_occur_only_once():
-    nodes = [_node(0, "LOOP_FOR"), _node(1, "IDENT", "x")]
+    nodes = [_node(0, "LOOP_N_BOUND"), _node(1, "IDENT", "x")]
     graph = IRGraph(nodes=nodes, edges=_ast_edges((0, 1)))
     assert loop_carry_edges(graph) == []
 
@@ -51,15 +51,15 @@ def test_loop_carry_ignores_identifiers_outside_any_loop():
 
 
 def test_loop_carry_reaches_into_nested_loops_and_both_loops_see_the_variable():
-    # LOOP_FOR(0) -> [IDENT "total"(1), LOOP_FOR(2) -> IDENT "total"(3)] --
+    # LOOP_N_BOUND(0) -> [IDENT "total"(1), LOOP_N_BOUND(2) -> IDENT "total"(3)] --
     # the outer loop's own body has only one "total" occurrence directly, but
     # its full subtree (including the nested loop) has two, so it must still
     # get a LOOP_CARRY edge; the inner loop sees only its own one occurrence,
     # so no edge for it (needs >= 2 within its own subtree).
     nodes = [
-        _node(0, "LOOP_FOR"),
+        _node(0, "LOOP_N_BOUND"),
         _node(1, "IDENT", "total"),
-        _node(2, "LOOP_FOR"),
+        _node(2, "LOOP_N_BOUND"),
         _node(3, "IDENT", "total"),
     ]
     graph = IRGraph(nodes=nodes, edges=_ast_edges((0, 1), (0, 2), (2, 3)))
@@ -75,8 +75,8 @@ def test_loop_carry_starves_bounded_reading_would_produce_for_pure_nested_loop()
     # its iteration is exactly what makes the inner loop's repeated variable
     # an O(n^2)-relevant signal. This asserts the outer loop does NOT starve.
     nodes = [
-        _node(0, "LOOP_FOR"),
-        _node(1, "LOOP_FOR"),
+        _node(0, "LOOP_N_BOUND"),
+        _node(1, "LOOP_N_BOUND"),
         _node(2, "IDENT", "x"),
         _node(3, "IDENT", "x"),
     ]

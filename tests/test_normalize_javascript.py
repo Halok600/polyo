@@ -26,7 +26,7 @@ def test_normalize_maps_function_def_and_params():
 def test_normalize_maps_loop_branch_and_return():
     ir = normalize_source(LINEAR_SEARCH_JS, "javascript")
     hist = ir.symbol_histogram()
-    assert hist["LOOP_FOR"] == 1
+    assert hist["LOOP_N_BOUND"] == 1
     assert hist["BRANCH"] == 1
     assert hist["RETURN"] == 2
     assert hist["BLOCK"] == 3
@@ -53,6 +53,31 @@ def test_normalize_detects_direct_recursion():
     ir = normalize_source(src, "javascript")
     hist = ir.symbol_histogram()
     assert hist["RECURSE"] == 1
+    assert hist["CALL"] == 0
+
+
+def test_normalize_detects_recursion_through_a_class_method_qualified_this_call():
+    # Two real bugs this regression guards, found together via a live
+    # adversarial test: (1) `this.fib(...)` wasn't matched against the bare
+    # method name by strict equality: needs the same trailing-segment
+    # leniency as `self.`/`this->` in every other served language; (2) a
+    # class method's own name is a `property_identifier` node (unlike a
+    # plain `function fib(n) {}`, whose name is a plain `identifier`) --
+    # `_function_name`'s walk didn't recognise that type at all, so it fell
+    # through the method name and silently returned the first PARAMETER's
+    # identifier instead, meaning `self._func_name_stack[-1]` was wrong
+    # regardless of the qualified-call leniency fix alone.
+    src = (
+        "class Solution {\n"
+        "    fib(n) {\n"
+        "        if (n <= 1) { return n; }\n"
+        "        return this.fib(n - 1) + this.fib(n - 2);\n"
+        "    }\n"
+        "}\n"
+    )
+    ir = normalize_source(src, "javascript")
+    hist = ir.symbol_histogram()
+    assert hist["RECURSE"] == 2
     assert hist["CALL"] == 0
 
 

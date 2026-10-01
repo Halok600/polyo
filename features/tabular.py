@@ -14,16 +14,21 @@ real, arbitrary competitive-programming solutions at training time (plan
 real pattern that can exceed Python's default recursion limit if walked
 recursively.
 
-**Deliberately NOT implemented here, and why:** loop-bound *shape*
-(constant / input-dependent / halving -- plan §8) would need extending
-`parsing/normalize.py` beyond Phase 1's stable, golden-tested node-to-symbol
-mapping (today one CST node always maps to one fixed IR symbol; bound shape
-needs inspecting a loop's *children*, which is a different kind of rule).
-Hash/set-lookup features are similarly deferred: Python's `d[k]` and
-`arr[i]` are syntactically identical `subscript` nodes, and telling them
-apart needs `d`'s type, which this project's static, no-execution design
-does not attempt. Both are candidates for a later pass, not silently
-approximated here.
+**Loop-bound *shape* (constant / input-dependent / halving -- plan §8) is
+classified in the IR** (`parsing/normalize.py:_classify_loop`, emitting
+LOOP_CONST_BOUND/LOOP_N_BOUND/LOOP_HALVING in place of a single generic
+loop symbol) **but deliberately still collapsed to one aggregate
+`loop_count`/`loop_count_by_depth` here**, via `_LOOP_SYMBOLS` treating all
+three as interchangeable -- this rung's feature set does not yet expose the
+shape distinction as its own field(s). Surfacing it (e.g. a separate
+per-shape count) is real, scoped future feature-engineering work, not
+something this pass silently folds in.
+
+**Deliberately NOT implemented here, and why:** hash/set-lookup features --
+Python's `d[k]` and `arr[i]` are syntactically identical `subscript` nodes,
+and telling them apart needs `d`'s type, which this project's static,
+no-execution design does not attempt. A candidate for a later pass, not
+silently approximated here.
 """
 from __future__ import annotations
 
@@ -31,14 +36,16 @@ from dataclasses import dataclass
 
 from core.ir import IRGraph
 
-_LOOP_SYMBOLS = frozenset({"LOOP_FOR", "LOOP_WHILE"})
+_LOOP_SYMBOLS = frozenset({"LOOP_CONST_BOUND", "LOOP_N_BOUND", "LOOP_HALVING"})
 _ALLOC_SYMBOLS = frozenset({"ARRAY_ALLOC", "HASH_ALLOC"})
 _LIBRARY_SYMBOL_FIELDS = {
     "SORT": "sort_call_count",
     "BINARY_SEARCH": "binary_search_call_count",
     "HEAP_PUSH": "heap_op_count",
     "HEAP_POP": "heap_op_count",
-    "MATH_OP": "math_op_count",
+    "MATH_OP_CONST": "math_op_count",
+    "MATH_OP_LINEAR": "math_op_count",
+    "MATH_OP_LOG": "math_op_count",
 }
 _LOOP_DEPTH_BUCKETS = 4  # counts at depth 0, 1, 2, "3+"
 

@@ -39,9 +39,13 @@ null_literal = "LITERAL"
 "^(Array|Collections)\\.Sort$" = "SORT"
 "\\.Sort$" = "SORT"
 "^Array\\.BinarySearch$" = "BINARY_SEARCH"
-"^Math\\.(Min|Max|Abs|Pow|Sqrt|Log)$" = "MATH_OP"
+"^Math\\.(Abs|Sqrt|Log)$" = "MATH_OP_CONST"
+"^Math\\.Pow$" = "MATH_OP_LOG"
 "\\.(Add|Push|Enqueue)$" = "LIST_APPEND"
 "\\.(ContainsKey|TryGetValue)$" = "HASH_LOOKUP"
+
+[calls_by_arity]
+"^Math\\.(Min|Max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 [binary_operator_nodes]
 types = ["binary_expression"]

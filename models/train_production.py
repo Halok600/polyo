@@ -27,6 +27,7 @@ import json
 import sys
 from pathlib import Path
 
+from core.ir import IR_SYMBOLS
 from data.corpus import CorpusRecord, read_jsonl
 from eval.report import SPACE_CLASSES, TIME_CLASSES, compute_metrics
 from models import gbdt, gnn
@@ -122,7 +123,7 @@ def _train_and_export_gnn(
             "mass_threshold_by_alpha": conformal_calibration.mass_threshold_by_alpha,
         }
 
-    export_gnn(time_model.core, time_model.edge_kinds, ARTIFACTS_DIR / "gnn.npz")
+    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, ARTIFACTS_DIR / "gnn.npz")
     calibration_path = ARTIFACTS_DIR / "calibration.json"
     calibration_path.write_text(json.dumps(calibration, indent=2), encoding="utf-8")
     conformal_path = ARTIFACTS_DIR / "conformal.json"

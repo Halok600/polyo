@@ -76,7 +76,7 @@ def test_predict_curve_shares_one_n_grid_across_both_dimensions(tiny_registry):
 def test_predict_ir_summary_matches_a_real_parse(tiny_registry):
     result = predict(tiny_registry, _LINEAR_PY, "python")
     assert result["ir"]["nodes"] > 0
-    assert result["ir"]["histogram"].get("LOOP_FOR") == 1
+    assert result["ir"]["histogram"].get("LOOP_N_BOUND") == 1
 
 
 def test_predict_attribution_entries_have_the_documented_shape(tiny_registry):

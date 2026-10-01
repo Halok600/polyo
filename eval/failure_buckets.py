@@ -21,11 +21,20 @@ from dataclasses import dataclass
 from models.dataset import ParsedExample
 
 _LIBRARY_SYMBOLS = frozenset(
-    {"SORT", "BINARY_SEARCH", "HEAP_PUSH", "HEAP_POP", "QUEUE_OP", "MATH_OP"}
+    {
+        "SORT",
+        "BINARY_SEARCH",
+        "HEAP_PUSH",
+        "HEAP_POP",
+        "QUEUE_OP",
+        "MATH_OP_CONST",
+        "MATH_OP_LINEAR",
+        "MATH_OP_LOG",
+    }
 )
 _MEMO_LOOKUP_SYMBOLS = frozenset({"HASH_LOOKUP", "HASH_INSERT"})
 _AMORTISED_SYMBOLS = frozenset({"LIST_APPEND", "SET_OP", "HASH_INSERT"})
-_LOOP_SYMBOLS = frozenset({"LOOP_FOR", "LOOP_WHILE"})
+_LOOP_SYMBOLS = frozenset({"LOOP_CONST_BOUND", "LOOP_N_BOUND", "LOOP_HALVING"})
 
 BUCKETS: dict[str, str] = {
     "amortised_structures": (

@@ -17,12 +17,16 @@ def _node(id_: int, symbol: str) -> IRNode:
 
 def test_to_example_graph_maps_symbols_and_groups_edges_by_kind():
     ir = IRGraph(
-        nodes=[_node(0, "FUNC_DEF"), _node(1, "LOOP_FOR"), _node(2, "IDENT")],
+        nodes=[_node(0, "FUNC_DEF"), _node(1, "LOOP_N_BOUND"), _node(2, "IDENT")],
         edges=[IREdge(0, 1, "AST_CHILD"), IREdge(1, 2, "AST_CHILD"), IREdge(1, 2, "LOOP_CARRY")],
     )
     graph = to_example_graph(ir)
     assert graph.num_nodes == 3
-    expected_symbols = [SYMBOL_INDEX["FUNC_DEF"], SYMBOL_INDEX["LOOP_FOR"], SYMBOL_INDEX["IDENT"]]
+    expected_symbols = [
+        SYMBOL_INDEX["FUNC_DEF"],
+        SYMBOL_INDEX["LOOP_N_BOUND"],
+        SYMBOL_INDEX["IDENT"],
+    ]
     assert graph.symbol_ids.tolist() == expected_symbols
     assert graph.edges_by_kind["AST_CHILD"].tolist() == [[0, 1], [1, 2]]
     assert graph.edges_by_kind["LOOP_CARRY"].tolist() == [[1, 2]]

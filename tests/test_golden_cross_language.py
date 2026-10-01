@@ -12,9 +12,13 @@ not a rewrite" claim, made concrete and checked in CI.
 
 "Near-identical" is defined precisely, not left to eyeballing:
 
-- Exact match on the *structural core* -- FUNC_DEF, PARAM, LOOP_FOR, BLOCK,
-  BRANCH, ARRAY_INDEX, RETURN -- the symbols that describe control flow and
-  data access shape, independent of how a language spells a loop bound.
+- Exact match on the *structural core* -- FUNC_DEF, PARAM, LOOP_N_BOUND,
+  BLOCK, BRANCH, ARRAY_INDEX, RETURN -- the symbols that describe control
+  flow and data access shape, independent of how a language spells a loop
+  bound. (Every fixture below uses an input-derived bound `n`, so the loop
+  symbol asserted here is specifically LOOP_N_BOUND, not the other two
+  members of the loop-bound-shape trio -- see `parsing/normalize.py`'s
+  `_classify_loop`.)
 - A documented, expected divergence on COMPARE/LITERAL/IDENT/ASSIGN:
   Python's `for i in range(n)` leaves the loop's start (0) and bound-check
   (`i < n`) implicit, while every other language must spell out an explicit
@@ -61,9 +65,24 @@ from __future__ import annotations
 import math
 from collections import Counter
 
+from core.ir import IR_SYMBOLS
 from parsing.normalize import normalize_source
 
-STRUCTURAL_CORE = ("FUNC_DEF", "PARAM", "LOOP_FOR", "BLOCK", "BRANCH", "ARRAY_INDEX", "RETURN")
+STRUCTURAL_CORE = ("FUNC_DEF", "PARAM", "LOOP_N_BOUND", "BLOCK", "BRANCH", "ARRAY_INDEX", "RETURN")
+
+# Fails at test COLLECTION time, not inside a test body -- a symbol renamed
+# or removed from `core/ir.py`'s vocabulary (as LOOP_FOR/LOOP_WHILE were,
+# once `_classify_loop` started emitting the finer-grained bound-shape
+# trio instead) must not leave this constant silently asserting a symbol
+# that can never appear in any histogram again, which would make every
+# language's `hist[symbol] == reference[symbol]` check trivially pass at
+# 0 == 0 -- a real regression here found exactly that, undetected until a
+# human re-read the assertion.
+_unknown_core_symbols = set(STRUCTURAL_CORE) - set(IR_SYMBOLS)
+assert not _unknown_core_symbols, (
+    f"STRUCTURAL_CORE names symbol(s) not in core.ir.IR_SYMBOLS: {_unknown_core_symbols} "
+    "-- update STRUCTURAL_CORE, this vocabulary drifted"
+)
 
 LINEAR_SEARCH_SOURCE: dict[str, str] = {
     "python": """\

@@ -27,9 +27,13 @@ false = "LITERAL"
 "^std::(lower_bound|upper_bound|binary_search)$" = "BINARY_SEARCH"
 "^(push_heap)$" = "HEAP_PUSH"
 "^(pop_heap)$" = "HEAP_POP"
-"^std::(min|max|abs|pow)$" = "MATH_OP"
+"^std::abs$" = "MATH_OP_CONST"
+"^std::pow$" = "MATH_OP_LOG"
 "\\.push_back$" = "LIST_APPEND"
-"\\.size$" = "MATH_OP"
+"\\.size$" = "MATH_OP_CONST"
+
+[calls_by_arity]
+"^std::(min|max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 # tree-sitter-cpp does not distinguish comparison from arithmetic by node
 # type -- both parse as `binary_expression`/`update_expression`. These node

@@ -25,18 +25,18 @@ def _zero_values() -> dict[str, float]:
 
 
 def test_spans_for_feature_returns_spans_of_the_mapped_symbols_only():
-    ir = _ir_with([("LOOP_FOR", _SPAN_A), ("BRANCH", _SPAN_B)])
+    ir = _ir_with([("LOOP_N_BOUND", _SPAN_A), ("BRANCH", _SPAN_B)])
     assert spans_for_feature(ir, "loop_count") == [_SPAN_A]
     assert spans_for_feature(ir, "branch_count") == [_SPAN_B]
 
 
 def test_spans_for_feature_returns_empty_for_a_feature_with_no_symbol_mapping():
-    ir = _ir_with([("LOOP_FOR", _SPAN_A)])
+    ir = _ir_with([("LOOP_N_BOUND", _SPAN_A)])
     assert spans_for_feature(ir, "node_count") == []
 
 
 def test_spans_for_feature_respects_max_spans():
-    ir = _ir_with([("LOOP_FOR", _SPAN_A), ("LOOP_WHILE", _SPAN_B), ("LOOP_FOR", _SPAN_A)])
+    ir = _ir_with([("LOOP_N_BOUND", _SPAN_A), ("LOOP_HALVING", _SPAN_B), ("LOOP_N_BOUND", _SPAN_A)])
     assert len(spans_for_feature(ir, "loop_count", max_spans=2)) == 2
 
 
@@ -49,7 +49,7 @@ def test_every_feature_name_has_a_span_mapping_entry():
 
 
 def test_top_contributions_ranks_by_absolute_value_and_attaches_spans():
-    ir = _ir_with([("LOOP_FOR", _SPAN_A)])
+    ir = _ir_with([("LOOP_N_BOUND", _SPAN_A)])
     values = _zero_values() | {"loop_count": 3.0, "branch_count": 1.0}
     weights = {"loop_count": -0.9, "branch_count": 0.1}
     scales = {"loop_count": 1.0, "branch_count": 1.0}

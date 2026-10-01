@@ -1,6 +1,6 @@
 {
   "time": {
-    "temperature": 0.5066924438476563,
+    "temperature": 0.4970667419433594,
     "classes": [
       "O(1)",
       "O(log n)",
@@ -12,7 +12,7 @@
     ]
   },
   "space": {
-    "temperature": 0.37580517578124994,
+    "temperature": 0.36059130859375,
     "classes": [
       "O(1)",
       "O(log n)",

@@ -35,13 +35,16 @@ Span = tuple[int, int, int, int]
 # Which IR symbols a tabular feature's count is derived from
 # (`features/tabular.py`'s own extraction) -- used only to look up spans to
 # report alongside a feature's contribution, not to recompute it.
+_LOOP_SYMBOLS = ("LOOP_CONST_BOUND", "LOOP_N_BOUND", "LOOP_HALVING")
+_MATH_OP_SYMBOLS = ("MATH_OP_CONST", "MATH_OP_LINEAR", "MATH_OP_LOG")
+
 _FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
-    "max_loop_nesting_depth": ("LOOP_FOR", "LOOP_WHILE"),
-    "loop_count": ("LOOP_FOR", "LOOP_WHILE"),
-    "loop_count_depth_0": ("LOOP_FOR", "LOOP_WHILE"),
-    "loop_count_depth_1": ("LOOP_FOR", "LOOP_WHILE"),
-    "loop_count_depth_2": ("LOOP_FOR", "LOOP_WHILE"),
-    "loop_count_depth_3": ("LOOP_FOR", "LOOP_WHILE"),
+    "max_loop_nesting_depth": _LOOP_SYMBOLS,
+    "loop_count": _LOOP_SYMBOLS,
+    "loop_count_depth_0": _LOOP_SYMBOLS,
+    "loop_count_depth_1": _LOOP_SYMBOLS,
+    "loop_count_depth_2": _LOOP_SYMBOLS,
+    "loop_count_depth_3": _LOOP_SYMBOLS,
     "max_alloc_nesting_depth": ("ARRAY_ALLOC", "HASH_ALLOC"),
     "alloc_count": ("ARRAY_ALLOC", "HASH_ALLOC"),
     "alloc_inside_loop_count": ("ARRAY_ALLOC", "HASH_ALLOC"),
@@ -55,7 +58,7 @@ _FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
     "sort_call_count": ("SORT",),
     "binary_search_call_count": ("BINARY_SEARCH",),
     "heap_op_count": ("HEAP_PUSH", "HEAP_POP"),
-    "math_op_count": ("MATH_OP",),
+    "math_op_count": _MATH_OP_SYMBOLS,
     "call_count": ("CALL",),
     "node_count": (),
     "edge_count": (),

@@ -1278,12 +1278,364 @@ func memoizedFibonacci(n int) int {
 """,
         },
     ),
+    SynthAlgorithm(
+        name="pairwise_target_search",
+        time_class=TimeClass.O_N2,
+        space_class=SpaceClass.O_1,
+        code_by_language={
+            # Deliberately fills a real, confirmed gap: every other nested-
+            # loop shape above either takes `n` as an explicit parameter
+            # (C-style raw-array idiom) or runs its loops to completion --
+            # none compute `n` from a container argument via a `.size()`/
+            # `len()`/`.length` call AND early-return from inside the
+            # nested loop once a condition is met. That exact combination
+            # (a two-sum-style solution) is an extremely common real-world
+            # shape this corpus had zero examples of before this pass.
+            "python": """\
+def pairwise_target_search(nums, target):
+    n = len(nums)
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if nums[i] + nums[j] == target:
+                return [i, j]
+    return []
+""",
+            "cpp": """\
+#include <vector>
+using namespace std;
+
+vector<int> pairwise_target_search(vector<int>& nums, int target) {
+    int n = nums.size();
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (nums[i] + nums[j] == target) {
+                return {i, j};
+            }
+        }
+    }
+    return {};
+}
+""",
+            "c": """\
+#include <stdlib.h>
+int *pairwise_target_search(int nums[], int n, int target, int *out_n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (nums[i] + nums[j] == target) {
+                int *result = malloc(sizeof(int) * 2);
+                result[0] = i;
+                result[1] = j;
+                *out_n = 2;
+                return result;
+            }
+        }
+    }
+    *out_n = 0;
+    return NULL;
+}
+""",
+            "java": """\
+class Solution {
+    static int[] pairwiseTargetSearch(int[] nums, int target) {
+        int n = nums.length;
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (nums[i] + nums[j] == target) {
+                    return new int[]{i, j};
+                }
+            }
+        }
+        return new int[]{};
+    }
+}
+""",
+            "javascript": """\
+function pairwiseTargetSearch(nums, target) {
+    const n = nums.length;
+    for (let i = 0; i < n - 1; i++) {
+        for (let j = i + 1; j < n; j++) {
+            if (nums[i] + nums[j] === target) {
+                return [i, j];
+            }
+        }
+    }
+    return [];
+}
+""",
+            "go": """\
+package main
+
+func pairwiseTargetSearch(nums []int, target int) []int {
+    n := len(nums)
+    for i := 0; i < n-1; i++ {
+        for j := i + 1; j < n; j++ {
+            if nums[i]+nums[j] == target {
+                return []int{i, j}
+            }
+        }
+    }
+    return []int{}
+}
+""",
+        },
+    ),
+    SynthAlgorithm(
+        name="qualified_self_recursion_fib",
+        time_class=TimeClass.O_2N,
+        space_class=SpaceClass.O_N,
+        code_by_language={
+            # Deliberately fills a real, confirmed gap found via a live
+            # adversarial test: `self.fib(...)`/`this.fib(...)`/
+            # `this->fib(...)`/a Go receiver's `s.fib(...)` recursive
+            # self-call went completely undetected as RECURSE before this
+            # session's parser fix (`parsing/normalize.py`'s
+            # `_trailing_call_segment` and the `property_identifier` fix in
+            # `_function_name`) -- the corpus had ZERO training examples of
+            # this now-correctly-parsed shape, so even after the parser fix
+            # the model had never seen "RECURSE via a qualified call" during
+            # training. C has no OOP receiver-call idiom, so its variant
+            # below is the natural direct-call equivalent instead.
+            "python": """\
+class Solution:
+    def fib(self, n):
+        if n <= 1:
+            return n
+        return self.fib(n - 1) + self.fib(n - 2)
+""",
+            "cpp": """\
+class Solution {
+public:
+    int fib(int n) {
+        if (n <= 1) {
+            return n;
+        }
+        return this->fib(n - 1) + this->fib(n - 2);
+    }
+};
+""",
+            "c": """\
+int fib(int n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+""",
+            "java": """\
+class Solution {
+    int fib(int n) {
+        if (n <= 1) {
+            return n;
+        }
+        return this.fib(n - 1) + this.fib(n - 2);
+    }
+}
+""",
+            "javascript": """\
+class Solution {
+    fib(n) {
+        if (n <= 1) {
+            return n;
+        }
+        return this.fib(n - 1) + this.fib(n - 2);
+    }
+}
+""",
+            "go": """\
+package main
+
+type Solution struct{}
+
+func (s *Solution) fib(n int) int {
+    if n <= 1 {
+        return n
+    }
+    return s.fib(n-1) + s.fib(n-2)
+}
+""",
+        },
+    ),
 )
+
+# --- Driver/main-wrapped variants (model-v2 item 6 follow-up): a real user
+# pasting a "complete, runnable" solution -- class Solution + main() + test
+# construction + print, exactly this session's bug-report shape -- was
+# ALSO entirely absent from the corpus (every algorithm above is a bare
+# function/method, never embedded in a driver harness). Confirmed via a
+# live A/B test that this absence measurably hurts: the exact same
+# two-nested-loop logic classified correctly as O(n^2) as a bare function
+# but as O(2^n)/O(n^3) once wrapped in main()/class boilerplate, on BOTH
+# the pre-this-session committed model and this session's item-3/6 retrain
+# -- i.e. a pre-existing gap, not a regression. Wraps a curated subset (one
+# shape per major time class, not everything) with the SAME label as the
+# unwrapped original, so the model sees driver boilerplate paired with
+# every complexity class rather than learning "more surrounding code ->
+# higher complexity" from the training distribution.
+_DRIVER_WRAPPED_SHAPES: tuple[str, ...] = (
+    "pairwise_target_search",
+    "linear_scan",
+    "binary_search",
+    "sort_then_return",
+    "triple_nested",
+    "naive_fibonacci",
+)
+
+
+def _indent(code: str, prefix: str = "    ") -> str:
+    return "\n".join(prefix + line if line else line for line in code.rstrip("\n").split("\n"))
+
+
+def _camel(snake_name: str) -> str:
+    head, *rest = snake_name.split("_")
+    return head + "".join(word.capitalize() for word in rest)
+
+
+def _python_driver(name: str, body: str) -> str:
+    return (
+        f"{body}\n"
+        "if __name__ == \"__main__\":\n"
+        "    nums = [2, 7, 11, 15]\n"
+        "    target = 9\n"
+        f"    result = {name}(nums, target)\n"
+        "    print(result)\n"
+    )
+
+
+def _split_leading_directives(body: str) -> tuple[str, str]:
+    """Splits off a body's own leading `#include`/`using namespace` lines
+    (several algorithms above need their own, e.g. sort_then_return's
+    `<algorithm>`) so a driver wrapper can hoist them to file scope instead
+    of nesting them inside `class Solution { ... }`, which isn't just
+    stylistically off -- it's not what this shape is meant to teach the
+    model (a preprocessor directive never legitimately appears inside a
+    class body in real code)."""
+    lines = body.split("\n")
+    split_at = 0
+    for line in lines:
+        if line.startswith("#include") or line.startswith("using namespace"):
+            split_at += 1
+        elif line == "":
+            split_at += 1
+        else:
+            break
+    return "\n".join(lines[:split_at]), "\n".join(lines[split_at:])
+
+
+def _cpp_driver(name: str, body: str) -> str:
+    directives, rest = _split_leading_directives(body)
+    directives = directives.strip("\n")
+    return (
+        "#include <iostream>\n"
+        "#include <vector>\n"
+        "using namespace std;\n"
+        + (directives + "\n" if directives else "")
+        + "\n"
+        "class Solution {\n"
+        "public:\n"
+        f"{_indent(rest)}\n"
+        "};\n\n"
+        "int main() {\n"
+        "    vector<int> nums = {2, 7, 11, 15};\n"
+        "    int target = 9;\n"
+        "    Solution solver;\n"
+        f"    auto result = solver.{name}(nums, target);\n"
+        "    cout << \"done\" << endl;\n"
+        "    return 0;\n"
+        "}\n"
+    )
+
+
+def _c_driver(name: str, body: str) -> str:
+    return (
+        "#include <stdio.h>\n"
+        "#include <stdlib.h>\n\n"
+        f"{body}\n"
+        "int main() {\n"
+        "    int nums[] = {2, 7, 11, 15};\n"
+        "    int n = 4;\n"
+        "    int target = 9;\n"
+        f"    long result = (long){name}(nums, n, target);\n"
+        "    printf(\"%ld\\n\", result);\n"
+        "    return 0;\n"
+        "}\n"
+    )
+
+
+def _java_driver(name: str, body: str) -> str:
+    trimmed = body.rstrip("\n")
+    without_class_close = trimmed[:-1]  # drop the class's own closing brace
+    driver = (
+        "\n"
+        "    public static void main(String[] args) {\n"
+        "        int[] nums = {2, 7, 11, 15};\n"
+        "        int target = 9;\n"
+        f"        var result = {name}(nums, target);\n"
+        "        System.out.println(result);\n"
+        "    }\n"
+        "}\n"
+    )
+    return without_class_close + driver
+
+
+def _js_driver(name: str, body: str) -> str:
+    return (
+        f"{body}\n"
+        "const nums = [2, 7, 11, 15];\n"
+        "const target = 9;\n"
+        f"const result = {name}(nums, target);\n"
+        "console.log(result);\n"
+    )
+
+
+def _go_driver(name: str, body: str) -> str:
+    prefix = "package main\n\n"
+    stripped = body[len(prefix):] if body.startswith(prefix) else body
+    return (
+        "package main\n\n"
+        "import \"fmt\"\n\n"
+        f"{stripped}\n"
+        "func main() {\n"
+        "    nums := []int{2, 7, 11, 15}\n"
+        "    target := 9\n"
+        f"    result := {name}(nums, target)\n"
+        "    fmt.Println(result)\n"
+        "}\n"
+    )
+
+
+_DRIVER_BUILDERS = {
+    "python": (lambda name, body: _python_driver(name, body)),
+    "cpp": (lambda name, body: _cpp_driver(name, body)),
+    "c": (lambda name, body: _c_driver(name, body)),
+    "java": (lambda name, body: _java_driver(_camel(name), body)),
+    "javascript": (lambda name, body: _js_driver(_camel(name), body)),
+    "go": (lambda name, body: _go_driver(_camel(name), body)),
+}
+
+
+def _build_driver_variants() -> tuple[SynthAlgorithm, ...]:
+    by_name = {algo.name: algo for algo in ALGORITHMS}
+    variants = []
+    for shape_name in _DRIVER_WRAPPED_SHAPES:
+        base = by_name[shape_name]
+        wrapped = {
+            language: _DRIVER_BUILDERS[language](shape_name, code)
+            for language, code in base.code_by_language.items()
+        }
+        variants.append(
+            SynthAlgorithm(
+                name=f"{shape_name}_driver",
+                time_class=base.time_class,
+                space_class=base.space_class,
+                code_by_language=wrapped,
+            )
+        )
+    return tuple(variants)
 
 
 def build_records() -> list[CorpusRecord]:
     records: list[CorpusRecord] = []
-    for algo in ALGORITHMS:
+    for algo in ALGORITHMS + _build_driver_variants():
         problem_id = f"synth_{algo.name}"
         for language, code in algo.code_by_language.items():
             records.append(

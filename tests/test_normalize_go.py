@@ -26,7 +26,7 @@ def test_normalize_maps_function_def_and_params():
 def test_normalize_maps_loop_branch_and_return():
     ir = normalize_source(LINEAR_SEARCH_GO, "go")
     hist = ir.symbol_histogram()
-    assert hist["LOOP_FOR"] == 1
+    assert hist["LOOP_N_BOUND"] == 1
     assert hist["BRANCH"] == 1
     assert hist["RETURN"] == 2
     assert hist["BLOCK"] == 3
@@ -53,6 +53,29 @@ def test_normalize_detects_direct_recursion():
     ir = normalize_source(src, "go")
     hist = ir.symbol_histogram()
     assert hist["RECURSE"] == 1
+    assert hist["CALL"] == 0
+
+
+def test_normalize_detects_recursion_through_a_method_receiver_call():
+    # Two real bugs this regression guards, found together via a live
+    # adversarial test: (1) `s.fib(...)` wasn't matched against the bare
+    # method name by strict equality; (2) Go's `method_declaration` has a
+    # RECEIVER parameter list (`(s *Solution)`) that precedes the method's
+    # own name in document order -- `_function_name`'s generic preorder walk
+    # found the receiver variable's identifier ("s") first and returned
+    # that as the "function name" instead of "fib", so even the qualified-
+    # call leniency fix alone couldn't have caught this without also fixing
+    # name extraction itself (now via the grammar's own `name` field).
+    src = (
+        "type Solution struct{}\n\n"
+        "func (s *Solution) fib(n int) int {\n"
+        "    if n <= 1 {\n        return n\n    }\n"
+        "    return s.fib(n-1) + s.fib(n-2)\n"
+        "}\n"
+    )
+    ir = normalize_source(src, "go")
+    hist = ir.symbol_histogram()
+    assert hist["RECURSE"] == 2
     assert hist["CALL"] == 0
 
 

@@ -34,8 +34,16 @@ baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
 
 - A **GNN message-passing over the IR graph** (rung 3) beats a rule baseline,
   TF-IDF over IR symbols, and IR-features+LightGBM on the same held-out,
-  problem-level test split — **0.377 / 0.336 macro-F1** (time / space) on the
-  full multi-language corpus.
+  problem-level test split — **~0.35-0.41 / ~0.33-0.34 macro-F1** (time /
+  space) on the full multi-language corpus (model v2: loop-bound-shape +
+  math-op-shape IR features and a targeted synthetic-data expansion). Given
+  as a range, honestly: an adversarial-testing pass this session found
+  training has real run-to-run variance at this scale that a single
+  retrain's number doesn't capture — see
+  [`PHASE5_REPORT.md`](PHASE5_REPORT.md#model-v2-continued-an-adversarial-test-two-real-parsing-bugs-and-a-training-variance-finding)
+  for the full retrain-comparison table and two real parsing bugs
+  (qualified recursive self-calls going undetected) found and fixed along
+  the way.
 - **Zero-shot cross-language transfer**: trained on Python+Java only,
   evaluated on C++, JavaScript, Go, and C it never saw during training.
   Directionally consistent with a language-agnostic IR, but honestly

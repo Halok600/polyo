@@ -24,14 +24,30 @@ import numpy as np
 _LAYER_NORM_EPS = 1e-5
 
 
-def export_gnn(core: object, edge_kinds: tuple[str, ...], path: Path) -> None:
+class VocabularyMismatchError(RuntimeError):
+    """Raised when a loaded `.npz`'s baked-in IR symbol vocabulary doesn't
+    exactly match the vocabulary the caller expects (normally
+    `core.ir.IR_SYMBOLS` as it exists right now). The embedding table's
+    row i means "whatever symbol occupied position i in IR_SYMBOLS at
+    train time" -- if a symbol has since been renamed, removed, or
+    reordered, every row from that point on would silently score the
+    wrong symbol's embedding, with no error, unless this is checked."""
+
+
+def export_gnn(
+    core: object, edge_kinds: tuple[str, ...], ir_symbols: tuple[str, ...], path: Path
+) -> None:
     """`core` is a `models.gnn._GnnCore` (typed as `object` here so this
-    module never imports `models.gnn`, and so never needs torch itself)."""
+    module never imports `models.gnn`, and so never needs torch itself).
+    `ir_symbols` should be `core.ir.IR_SYMBOLS` as it existed at train
+    time -- saved alongside the weights so `NumpyGnnModel.load` can catch
+    a vocabulary drift instead of silently serving scrambled embeddings."""
     state = core.state_dict()  # type: ignore[attr-defined]
     arrays: dict[str, np.ndarray] = {
         key: tensor.detach().cpu().numpy() for key, tensor in state.items()
     }
     arrays["_edge_kinds"] = np.array(edge_kinds)
+    arrays["_ir_symbols"] = np.array(ir_symbols)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(path, **arrays)  # type: ignore[arg-type]  # numpy's savez stub mistypes **kwds
 
@@ -56,9 +72,25 @@ class NumpyGnnModel:
         self.heads: tuple[str, ...] = tuple(sorted(head_keys))
 
     @classmethod
-    def load(cls, path: Path) -> NumpyGnnModel:
+    def load(
+        cls, path: Path, expected_symbols: tuple[str, ...] | None = None
+    ) -> NumpyGnnModel:
         data = np.load(path, allow_pickle=False)
         edge_kinds = tuple(str(k) for k in data["_edge_kinds"])
+        if expected_symbols is not None:
+            if "_ir_symbols" not in data.files:
+                raise VocabularyMismatchError(
+                    f"{path} predates IR-vocabulary fingerprinting (no '_ir_symbols' "
+                    "entry) -- retrain and re-export before serving, so this can be "
+                    "checked."
+                )
+            trained_symbols = tuple(str(s) for s in data["_ir_symbols"])
+            if trained_symbols != tuple(expected_symbols):
+                raise VocabularyMismatchError(
+                    f"{path} was exported against a different IR symbol vocabulary "
+                    "than is currently defined -- retrain and re-export before "
+                    f"serving.\ntrained:  {trained_symbols}\ncurrent:  {tuple(expected_symbols)}"
+                )
         weights = {k: data[k] for k in data.files if not k.startswith("_")}
         return cls(weights, edge_kinds)
 

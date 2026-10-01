@@ -26,7 +26,7 @@ def test_normalize_maps_function_def_and_params():
 def test_normalize_maps_loop_branch_and_return():
     ir = normalize_source(LINEAR_SEARCH_CPP, "cpp")
     hist = ir.symbol_histogram()
-    assert hist["LOOP_FOR"] == 1
+    assert hist["LOOP_N_BOUND"] == 1
     assert hist["BRANCH"] == 1
     assert hist["RETURN"] == 2
     assert hist["BLOCK"] == 3
@@ -53,6 +53,21 @@ def test_normalize_detects_direct_recursion():
     ir = normalize_source(src, "cpp")
     hist = ir.symbol_histogram()
     assert hist["RECURSE"] == 1
+    assert hist["CALL"] == 0
+
+
+def test_normalize_detects_recursion_through_a_qualified_this_arrow_call():
+    # A real bug this regression guards: `this->fib(...)` wasn't matched by
+    # a trailing-segment split on `.` alone -- C++'s `->` pointer-member
+    # operator needs the same leniency `self.`/`this.` get in every other
+    # served language.
+    src = (
+        "class Solution { public: int fib(int n) { if (n <= 1) { return n; } "
+        "return this->fib(n - 1) + this->fib(n - 2); } };\n"
+    )
+    ir = normalize_source(src, "cpp")
+    hist = ir.symbol_histogram()
+    assert hist["RECURSE"] == 2
     assert hist["CALL"] == 0
 
 

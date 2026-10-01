@@ -41,10 +41,14 @@ null_literal = "LITERAL"
 "\\.sort$" = "SORT"
 "^Arrays\\.binarySearch$" = "BINARY_SEARCH"
 "^Collections\\.binarySearch$" = "BINARY_SEARCH"
-"^Math\\.(min|max|abs|pow|sqrt|log)$" = "MATH_OP"
+"^Math\\.(abs|sqrt|log)$" = "MATH_OP_CONST"
+"^Math\\.pow$" = "MATH_OP_LOG"
 "\\.(add|addLast|push)$" = "LIST_APPEND"
 "\\.(get|containsKey|containsValue)$" = "HASH_LOOKUP"
 "\\.put$" = "HASH_INSERT"
+
+[calls_by_arity]
+"^Math\\.(min|max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 # `binary_expression` covers both comparison and arithmetic in this grammar
 # (unlike Python, whose grammar already splits them by node type) -- resolved

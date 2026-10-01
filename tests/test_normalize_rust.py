@@ -26,7 +26,7 @@ def test_normalize_maps_function_def_and_params():
 def test_normalize_maps_loop_branch_and_return():
     ir = normalize_source(LINEAR_SEARCH_RUST, "rust")
     hist = ir.symbol_histogram()
-    assert hist["LOOP_FOR"] == 1
+    assert hist["LOOP_N_BOUND"] == 1
     assert hist["BRANCH"] == 1
     assert hist["RETURN"] == 2
     assert hist["BLOCK"] == 3

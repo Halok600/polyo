@@ -14,6 +14,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from core.ir import IR_SYMBOLS
 from models.conformal import ConformalCalibration
 from models.export_numpy import NumpyGnnModel
 
@@ -63,7 +64,7 @@ def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
             "`python -m models.train_production` first"
         )
 
-    gnn = NumpyGnnModel.load(gnn_path)
+    gnn = NumpyGnnModel.load(gnn_path, expected_symbols=IR_SYMBOLS)
 
     calibration_raw = json.loads(calibration_path.read_text(encoding="utf-8"))
     calibration = {

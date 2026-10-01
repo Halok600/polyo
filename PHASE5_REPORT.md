@@ -40,6 +40,164 @@ Parsing/feature-extraction survival rate per split (`models/dataset.py`):
 
 ![space confusion matrix, rung 3](eval/figures/confusion_space_rung3_gnn.png)
 
+## Model v2
+
+**A real, user-reported bug, root-caused before any fix was attempted.** A pasted C++
+two-sum solution (`class Solution { ... twoSum(...) ... }; int main() { ... }` — a
+complete, driver-wrapped program, not a bare function) predicted **O(2^n)** time
+instead of the correct **O(n^2)**. Root-caused with live A/B evidence, not guessed at:
+
+- The identical nested-loop logic, as a bare Python function, already classified
+  correctly (O(n^2), 57% confidence) — so the *algorithm* wasn't the problem.
+- Confirmed this predates model v2 entirely: temporarily stashed all model-v2 work in
+  progress and re-ran the exact same C++ code against the last-*committed* model —
+  it also mispredicted O(2^n). Not a regression; a pre-existing gap.
+- Stripping the `main()`/`class Solution` driver down to a bare function moved the
+  prediction from O(2^n) to O(n^3) — closer, still wrong, proving the driver
+  boilerplate was A cause but not the only one.
+- Inspecting the corpus directly (`data/synth.py`) found the real gap: **zero**
+  training examples anywhere combined (a) a nested loop that early-returns on a
+  found condition (the canonical two-sum shape) with (b) `n` computed internally via
+  a `.size()`/`.length`/`len()` call rather than passed in as a parameter, and
+  **zero** examples of any complexity class wrapped in a realistic
+  `class Solution { ... }; int main() { ... }` driver harness. Every synthetic
+  example was a bare function/method — a real train/serve distribution gap, not a
+  code defect.
+
+**Fix, batched with the previously-shipped item-3/6 IR work (loop-bound shape —
+`LOOP_CONST_BOUND`/`LOOP_N_BOUND`/`LOOP_HALVING` — and math-op shape —
+`MATH_OP_CONST`/`MATH_OP_LINEAR`/`MATH_OP_LOG`, plus `min`/`max` arity
+disambiguation) into one retrain, per the user's own "batch everything that needs a
+retrain into one push" direction:**
+
+- `data/synth.py` grew from 84 to 126 records: a new `pairwise_target_search` shape
+  (the missing two-sum pattern, `n` computed internally via a size/length call,
+  early return from inside the nested loop) across all six languages, plus
+  driver/`main()`-wrapped variants of one shape per major time class (`O(n)`
+  through `O(2^n)`) — the same label as the unwrapped original, so the model sees
+  driver boilerplate paired with every complexity class instead of learning
+  "more surrounding code implies higher complexity" from a corpus that only ever
+  showed it bare functions.
+- Retrained (`python -m models.train_production`, unchanged hyperparameters —
+  hidden_dim=64, 3 layers, batch_size=512, early stopping on val macro-F1).
+
+**Result, full held-out test set (not cherry-picked)** — a real improvement over
+*both* the originally-shipped model (0.377/0.336) and the item-3/6-only retrain that
+preceded this data expansion (0.359/0.333, before this session's fix):
+
+| Variant | n | Accuracy | Macro-F1 | Mean ordinal distance | ECE |
+|---|---|---|---|---|---|
+| time | 25464 | 0.569 | **0.409** | 0.794 | 0.042 |
+| space | 24586 | 0.728 | **0.337** | 0.515 | 0.034 |
+
+Per-class time F1 improved most exactly where the bug lived: `O(n^3)` 0.236 → 0.466,
+`O(2^n)` 0.397 → 0.559. Not a full fix for every shape, honestly: the *exact*
+fully driver-wrapped bug-report code still top-predicts O(n^3) rather than O(n^2)
+(down from a confident, clearly-wrong O(2^n) at 41.5% to a near-three-way tie —
+O(n^3) 37.0%, O(2^n) 36.1%, O(n^2) 22.6%) — but its 90%-coverage conformal set now
+correctly includes O(n^2), and the same logic as a bare function is now correctly
+classified (O(n^2), 55%, up from O(n^3) at 43.6%). Scaling `data/synth.py` further
+(the "thousands of records" scope of the original roadmap item) is a real, named
+next step, not silently declared done at 126 records.
+
+**Explicitly NOT rerun this pass** — the ablation, cross-language-transfer, and LLM
+zero-shot baseline sections below still reflect the pre-model-v2 GNN and corpus,
+including their confusion-matrix figures above. Re-running them against the model-v2
+artifacts is future work, flagged rather than left to look silently current next to
+the numbers above.
+
+### Model v2 continued: an adversarial test, two real parsing bugs, and a training-variance finding
+
+Asked to test the fix above "completely, with maximum effort" and fix any shortcomings
+found. Built a genuinely independent adversarial test suite via a multi-agent Workflow
+(111 agents total): 8 domain-expert generator agents each wrote 10-14 labelled test
+cases from a distinct angle (nested-loop early returns, driver-wrapped programs,
+recursion variants, library-call-hidden-complexity, loop-bound-shape edge cases,
+cross-language idiom parity, space-complexity focus, messy realistic noise); every
+case was then independently re-derived by a separate agent with NO access to the
+generator's claimed label. 100 of 103 cases had generator/verifier agreement and
+became trusted ground truth (3 disputed/dropped) — this generate-then-blind-verify
+pattern caught labelling mistakes a single self-reported label never would have.
+
+**Running all 100 against the live model surfaced two real, previously-undiscovered
+CODE bugs in `parsing/normalize.py`** (not ML weaknesses) — the most severe symptom
+was naive recursive Fibonacci predicted **O(1)** at 85%+ confidence:
+
+1. RECURSE detection compared a call's callee text against the enclosing function's
+   name by strict equality — any qualified self-call (`self.fib(...)`,
+   `this.fib(...)`, C++'s `this->fib(...)`) silently fell through to a plain CALL,
+   never RECURSE, because the receiver prefix broke the match.
+   `resolve_call_edges`'s CALL_EDGE resolution already had a lenient trailing-segment
+   match for exactly this qualified-callee shape, but only split on `.` — also
+   silently missing C++'s `->`, a latent pre-existing bug of its own. Fixed with a
+   shared `_trailing_call_segment` helper (handles both `.` and `->`).
+2. `_function_name`'s preorder walk had two separate blind spots: a JS/TS class
+   method's own name is a `property_identifier` node, not `identifier`/
+   `field_identifier` — the walk fell through it entirely and silently returned the
+   first PARAMETER's identifier instead (wrong, not absent); and Go's
+   `method_declaration` has a RECEIVER parameter list (`(s *Solution)`) that precedes
+   the method's real name in document order, so the walk found the receiver
+   variable's identifier first. Fixed by preferring the grammar's own `name` field
+   when present (Go exposes exactly this) before falling back to the walk, plus
+   matching `property_identifier` in the walk.
+
+Both are pure parsing-correctness fixes, independent of model weights, each with a
+new regression test in every affected per-language file. They affect every OOP-style
+recursive method across python/java/cpp/javascript/go that calls itself via a
+receiver rather than its bare name — a real, meaningful, previously-shipped gap.
+
+**A training-variance finding, arguably the most important result of this pass.**
+`models/gnn.py` had NO random seed anywhere (`_GnnCore`'s weight init, `_train`'s
+per-epoch `random.shuffle`) — added one (`seed=42` default, both `fit_multitask` and
+`fit_single_task`). This was necessary because a sequence of retrains, each intended
+to test one hypothesis, instead revealed the real hypothesis-breaker: **run-to-run
+variance on this model/corpus is large enough that a single retrain's macro-F1 is not
+reliable evidence for or against a specific data change.**
+
+| Retrain | Synth records | Seed | Time macro-F1 | Space macro-F1 | Adversarial-suite time acc. |
+|---|---|---|---|---|---|
+| Model v2 (above) | 126 | none | 0.409 | 0.337 | 41% |
+| + 5 more speculative shapes | 156 | none | 0.374 | 0.330 | 30% |
+| same 156-record corpus | 156 | 42 | 0.344 | 0.336 | 28% |
+| reverted to 132 (dropped the 4 least-justified additions, kept the one exercising the RECURSE fix) | 132 | 42 | 0.354 | 0.341 | 25% |
+
+Four runs, monotonically-decreasing adversarial accuracy (41→30→28→25%) that does
+**not** track the data changes made between them in a way that supports a causal
+story — reverting data that looked harmful made the adversarial number *worse*, not
+better. The honest conclusion: this small GNN (hidden_dim=64, 3 layers, several rare
+classes under 1% of the training corpus) has enough run-to-run instability that
+**no single retrain in this sequence, including the first one, should be treated as
+definitively "the best" without averaging multiple seeded runs** — a real
+methodological gap this session did not have time to close, named here rather than
+picking a winner arbitrarily. The seed default is a genuine, permanent improvement
+regardless (retraining is now far more reproducible than before), but a second,
+unidentified source of non-determinism remains even with the seed fixed (the same
+156-record corpus produced 0.374 unseeded and 0.344 seeded — still not identical to a
+third run on the same seed, which this session did not have time to fully isolate).
+
+**Currently served checkpoint** (`models/artifacts/`, the last row above): time
+0.354 / space 0.341 macro-F1 — within the demonstrated noise band of every other
+run in the table, not a confirmed regression from 0.409. The original bug-report
+code (full driver-wrapped C++ two-sum) still lands at O(n^3), 37% confidence, with
+the correct O(n^2) in its 90%-coverage conformal set, matching the earlier writeup's
+"not a full fix, honestly said so" result.
+
+**Real, unfixed gaps, named rather than silently left implicit:**
+- **Mutual/indirect recursion** (`is_even`/`is_odd` calling each other) is
+  architecturally invisible to the current RECURSE symbol, which only detects direct
+  self-recursion by name/receiver match. Real call-graph cycle detection across
+  multiple function definitions would be needed — a bigger design change, not a bug
+  fix.
+- **Space-complexity accuracy on recursion-stack and 2D-DP-table shapes** stayed weak
+  across every retrain in the table above. `O(n^2)` space is ~2.7% of the real
+  training corpus; `models/gnn.py`'s `ordinal_cross_entropy` loss has no
+  class-frequency weighting at all, a legitimate, not-yet-attempted lever that might
+  matter more than additional hand-written examples at this corpus's class balance.
+- **Training-run averaging.** Any future retrain comparison should train the same
+  configuration N≥3 times (now cheap to make deterministic per-run via `seed=`, but
+  still needs multiple *different* seeds averaged together) and report mean ± spread,
+  not a single number, given the variance measured here.
+
 ## LLM zero-shot baseline
 
 BigO(Bench) found frontier LLMs themselves struggle at this task; this project never had its own number for that until now. 200 held-out test examples (fixed seed 42, `eval/sample_llm_baseline.py`) were classified by Claude Sonnet 5 -- zero-shot, code only, no execution, no fine-tuning -- via 10 parallel subagents each blind to the ground truth (`eval/llm_baseline_unlabeled.json` has no label fields at all, so there's no answer key sitting next to the code being read). Scored with the exact same `eval/report.py:compute_metrics` every rung above uses.

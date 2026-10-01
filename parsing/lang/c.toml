@@ -27,7 +27,11 @@ false = "LITERAL"
 "^(malloc|calloc|realloc)$" = "ALLOC_N"
 "^(memcpy|memmove|strcpy|strncpy)$" = "COPY"
 "^(strcat|strncat)$" = "STRING_CONCAT"
-"^(min|max|abs|fabs|pow|sqrt|log)$" = "MATH_OP"
+"^(abs|fabs|sqrt|log)$" = "MATH_OP_CONST"
+"^pow$" = "MATH_OP_LOG"
+
+[calls_by_arity]
+"^(min|max)$" = { one = "MATH_OP_LINEAR", many = "MATH_OP_CONST" }
 
 # tree-sitter-c does not distinguish comparison from arithmetic by node
 # type -- both parse as `binary_expression`/`update_expression`, same as
