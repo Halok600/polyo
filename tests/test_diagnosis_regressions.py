@@ -4,9 +4,12 @@ User report: pasting O(n^2) code returned O(n^3). Measured against the real serv
 20 of 28 curated golden (case, language) pairs were wrong -- every non-Python nested loop was
 over-predicted, space was often inverted, and 40 dead statements flipped a correct answer.
 
-The 20 known-wrong pairs are `xfail(strict=True)`: they document today's behaviour, and the moment
-the hybrid engine (PolyO v2 Phase 5) fixes one, XPASS fails the suite and forces the marker to be
-removed. The 8 pairs that are right today are plain tests so they can never regress.
+Those 20 pairs were `xfail(strict=True)` while the GNN was the product. Since PolyO v2 phase 5 the
+product is the hybrid (symbolic engine first, GNN only when the engine says "unknown"), the strict
+markers did their job -- XPASS forced their removal -- and every pair is now an ordinary assertion
+about what the API answers. What stays on record is the historical fact itself: the GNN ALONE
+(`gnn` predictor, `mode="ml"`) still gets those same pairs wrong, which is why it is no longer in
+front.
 """
 from __future__ import annotations
 
@@ -20,7 +23,8 @@ from parsing.normalize import normalize_source
 
 _CASES = {case.id: case for case in load_cases()}
 
-_STILL_WRONG = {
+# The pairs the served GNN got wrong on 2026-10-01 (the diagnosis), then the ones it got right.
+_WRONG_FOR_THE_GNN = {
     ("quad_two_sum_bruteforce", "python"),
     ("quad_two_sum_bruteforce", "cpp"),
     ("quad_two_sum_bruteforce", "java"),
@@ -42,7 +46,7 @@ _STILL_WRONG = {
     ("hash_two_sum", "python"),
     ("hash_two_sum", "cpp"),
 }
-_ALREADY_RIGHT = {
+_RIGHT_FOR_THE_GNN = {
     ("quad_two_sum_bruteforce", "go"),
     ("program_two_sum_with_main_harness", "python"),
     ("program_two_sum_with_main_harness", "java"),
@@ -52,18 +56,11 @@ _ALREADY_RIGHT = {
     ("rec_fib_naive", "python"),
     ("rec_fib_naive", "cpp"),
 }
-_XFAIL = pytest.mark.xfail(
-    strict=True,
-    reason="PolyO v2: the served GNN reads graph size, not loop nesting (Phase 5 fixes)",
-)
+_ALL_PAIRS = sorted(_WRONG_FOR_THE_GNN | _RIGHT_FOR_THE_GNN)
 
 
-def _params() -> list:
-    out = []
-    for pair in sorted(_STILL_WRONG | _ALREADY_RIGHT):
-        marks = [_XFAIL] if pair in _STILL_WRONG else []
-        out.append(pytest.param(*pair, id=f"{pair[0]}-{pair[1]}", marks=marks))
-    return out
+def _ids(pairs: list[tuple[str, str]]) -> list[str]:
+    return [f"{case_id}-{language}" for case_id, language in pairs]
 
 
 @pytest.fixture(scope="module")
@@ -75,28 +72,20 @@ def product():
     return predictor
 
 
-@pytest.mark.parametrize(("case_id", "language"), _params())
+@pytest.mark.parametrize(("case_id", "language"), _ALL_PAIRS, ids=_ids(_ALL_PAIRS))
 def test_product_answer_matches_the_golden_label(product, case_id: str, language: str) -> None:
     case = _CASES[case_id]
     expected = case.expected(language)
     got = product(case.sources[language], language)
     assert got.error is None, got.error
     assert (got.time_class, got.space_class) == (expected.time_class, expected.space_class)
+    assert got.engine == "symbolic"
 
 
 _TWO_SUM = _CASES["quad_two_sum_bruteforce"].sources["python"]
 
 
-@pytest.mark.parametrize(
-    "padding",
-    [
-        0,
-        5,
-        pytest.param(20, marks=_XFAIL),
-        pytest.param(40, marks=_XFAIL),
-        pytest.param(80, marks=_XFAIL),
-    ],
-)
+@pytest.mark.parametrize("padding", [0, 5, 20, 40, 80])
 def test_dead_code_does_not_change_the_product_answer(product, padding: int) -> None:
     """The original padding experiment: pure O(1) statements cannot change a complexity class."""
     padded = add_dead_code(_TWO_SUM, "python", k=padding) if padding else _TWO_SUM
@@ -114,13 +103,39 @@ def test_the_ir_sees_the_same_loop_nest_in_every_language(language: str) -> None
     assert features.loop_count == 2
 
 
-def test_the_rule_baseline_beats_the_product_on_the_originally_reported_cases() -> None:
+def _score(name: str, pairs: list[tuple[str, str]]) -> int:
+    predictor = get_predictor(name)
+    hits = 0
+    for case_id, language in pairs:
+        case = _CASES[case_id]
+        expected = case.expected(language)
+        got = predictor(case.sources[language], language)
+        hits += (got.time_class, got.space_class) == (expected.time_class, expected.space_class)
+    return hits
+
+
+def test_the_gnn_alone_still_fails_where_it_failed_and_the_hybrid_does_not(product) -> None:
     """The unflattering fact that started the rebuild, kept as an executable statement: on the
-    reported cases a lookup on loop depth is right where the served model is wrong."""
+    pairs the served model got wrong, the GNN alone is still wrong on most, a ten-line rule on loop
+    depth beats it on time, and the hybrid that replaced it gets all of them."""
+    wrong = sorted(_WRONG_FOR_THE_GNN)
+    gnn_hits = _score("gnn", wrong)
+    hybrid_hits = _score("product", wrong)
+    assert hybrid_hits == len(wrong)
+    assert gnn_hits < len(wrong) // 2, "the GNN alone no longer fails: revisit the promotion rule"
+
+
+def test_the_rule_baseline_beats_the_gnn_alone_on_the_originally_reported_cases() -> None:
+    """On the reported nested-loop cases a lookup on loop depth is right where the GNN is wrong."""
     rule = get_predictor("rule")
-    reported = [("quad_two_sum_bruteforce", lang) for lang in ("cpp", "java", "javascript", "go")]
+    gnn = get_predictor("gnn")
+    reported = [("quad_two_sum_bruteforce", lang) for lang in ("cpp", "java", "javascript")]
     reported += [("quad_bubble_sort", "java"), ("linear_sum", "cpp"), ("linear_sum", "go")]
+    rule_hits = gnn_hits = 0
     for case_id, language in reported:
         case = _CASES[case_id]
-        got = rule(case.sources[language], language).time_class
-        assert got == case.expected(language).time_class, (case_id, language)
+        want = case.expected(language).time_class
+        rule_hits += rule(case.sources[language], language).time_class == want
+        gnn_hits += gnn(case.sources[language], language).time_class == want
+    assert rule_hits == len(reported)
+    assert gnn_hits < rule_hits

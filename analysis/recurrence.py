@@ -295,9 +295,11 @@ def solve_recurrence(it: Interp, summary: FuncSummary, body: Bundle) -> None:
                 "whose size could not be bounded",
             )
             return
+        summary.how = f"every distinct state is computed once, shared through {domain.container}"
         _apply_domain(it, summary, domain, work, frame)
         return
     if _structural(summary, every_call):
+        summary.how = "every node is visited once"
         _apply_structural(it, summary, work, frame)
         return
     try:
@@ -306,6 +308,17 @@ def solve_recurrence(it: Interp, summary: FuncSummary, body: Bundle) -> None:
         paths = alternatives
     outcomes = [_solve_path(it, summary, path, work, frame) for path in paths]
     if any(outcome is None for outcome in outcomes):
+        split = _range_split(it, summary, paths, work, frame)
+        if split is not None:
+            summary.time, summary.space = split
+            summary.solved = True
+            summary.how = "recursion on the two sides of a split point, assumed to lie in range"
+            it.note(
+                "assumed",
+                f"the split point of {func.name}() is assumed to lie inside its range",
+                func.line,
+            )
+            return
         summary.solved = False
         it.note("unknown", f"recursion in {func.name}() could not be solved")
         return
@@ -315,6 +328,7 @@ def solve_recurrence(it: Interp, summary: FuncSummary, body: Bundle) -> None:
         time = outcome[0] if time.is_zero() else time.max(outcome[0])
         space = outcome[1] if space.is_zero() else space.max(outcome[1])
     summary.time, summary.space, summary.solved = time, space, True
+    summary.how = "solved as a recurrence"
 
 
 def _solve_path(
@@ -361,6 +375,109 @@ def _solve_path(
     return (
         time if not time.is_zero() else ONE,
         _stack_space(depth, frame, measure, kinds == {"geom"}),
+    )
+
+
+def _pivot_form(expr: object) -> tuple[str, int] | None:
+    """`p`, `p + 1`, `p - 1`, `1 + p`: a name and a constant offset."""
+    if isinstance(expr, Name):
+        return expr.id, 0
+    if isinstance(expr, BinOp) and expr.op in ("+", "-"):
+        if (
+            isinstance(expr.left, Name)
+            and isinstance(expr.right, Num)
+            and expr.right.value is not None
+        ):
+            offset = int(expr.right.value)
+            return expr.left.id, offset if expr.op == "+" else -offset
+        if expr.op == "+" and isinstance(expr.right, Name) and isinstance(expr.left, Num):
+            return expr.right.id, int(expr.left.value or 0)
+    return None
+
+
+def _range_pair(calls: tuple[RecCall, ...], summary: FuncSummary) -> tuple[str, str] | None:
+    """The two integer parameters `small < large` that every recursive call is made under."""
+    owner: dict[Var, str] = {}
+    for name, formal in summary.params.items():
+        if isinstance(formal, IntV) and formal.mag is not None:
+            var = _only_var(formal.mag)
+            if var is not None:
+                owner[var] = name
+    pair: tuple[str, str] | None = None
+    for call in calls:
+        found: tuple[str, str] | None = None
+        for op, left, right in call.conds:
+            lv, rv = _only_var(left), _only_var(right)
+            if lv not in owner or rv not in owner or lv == rv:
+                continue
+            small, large = (
+                (lv, rv) if op in ("<", "<=") else (rv, lv) if op in (">", ">=") else (None, None)
+            )
+            if small is not None and large is not None:
+                found = (owner[small], owner[large])
+        if found is None or (pair is not None and found != pair):
+            return None
+        pair = found
+    return pair
+
+
+def _range_split(
+    it: Interp,
+    summary: FuncSummary,
+    paths: list[tuple[RecCall, ...]],
+    work: Poly,
+    frame: Poly,
+) -> tuple[Poly, Poly] | None:
+    """Quicksort-shaped recursion: `f(lo, hi)` calls `f(lo, p - 1)` and `f(p + 1, hi)` where the
+    split point `p` is found by the function itself. Nothing says WHERE `p` falls, but if it lies in
+    the range (assumed, and reported as an assumption) the two sub-ranges together hold fewer
+    elements than the range, so the calls form a tree of at most `hi - lo` internal nodes, each
+    doing at most `work`: time (hi - lo) * work, and the stack is at most hi - lo frames deep.
+    Both calls keeping the split point (`f(lo, p)`, `f(p, hi)`) shrink nothing and are refused."""
+    calls = tuple(c for path in paths for c in path)
+    pair = _range_pair(calls, summary)
+    if pair is None:
+        return None
+    small, large = pair
+    order = list(summary.params)
+    i_small, i_large = order.index(small), order.index(large)
+    pivots: set[str] = set()
+    for path in paths:
+        low_offset = high_offset = None  # how far each side stays clear of the split point
+        for call in path:
+            if len(call.arg_exprs) != len(order):
+                return None
+            at_small, at_large = call.arg_exprs[i_small], call.arg_exprs[i_large]
+            if isinstance(at_small, Name) and at_small.id == small:
+                form = _pivot_form(at_large)  # f(lo, p - c): the left side
+                if form is None or form[0] in summary.params or form[1] > 0:
+                    return None
+                pivots.add(form[0])
+                low_offset = -form[1] if low_offset is None else min(low_offset, -form[1])
+            elif isinstance(at_large, Name) and at_large.id == large:
+                form = _pivot_form(at_small)  # f(p + c, hi): the right side
+                if form is None or form[0] in summary.params or form[1] < 0:
+                    return None
+                pivots.add(form[0])
+                high_offset = form[1] if high_offset is None else min(high_offset, form[1])
+            else:
+                return None
+        # the sub-ranges of one invocation must hold fewer elements than the range
+        if low_offset is not None and high_offset is not None:
+            if low_offset + high_offset < 1:
+                return None
+        elif (low_offset or high_offset or 0) < 1:
+            return None
+    if len(pivots) != 1:
+        return None
+    a, b = summary.params[small], summary.params[large]
+    assert isinstance(a, IntV) and isinstance(b, IntV) and a.mag is not None and b.mag is not None
+    size = (b.mag - a.mag).order()
+    if size.is_zero():
+        return None
+    return (
+        (size * work).order(),
+        (size * (frame if not frame.is_zero() else ONE)).order(),
     )
 
 
@@ -587,7 +704,7 @@ def _guard_reads(
     elif isinstance(sub, Subscript):
         root = _container_name(sub)
         if root is not None and is_container(root):
-            usage.guard(root, sub.index)
+            usage.guard(root, _outer_index(sub))  # `memo[i][j]` is keyed by (i, j), not by j
     elif isinstance(sub, Compare) and sub.op in ("in", "not in"):
         root = _container_name(sub.right)
         if root is not None and is_container(root):

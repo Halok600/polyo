@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 
 COPY core ./core
 COPY parsing ./parsing
+COPY analysis ./analysis
 COPY features ./features
 COPY models ./models
 COPY api ./api

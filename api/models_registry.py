@@ -14,6 +14,11 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from analysis.calibration import (
+    CalibrationError,
+    SymbolicCalibration,
+    load_calibration,
+)
 from core.ir import IR_SYMBOLS
 from models.conformal import ConformalCalibration
 from models.export_numpy import NumpyGnnModel
@@ -46,6 +51,10 @@ class ModelRegistry:
     # one (max_loop_nesting_depth) on raw numbers alone.
     feature_importance: dict[str, dict[str, float]]
     feature_scales: dict[str, float]
+    # How much to trust the symbolic engine at each certainty level (`analysis/calibration.py`);
+    # None means "load the committed file when a symbolic answer is built" (tests build registries
+    # without one).
+    symbolic: SymbolicCalibration | None = None
 
 
 def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
@@ -83,10 +92,16 @@ def load_registry(artifacts_dir: Path = ARTIFACTS_DIR) -> ModelRegistry:
 
     importance_raw = json.loads(importance_path.read_text(encoding="utf-8"))
 
+    try:
+        symbolic = load_calibration()
+    except CalibrationError as e:  # a deployment problem, exactly like a missing model file
+        raise ModelsNotTrainedError(str(e)) from e
+
     return ModelRegistry(
         gnn=gnn,
         calibration=calibration,
         conformal=conformal,
         feature_importance=importance_raw["weights"],
         feature_scales=importance_raw["scales"],
+        symbolic=symbolic,
     )

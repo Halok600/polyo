@@ -109,6 +109,8 @@ class LoopPlan:
     drain: str | None = None  # name of the container this loop drains
     guard: str | None = None  # the visited container that bounds the pushes onto the worklist
     index_pointers: list[tuple[str, ContV]] = field(default_factory=list)
+    # an assumption to report ONLY if no enclosing loop turns out to bound this one's total
+    pending_note: str | None = None
 
 
 @dataclass
@@ -127,7 +129,7 @@ def plan_loop(it: Interp, loop: Loop, env: Env, loop_id: int) -> LoopPlan:
         plan = _plan_for_each(it, loop, env)
         _mark_drain(it, loop, plan, env)  # for _ in range(len(q)): q.popleft()
         _maybe_amortize(it, plan, loop, env)
-        return plan
+        return _settle_pending(plan)
     if loop.kind == "for_c":
         for stmt in loop.init:
             it.absorb(it.exec_stmt(stmt, env))
@@ -136,6 +138,13 @@ def plan_loop(it: Interp, loop: Loop, env: Env, loop_id: int) -> LoopPlan:
         plan = _plan_progress(it, loop.test, loop.body, env, loop)
     _mark_drain(it, loop, plan, env)
     _maybe_amortize(it, plan, loop, env)
+    return _settle_pending(plan)
+
+
+def _settle_pending(plan: LoopPlan) -> LoopPlan:
+    """A bound that only an enclosing loop can supply is an assumption unless it did."""
+    if plan.pending_note is not None and plan.amortize_into is None:
+        plan.notes.append(plan.pending_note)
     return plan
 
 
@@ -653,6 +662,20 @@ def _worklist_plan(
 
         domain = mem(gvalue)
         uid = None
+    elif (
+        gvalue.cap is not None
+        and gvalue.kind in ("set", "dict", "treeset", "treemap")
+        and gvalue.cap in it.cap_distinct
+        and gvalue.cap not in it.cap_unbounded
+    ):
+        # the loops that seed the walk insert loop-index keys (every grid cell): its neighbours
+        # are taken to stay inside that domain, so the walk visits at most that many entries
+        domain = it.cap_distinct[gvalue.cap]
+        uid = None
+        plan.notes.append(
+            "visited-domain taken from the keys the enclosing loops seed; neighbours are "
+            "assumed to stay inside it"
+        )
     else:
         domain = it.default_size
         uid = None
@@ -998,11 +1021,13 @@ def _arithmetic_plan(
     if not atoms:
         return None
     sides: list[tuple[str, Poly, Poly]] = []
+    data_sides: list[tuple[str, Poly, Poly]] = []
     unknowns: set[Var] = set()
     for op, left, right in comps:
         lv, rv = it.pure(left, trace_env), it.pure(right, trace_env)
         lm, rm = magnitude(lv), magnitude(rv)
-        if (lm is None) != (rm is None):
+        read_from_data = (lm is None) != (rm is None)
+        if read_from_data:
             # `w >= weights[i]`: one side is read from data. Stand in a fresh size for it; a plan
             # whose trip count does not depend on that size (a count-down from a known start) is
             # sound if the value is non-negative, one that does is not provable and is dropped
@@ -1012,7 +1037,14 @@ def _arithmetic_plan(
             rm = rm if rm is not None else Poly.var(stand_in)
         if lm is None or rm is None:
             continue
-        sides.append((op, lm, rm))
+        (data_sides if read_from_data else sides).append((op, lm, rm))
+    if sides and data_sides:
+        # `while (col > 0 && grid[r][col - 1] < 0)`: the loop runs only while EVERY conjunct holds,
+        # so the conjuncts that depend on numbers alone already bound it; the one read from data
+        # can only stop it sooner
+        unknowns = set()
+    else:
+        sides = data_sides + sides
     if not sides:
         return None
     paths = trace_paths(it, body, trace_env)
@@ -1138,7 +1170,19 @@ def _single_variable_plan(
             span = bound - start if start is not None else bound
         else:
             if start is None:
-                return None
+                # a count-down whose start was set before an enclosing loop (`col = m`, then for
+                # each row `while col > 0: col -= 1`): this execution's trips are not bounded here,
+                # but the pointer never goes back up, so the enclosing loop's entry value bounds
+                # the trips of all executions together (see `_maybe_amortize`)
+                plan.iters = it.default_size
+                _attach_atom(plan, name, atom, "arith", it.default_size)
+                plan.phi = Poly.var(atom) - bound
+                plan.phi_atoms = {name: atom}
+                plan.phi_step = min(abs(s) for s in steps if s is not None)
+                plan.pending_note = (
+                    "this loop's trip count could not be proven; assumed proportional to the input"
+                )
+                return plan
             span = start - bound
         plan.iters = _ordered(span / step)
         plan.exact_iters = span / step
@@ -1379,6 +1423,77 @@ def _reset_in(frame_loop: Loop, inner: Loop, name: str) -> bool:
     return False
 
 
+def _simple_copy(expr: Expr | None, group: set[str]) -> bool:
+    """`p`, `p + 1`, `p - 1`, `1 + p`: a member of `group` up to a constant."""
+    if isinstance(expr, Name):
+        return expr.id in group
+    if isinstance(expr, BinOp) and expr.op in ("+", "-"):
+        if isinstance(expr.right, Num):
+            return _simple_copy(expr.left, group)
+        if expr.op == "+" and isinstance(expr.left, Num):
+            return _simple_copy(expr.right, group)
+    return False
+
+
+def _copied_name(expr: Expr | None) -> str | None:
+    """The one name `expr` copies up to a constant (`i`, `i + 1`), if it is that simple."""
+    if isinstance(expr, Name):
+        return expr.id
+    if isinstance(expr, BinOp) and expr.op in ("+", "-"):
+        if isinstance(expr.right, Num):
+            return _copied_name(expr.left)
+        if expr.op == "+" and isinstance(expr.left, Num):
+            return _copied_name(expr.right)
+    return None
+
+
+def _handoff(frame_loop: Loop, inner: Loop, names: list[str]) -> bool:
+    """`j = i; while (... j++ ...) ...; i = j`: the inner pointer starts where the outer one is and
+    the outer one catches up with it afterwards, so every step the inner loop takes is a step the
+    outer pointer does not take again and the two cover the range once between them. That needs
+    the copy back (`i = j`, after the inner loop, every time round) and no other way of setting
+    either pointer: restarting it from a constant, or never catching up (`j = i` with `i += 1`),
+    makes the scans overlap and is quadratic."""
+    body = frame_loop.body
+    top = next((k for k, stmt in enumerate(body) if any(n is inner for n in walk(stmt))), None)
+    if top is None:
+        return False
+    assigns: list[tuple[int, Assign, str]] = []
+    for index, stmt in enumerate(body):
+        for node in _walk_excluding(stmt, inner):
+            if (
+                isinstance(node, Assign)
+                and node.op == "="
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], Name)
+            ):
+                assigns.append((index, node, node.targets[0].id))
+    group = set(names)
+    grown = True
+    while grown:
+        grown = False
+        for _, node, target in assigns:
+            source = _copied_name(node.value)
+            if source is None:
+                continue
+            if target in group and source not in group:
+                group.add(source)  # `j = i`: the outer pointer joins
+                grown = True
+            elif source in group and target not in group:
+                group.add(target)  # `i = j`
+                grown = True
+    for _, node, target in assigns:
+        if target in group and not _simple_copy(node.value, group):
+            return False  # restarted from something that is not another pointer
+    return any(
+        index > top
+        and body[index] is node
+        and target in group
+        and _copied_name(node.value) in names
+        for index, node, target in assigns
+    )
+
+
 def _initialised_by(loop: Loop) -> set[str]:
     """Names the loop's own header assigns each time it is entered: `for (w = cap; ...)`."""
     names: set[str] = set()
@@ -1405,6 +1520,10 @@ def _maybe_amortize(it: Interp, plan: LoopPlan, loop: Loop, env: Env) -> None:
             if any(n in restarted for n in names):
                 break
             if any(_reset_in(frame.loop, loop, n) for n in names):
+                if _handoff(frame.loop, loop, names):
+                    plan.amortize_into = frame.id
+                    plan.amortized_total = plan.iters
+                    return
                 continue
             entry = _entry_values(it, frame.entry_env, plan.phi_atoms)
             if not entry or any(
@@ -1455,7 +1574,9 @@ def _maybe_amortize(it: Interp, plan: LoopPlan, loop: Loop, env: Env) -> None:
         if any(n in restarted for n in names):
             return
         for frame in stack:
-            if any(_reset_in(frame.loop, loop, n) for n in names):
+            if any(_reset_in(frame.loop, loop, n) for n in names) and not _handoff(
+                frame.loop, loop, names
+            ):
                 continue
             plan.amortize_into = frame.id
             plan.amortized_total = plan.iters

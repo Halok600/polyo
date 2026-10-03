@@ -1,0 +1,1010 @@
+{
+ "add_digits_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "all_subsequences_strings_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "array_sum_divide_conquer_c": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "binary_search_recursive_go": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "binary_search_recursive_javascript": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "bst_insert_recursive_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "build_tree_linear_search_java": {
+  "certainty": "unknown",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "candy_two_pass_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "canonical_coins_greedy_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "capitalize_words_string_concat_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "climb_stairs_memo_java": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "contains_duplicate_sorted_copy_c": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "count_components_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * k + m)"
+ },
+ "count_negatives_sorted_grid_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "count_occurrences_by_value_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "count_pairs_below_target_sorted_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "count_subsets_with_sum_bitmask_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(n * 2^n)"
+ },
+ "count_triangles_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "count_unique_indexof_scan_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "count_uppercase_strlen_condition_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "count_walks_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(3^n)"
+ },
+ "counting_bits_dp_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "course_schedule_order_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "daily_temperatures_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "delete_node_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "diagonal_sum_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "digit_sum_recursive_python": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "distinct_pair_sums_map_go": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "divisor_counts_harmonic_loop_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "divisor_sums_harmonic_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "edit_distance_table_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "factorial_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "factorial_trailing_zeroes_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "factorial_trailing_zeroes_recursive_python": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "fast_power_recursive_cpp": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "fib_matrix_power_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "fib_naive_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(2^n)"
+ },
+ "floyd_warshall_c": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^2 * m)"
+ },
+ "gcd_of_strings_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "grid_shortest_path_cpp": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "hamming_distance_fixed_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "hanoi_moves_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(2^n)"
+ },
+ "has_alternating_bits_xor_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "has_cycle_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "heap_level_sums_python": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "heap_sort_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "height_checker_bubble_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "insertion_sort_in_place_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "insertion_sort_list_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "int_sqrt_cpp": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "is_bipartite_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "jump_game_greedy_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "kadane_max_subarray_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "knapsack_rolling_java": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "kth_largest_heap_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "kth_smallest_bst_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "lcs_length_table_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "lcs_rolling_rows_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "level_order_java": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "lis_patience_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "longest_common_substring_c": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "longest_distinct_subarray_window_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "longest_ones_flip_k_window_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "longest_palindrome_brute_force_java": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "longest_palindrome_expand_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "matrix_chain_memo_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "matrix_chain_order_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "matrix_multiply_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^2 * m)"
+ },
+ "max_area_island_c": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m + n * k)"
+ },
+ "max_depth_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "max_fixed_window_sum_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "max_or_subsets_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(n * 2^n)"
+ },
+ "max_subarray_divide_conquer_go": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "meeting_rooms_heap_go": {
+  "certainty": "assumed",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "merge_intervals_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "merge_k_lists_cpp": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "merge_sort_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "merge_sort_inversions_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "merge_sort_tree_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "merge_two_lists_recursive_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "min_path_sum_inplace_go": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "min_subarray_len_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "minimum_abs_difference_pairs_java": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "move_zeroes_two_pointers_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "my_pow_java": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "next_greater_circular_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "num_islands_bfs_python": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "number_of_provinces_java": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "palindromic_subsequence_go": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "pascal_triangle_rows_c": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "permutations_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(n!)"
+ },
+ "pow_mod_recursive_halving_go": {
+  "certainty": "certain",
+  "space_class": "O(log n)",
+  "space_expr": "O(log n)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "prime_factors_trial_python": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "product_except_self_output_array_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "push_front_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "queue_two_stacks_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "quicksort_lomuto_java": {
+  "certainty": "unknown",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "range_sum_queries_prefix_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "reachable_at_time_cpp": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "rectangle_area_cpp": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "remove_duplicates_list_scan_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "remove_dups_unsorted_list_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "remove_vowels_string_concat_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "reverse_bits_fixed_width_cpp": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "reverse_list_recursive_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "reverse_string_recursive_python": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "reverse_words_backward_scan_cpp": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "root_to_leaf_paths_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "rotate_image_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "rotting_oranges_javascript": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "row_max_ones_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n * log m)"
+ },
+ "run_length_encode_concat_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(n * m^-1)",
+  "time_class": "O(n)",
+  "time_expr": "O(1 + n^2 * m^-1)"
+ },
+ "running_median_resort_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^2 log n)"
+ },
+ "search_bst_cpp": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "search_insert_position_java": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "search_sorted_matrix_java": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n + log m)"
+ },
+ "set_matrix_zeroes_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "shortest_palindrome_prefix_slices_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "sliding_window_max_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "sort_list_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "sorted_list_to_bst_javascript": {
+  "certainty": "unknown",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "sparse_table_range_min_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n log n)",
+  "space_expr": "O(n log n)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n)"
+ },
+ "spiral_matrix_gen_c": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "spiral_order_java": {
+  "certainty": "assumed",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n^2 + n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2 + n * m)"
+ },
+ "sqrt_binary_search_java": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(log n)",
+  "time_expr": "O(log n)"
+ },
+ "staircase_search_go": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n + m)"
+ },
+ "star_graph_center_javascript": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "subarray_sum_equals_k_prefix_map_java": {
+  "certainty": "assumed",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "subset_sum_ways_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(2^n)"
+ },
+ "subsets_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(2^n)"
+ },
+ "successful_pairs_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n * log m + m log m)"
+ },
+ "sum_of_distances_dict_of_lists_python": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "target_sum_recursive_c": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(2^n)",
+  "time_expr": "O(2^n)"
+ },
+ "top_k_frequent_java": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n + m)",
+  "time_class": "O(n log n)",
+  "time_expr": "O(n log n + log n * m)"
+ },
+ "transpose_copy_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n * m)"
+ },
+ "transpose_in_place_c": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(n^2)",
+  "time_expr": "O(n^2)"
+ },
+ "triangle_count_binary_search_cpp": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^2 log n)"
+ },
+ "tribonacci_memo_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "unique_paths_memo_javascript": {
+  "certainty": "unknown",
+  "space_class": "O(n^2)",
+  "space_expr": "O(n * m)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "valid_parentheses_javascript": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ },
+ "valid_sudoku_python": {
+  "certainty": "certain",
+  "space_class": "O(1)",
+  "space_expr": "O(1)",
+  "time_class": "O(1)",
+  "time_expr": "O(1)"
+ },
+ "word_break_slices_python": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "xor_triplets_prefix_brute_go": {
+  "certainty": "certain",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n^3)",
+  "time_expr": "O(n^3)"
+ },
+ "zigzag_tree_path_go": {
+  "certainty": "assumed",
+  "space_class": "O(n)",
+  "space_expr": "O(n)",
+  "time_class": "O(n)",
+  "time_expr": "O(n)"
+ }
+}

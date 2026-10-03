@@ -146,6 +146,21 @@ class ClassPrediction(BaseModel):
     conformal_set: list[str]
     conformal_coverage: float
     abstain: bool
+    # --- added in v2 (additive: a client that ignores them keeps working) ---
+    # Who answered: "symbolic" (the static cost engine), "ml_fallback" (the GNN, because the engine
+    # could not bound the code) or "ml" (the GNN alone).
+    engine: str = "ml"
+    # How sure the engine is: "certain" (every bound proven) or "assumed" (a bound was assumed, the
+    # answer may over-estimate). None when the model answered.
+    certainty: str | None = None
+    # The exact cost expression, e.g. "O(n * m)" or "O(n^2 + n log n)"; None when the model
+    # answered.
+    expression: str | None = None
+    # `class` is one of the legacy classes (rounded UP when the expression is not exactly one of
+    # them); this is the richer class (adds O(sqrt n), O(n^2 log n), O(n!)) for time.
+    extended_class: str | None = None
+    # True when `class` is not exactly the expression (it was rounded to a legacy class).
+    projection_lossy: bool = False
 
     model_config = {"populate_by_name": True}
 
@@ -173,6 +188,17 @@ class IrSummary(BaseModel):
     histogram: dict[str, int]
 
 
+class AssumptionItem(BaseModel):
+    line: int  # 1-based source line, 0 when unknown
+    reason: str
+
+
+class DerivationStep(BaseModel):
+    line: int  # 1-based source line; 0 for the closing "time" / "space" totals
+    kind: str  # loop | call | recursion | alloc | total
+    text: str
+
+
 class PredictResponse(BaseModel):
     language_detected: str
     time: ClassPrediction
@@ -181,6 +207,11 @@ class PredictResponse(BaseModel):
     curve: Curve
     ir: IrSummary
     warnings: list[str]
+    # --- added in v2 (additive) ---
+    engine: str = "ml"  # who answered, as in ClassPrediction.engine
+    entry: str | None = None  # the function(s) the symbolic engine analysed
+    assumptions: list[AssumptionItem] = Field(default_factory=list)
+    derivation: list[DerivationStep] = Field(default_factory=list)
 
 
 @app.post("/v1/predict", response_model=PredictResponse)

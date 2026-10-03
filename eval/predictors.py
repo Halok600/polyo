@@ -56,11 +56,11 @@ def _registry():  # noqa: ANN202 -- ModelRegistry, imported lazily to keep `rule
     return load_registry()
 
 
-def _from_api(engine: str, source: str, language: str) -> Prediction:
+def _from_api(engine: str, source: str, language: str, mode: str = "hybrid") -> Prediction:
     try:
         from api.predict import predict
 
-        response = predict(_registry(), source, language)
+        response = predict(_registry(), source, language, mode=mode)
         time_part = response["time"]
         space_part = response["space"]
         assert isinstance(time_part, dict) and isinstance(space_part, dict)
@@ -81,13 +81,13 @@ def _optional_str(value: object) -> str | None:
 
 
 def _gnn(source: str, language: str) -> Prediction:
-    """The shipped ML model on its own. (Until the API becomes a hybrid this is the same path as
-    `product`; the two are separate names so the ML arm stays measurable afterwards.)"""
-    return _from_api("gnn", source, language)
+    """The shipped ML model on its own: the GNN with no engine in front of it, so the research arm
+    stays measurable now that `product` (the API) is a hybrid."""
+    return _from_api("gnn", source, language, mode="ml")
 
 
 def _product(source: str, language: str) -> Prediction:
-    """Exactly what `POST /v1/predict` answers: the thing users actually see."""
+    """Exactly what `POST /v1/predict` answers: the thing users actually see (the hybrid)."""
     return _from_api("product", source, language)
 
 

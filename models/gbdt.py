@@ -12,10 +12,8 @@ from dataclasses import dataclass
 import lightgbm as lgb
 import numpy as np
 
-from features.tabular import TabularFeatures
+from features.tabular import FEATURE_NAMES  # defined with TabularFeatures; re-exported here
 from models.dataset import ParsedExample
-
-FEATURE_NAMES: tuple[str, ...] = tuple(TabularFeatures(0, 0).as_dict().keys())
 
 
 def _feature_matrix(examples: list[ParsedExample], feature_names: tuple[str, ...]) -> np.ndarray:

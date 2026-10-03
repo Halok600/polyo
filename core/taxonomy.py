@@ -12,6 +12,7 @@ label spellings can be verified rather than guessed. Only the "canonical"
 identity mapping -- a class's own string form mapping to itself -- is
 pre-registered here.
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -33,6 +34,53 @@ class SpaceClass(str, Enum):
     O_N = "O(n)"
     O_N_LOG_N = "O(n log n)"
     O_N2 = "O(n^2)"
+
+
+class ExtendedTimeClass(str, Enum):
+    """The time classes the symbolic engine can answer in: the legacy seven plus O(sqrt n)
+    (between O(log n) and O(n)), O(n^2 log n) (between O(n^2) and O(n^3)) and O(n!) (after O(2^n)).
+
+    The ML arm keeps its 7-class head (`TimeClass`); every extended class is reported in the
+    legacy fields as a legacy class (`legacy_time_class`), rounded up where one exists. Space
+    stays on the five-class `SpaceClass`: its multi-variable shapes are carried by the
+    expression instead."""
+
+    O_1 = "O(1)"
+    O_LOG_N = "O(log n)"
+    O_SQRT_N = "O(sqrt n)"
+    O_N = "O(n)"
+    O_N_LOG_N = "O(n log n)"
+    O_N2 = "O(n^2)"
+    O_N2_LOG_N = "O(n^2 log n)"
+    O_N3 = "O(n^3)"
+    O_2N = "O(2^n)"
+    O_FACT_N = "O(n!)"
+
+
+# what each extended class is reported as in the legacy 7-class fields (rounded UP)
+_LEGACY_OF: dict[ExtendedTimeClass, TimeClass] = {
+    ExtendedTimeClass.O_1: TimeClass.O_1,
+    ExtendedTimeClass.O_LOG_N: TimeClass.O_LOG_N,
+    ExtendedTimeClass.O_SQRT_N: TimeClass.O_N,
+    ExtendedTimeClass.O_N: TimeClass.O_N,
+    ExtendedTimeClass.O_N_LOG_N: TimeClass.O_N_LOG_N,
+    ExtendedTimeClass.O_N2: TimeClass.O_N2,
+    ExtendedTimeClass.O_N2_LOG_N: TimeClass.O_N3,
+    ExtendedTimeClass.O_N3: TimeClass.O_N3,
+    ExtendedTimeClass.O_2N: TimeClass.O_2N,
+    ExtendedTimeClass.O_FACT_N: TimeClass.O_2N,
+}
+_EXT_RANK: dict[ExtendedTimeClass, int] = {c: i for i, c in enumerate(ExtendedTimeClass)}
+
+
+def extended_time_rank(c: ExtendedTimeClass) -> int:
+    return _EXT_RANK[c]
+
+
+def legacy_time_class(c: ExtendedTimeClass) -> TimeClass:
+    """The legacy class an extended class is reported as: rounded UP (O(n!), beyond the largest
+    legacy class, saturates at O(2^n))."""
+    return _LEGACY_OF[c]
 
 
 _TIME_RANK: dict[TimeClass, int] = {c: i for i, c in enumerate(TimeClass)}

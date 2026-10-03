@@ -107,9 +107,18 @@ _NEGATED = {"<": ">=", "<=": ">", ">": "<=", ">=": "<", "==": "!=", "!=": "=="}
 _SIZE_OPS = frozenset(_NEGATED)
 _EMPTY_TESTS = frozenset({"empty", "isEmpty", "is_empty", "isempty"})
 _KEYED_INSERTS = frozenset(
-    {"add", "put", "insert", "emplace", "set", "setdefault", "putIfAbsent", "computeIfAbsent"}
-)
+    {"add", "put", "insert", "emplace", "set", "setdefault", "putIfAbsent", "computeIfAbsent",
+     "merge", "compute", "computeIfPresent", "insert_or_assign", "try_emplace", "emplace_hint"}
+)  # fmt: skip
 _HOF_RECEIVER, _HOF_ITEM, _HOF_ACC = "<hof receiver>", "<hof item>", "<hof acc>"
+_REMOVERS = frozenset(
+    {"pop", "popleft", "poll", "pollFirst", "pollLast", "remove", "dequeue", "shift",
+     "pop_front", "pop_back", "removeFirst", "removeLast", "Pop", "heappop", "erase", "discard",
+     "delete"}
+)  # fmt: skip
+_GROWABLE_KINDS = frozenset(
+    {"list", "deque", "set", "dict", "treemap", "treeset", "queue", "stack", "heap"}
+)
 
 
 @dataclass(frozen=True)
@@ -117,6 +126,21 @@ class Note:
     kind: str  # "assumed": a bound was assumed;  "unknown": no meaningful answer
     reason: str
     line: int = 0
+
+
+@dataclass(frozen=True)
+class StepRec:
+    """One line of the derivation. The polynomials are rendered once the display names of the
+    variables are known, so every step uses the same letters as the answer."""
+
+    line: int
+    kind: str  # loop | call | recursion | alloc
+    fmt: str  # `{0}`, `{1}` stand for the rendered polynomials
+    polys: tuple[Poly, ...] = ()
+    key: str = ""  # tells apart several steps on one line
+
+
+_MAX_STEPS = 4000  # a hostile file must not grow the trace without bound
 
 
 @dataclass
@@ -156,6 +180,11 @@ class FuncSummary:
     shared: dict[str, Poly] = field(default_factory=dict)
     closure: Env | None = None  # where a nested function finds the variables it captured
     shared_free: dict[int, Poly] = field(default_factory=dict)  # the same, by captured container
+    how: str = ""  # how the recursion was solved, for the derivation
+    # what ONE call adds to containers that outlive it (an output list handed in, a captured
+    # result list), by the container's growth variable; for a recursion, all its calls together
+    effects: dict[Var, Poly] = field(default_factory=dict)
+    param_caps: dict[str, Var] = field(default_factory=dict)  # parameter name -> growth variable
 
 
 class Interp:
@@ -173,6 +202,8 @@ class Interp:
         self.input_size = Poly.var(self.input_var)
         self.default_size = self.input_size
         self.notes: list[Note] = []
+        self.steps: list[StepRec] = []
+        self._line = 0  # line of the statement being executed
         self._cur = Bundle()
         self._ids = itertools.count(1)
         self.iters: dict[Var, IterInfo] = {}
@@ -185,6 +216,10 @@ class Interp:
         self.total_vars: dict[int, Var] = {}
         self.cols_vars: dict[int, Var] = {}
         self.row_owner: dict[int, int] = {}  # row uid -> uid of the container whose rows they are
+        self.autovivify: set[int] = set()  # defaultdicts: reading a missing key inserts it
+        self._links_nodes = False  # the function being analysed links nodes through `.next`...
+        self._pushed: set[Var] = set()  # containers the function being analysed adds to...
+        self._popped: set[Var] = set()  # ...and removes from (a path that goes up and down)
         self.ragged_uids: set[int] = set()  # containers a traversal proves to be adjacency lists
         self._loop_stack: list[LoopFrame] = []
         self._conds: list[tuple[Expr, bool]] = []  # tests known true / false on this path
@@ -201,20 +236,30 @@ class Interp:
 
     # ================================================================== utilities
     def note(self, kind: str, reason: str, line: int = 0) -> None:
-        note = Note(kind, reason, line)
+        note = Note(kind, reason, line or self._line)
         if note not in self.notes:
             self.notes.append(note)
 
+    def step(self, kind: str, fmt: str, *polys: Poly, line: int = 0, key: str = "") -> None:
+        if len(self.steps) < _MAX_STEPS:
+            self.steps.append(StepRec(line or self._line, kind, fmt, polys, key))
+
+    def note_alloc(self, amount: Poly, what: str) -> None:
+        """Record a sizeable allocation in the derivation (constant ones are not worth a line)."""
+        if amount.vars():
+            self.step("alloc", f"{what} allocates {{0}}", amount, key=what)
+
     @contextmanager
     def scratch(self) -> Iterator[Bundle]:
-        """Evaluate without charging the enclosing statement or recording notes."""
-        saved_cur, saved_notes = self._cur, len(self.notes)
+        """Evaluate without charging the enclosing statement or recording notes or steps."""
+        saved_cur, saved_notes, saved_steps = self._cur, len(self.notes), len(self.steps)
         self._cur = Bundle()
         try:
             yield self._cur
         finally:
             self._cur = saved_cur
             del self.notes[saved_notes:]
+            del self.steps[saved_steps:]
 
     def pure(self, expr: Expr, env: Env) -> Value:
         with self.scratch():
@@ -285,9 +330,12 @@ class Interp:
             self._conds,
             self._cur_func,
             self.default_size,
+            self._pushed,
+            self._popped,
+            self._links_nodes,
         )
         self._cur_func = fdef
-        notes_before = len(self.notes)
+        notes_before, steps_before = len(self.notes), len(self.steps)
         try:
             params, body, ret = self._run_body(fdef, closure)
             if self._calls_itself(fdef, body) and id(fdef) not in self._rec_returns:
@@ -295,6 +343,7 @@ class Interp:
                 # returns, so `len(merge_sort(left))` is a length and not an unknown
                 self._rec_returns[id(fdef)] = (params, ret)
                 del self.notes[notes_before:]
+                del self.steps[steps_before:]
                 self._shared_pool.clear()
                 params, body, ret = self._run_body(fdef, closure)
             summary = self._make_summary(fdef, params, body, ret, closure)
@@ -308,6 +357,9 @@ class Interp:
                 self._conds,
                 self._cur_func,
                 self.default_size,
+                self._pushed,
+                self._popped,
+                self._links_nodes,
             ) = saved
         return summary
 
@@ -315,8 +367,11 @@ class Interp:
         self, fdef: FuncDef, closure: Env | None = None
     ) -> tuple[dict[str, Value], Bundle, Value | None]:
         self._cur, self._returns, self._loop_stack, self._conds = Bundle(), [], [], []
+        self._pushed, self._popped = set(), set()
+        self._links_nodes = _links_nodes(fdef)
         params = params_to_values(fdef, self.lang, self._callee_table)
         self.default_size = self._first_size(params)
+        self._give_growth_vars(fdef, params)
         self._copy_by_value_params(fdef, params)
         prologue = self._cur  # what happens before the first statement: copying the arguments
         env = Env(dict(params), closure)
@@ -336,6 +391,27 @@ class Interp:
                 fixed = replace(fixed, cap=None)
             ret = fixed
         return params, body, ret
+
+    def _give_growth_vars(self, fdef: FuncDef, params: dict[str, Value]) -> None:
+        """Adding to a container the caller handed in is visible to the caller. Each such
+        parameter gets a growth variable, so what a call adds to it can be charged to the
+        container the caller passed (a C++ value parameter is a copy, a Go slice a header, a C
+        array cannot grow: none of those are shared)."""
+        if self.lang == "c":
+            return
+        for param in fdef.params:
+            value = params.get(param.name)
+            if not isinstance(value, ContV) or value.cap is not None or value.view:
+                continue
+            if value.kind not in _GROWABLE_KINDS:
+                continue
+            if self.lang == "cpp" and (
+                param.type is None or not (param.type.ref or param.type.ptr)
+            ):
+                continue
+            if self.lang == "go" and value.kind not in ("dict", "treemap"):
+                continue
+            params[param.name] = replace(value, cap=new_var(param.name, "pgrow"))
 
     def _copy_by_value_params(self, fdef: FuncDef, params: dict[str, Value]) -> None:
         """A C++ container parameter that is not a reference or pointer is COPIED for the call:
@@ -390,6 +466,12 @@ class Interp:
         )
         time = body.time.total()
         space = (body.allocs + body.retained.total()).order()
+        balanced = self._pushed & self._popped  # up and down again: no net growth
+        effects = {
+            cap: growth.total().order()
+            for cap, growth in body.grows.items()
+            if cap not in balanced and not growth.total().is_zero()
+        }
         summary = FuncSummary(
             func=fdef,
             params=params,
@@ -401,13 +483,64 @@ class Interp:
             solved=not recursive,
             outer_rec=outer,
             closure=closure,
+            effects=effects,
+            param_caps={
+                name: value.cap
+                for name, value in params.items()
+                if isinstance(value, ContV) and value.cap is not None and value.cap.kind == "pgrow"
+            },
         )
         self._settle_shared(summary)
         if recursive:
             from analysis.recurrence import solve_recurrence
 
             solve_recurrence(self, summary, body)
+            self._scale_effects(summary, body)
+            self._step_recursion(summary)
         return summary
+
+    def _scale_effects(self, summary: FuncSummary, body: Bundle) -> None:
+        """A recursion adds to its output container on every call: its effects are one call's
+        effects times the number of calls (the recurrence solved with one unit of work each)."""
+        if not summary.effects or not summary.solved:
+            return
+        if summary.how.startswith("every distinct state"):
+            # a memoised / visited-guarded recursion adds to its domain container once per
+            # distinct state however often it is called: that is the domain's own size, not a
+            # per-call effect (the container's final size is bounded where it is created)
+            summary.effects = {}
+            return
+        from analysis.recurrence import solve_recurrence
+
+        probe = replace(summary, time=ONE, space=ONE, shared={}, shared_free={}, effects={})
+        solve_recurrence(self, probe, body)
+        if not probe.solved:
+            return
+        calls = probe.time
+        for extra in (*probe.shared.values(), *probe.shared_free.values()):
+            calls = calls + extra
+        calls = calls.order() if not calls.is_zero() else ONE
+        summary.effects = {cap: (e * calls).order() for cap, e in summary.effects.items()}
+
+    def _step_recursion(self, summary: FuncSummary) -> None:
+        name, line = summary.func.name, summary.func.line
+        if summary.solved:
+            self.step(
+                "recursion",
+                f"{name}() calls itself ({summary.how or 'solved as a recurrence'}): "
+                "time {0}, space {1}",
+                summary.time,
+                summary.space,
+                line=line,
+                key=name,
+            )
+        else:
+            self.step(
+                "recursion",
+                f"{name}() calls itself; the recursion could not be bounded",
+                line=line,
+                key=name,
+            )
 
     def bind_args(self, params: dict[str, Value], args: list[Value]) -> dict[Var, Poly]:
         mapping: dict[Var, Poly] = {}
@@ -444,7 +577,22 @@ class Interp:
                     self._guessed[var] = f"size of argument for {var.name} unknown"
             if formal.elem is not None:
                 nested = actual.elem if isinstance(actual, ContV) else None
-                if nested is not None:
+                if (
+                    isinstance(formal.elem, ContV)
+                    and isinstance(nested, ContV)
+                    and nested.owned
+                    and nested.length.is_zero()
+                ):
+                    # rows that start empty and are filled in later (by the callee, as a merge
+                    # sort tree fills its nodes): they are not empty when the callee reads them
+                    inner = _single_var(formal.elem.length)
+                    if inner is not None:
+                        mapping[inner] = self.default_size
+                        self._guessed[inner] = (
+                            "the rows of a table the callee fills in are assumed as long as "
+                            "the input"
+                        )
+                elif nested is not None:
                     self._match(formal.elem, nested, mapping)
                 elif isinstance(formal.elem, ContV):
                     inner = _single_var(formal.elem.length)
@@ -481,7 +629,8 @@ class Interp:
         return total
 
     def exec_stmt(self, st: Stmt, env: Env) -> Bundle:
-        saved = self._cur
+        saved, saved_line = self._cur, self._line
+        self._line = getattr(st, "line", 0) or saved_line
         b = Bundle()
         self._cur = b
         try:
@@ -507,7 +656,7 @@ class Interp:
                 env.set(st.name, FuncV(st, env, st.name))
             return b
         finally:
-            self._cur = saved
+            self._cur, self._line = saved, saved_line
 
     @staticmethod
     def always_exits(stmts: tuple[Stmt, ...]) -> bool:
@@ -693,7 +842,8 @@ class Interp:
                 if container.kind == "treemap":
                     self._cur.charge(container.length.log())  # an ordered map: log per insert
                 if container.kind in ("dict", "treemap") and container.cap is not None:
-                    self._cur.grow(container.cap, mem(value))
+                    stored = mem(value)
+                    self._cur.grow(container.cap, stored if not stored.is_zero() else ONE)
                     self._note_key(container.cap, self.pure(target.index, env))
                 restored = isinstance(container.elem, ContV) and (
                     isinstance(value, ContV) and value.uid == container.elem.uid
@@ -704,7 +854,7 @@ class Interp:
                     isinstance(value, ContV)
                     and not restored
                     and isinstance(target.obj, Name)
-                    and container.kind in ("list", "array")
+                    and container.kind in ("list", "array", "dict", "treemap")
                     and (container.elem is None or isinstance(container.elem, ContV))
                 ):  # `grid[i] = make([]int, m)`: the rows are now known to have that length
                     elem = value if container.elem is None else join(container.elem, value)
@@ -779,7 +929,25 @@ class Interp:
         for cap in cyclic:
             values[cap] = self.default_size
             self.note("assumed", f"size of container {cap.name} depends on itself; assumed linear")
+        for cap, size in list(values.items()):
+            if skip_lump is None and size.is_zero() and self._paid_for(bundle, cap):
+                values[cap] = self.default_size
+                self.note(
+                    "assumed",
+                    f"the size of `{cap.name}` could not be tracked; assumed proportional to the "
+                    "input",
+                )
         return {c: (v if not v.is_zero() else ZERO) for c, v in values.items()}
+
+    @staticmethod
+    def _paid_for(bundle: Bundle, cap: Var) -> bool:
+        """Does the time of `bundle` depend on this container's size (a loop over it)?"""
+        if bundle.allocs.mentions(cap):
+            return True
+        for cost in (bundle.time, bundle.retained, *bundle.grows.values()):
+            if cost.own.mentions(cap) or any(lump.mentions(cap) for lump in cost.lumps.values()):
+                return True
+        return False
 
     def finalize_caps(self, bundle: Bundle, caps: set[Var], loop_id: int | None = None) -> Bundle:
         if not caps:
@@ -881,16 +1049,44 @@ class Interp:
             self._loop_stack.pop()
         overhead = Bundle()
         overhead.charge(ONE)
+        test_cost = self._test_cost(st, body_env)
+        if test_cost is not None:
+            overhead.charge(test_cost)
         inner = overhead.then(inner)
         retired = self.resolve_caps(inner, inner.created) if inner.created else {}
         inner = self.finalize_caps(inner, inner.created, loop_id)
         inner = self.apply_flushes(inner)
         inner = self._bound_allocs(inner, plan)
         folded = self.fold_loop(inner, plan, loop_id)
+        if plan.amortize_into is not None and plan.amortized_total is not None:
+            self.step(
+                "loop",
+                "loop runs {0} times in total across the enclosing loop (amortised)",
+                plan.amortized_total,
+                line=st.line,
+            )
+        else:
+            self.step(
+                "loop",
+                "loop runs {0} times; the whole loop costs {1}",
+                plan.iters,
+                folded.time.own,
+                line=st.line,
+            )
         self._post_loop_env(st, env, body_env, plan, assigned)
         if retired:
             self._retire_caps(env, retired)
         return b.then(folded)
+
+    def _test_cost(self, st: Loop, env: Env) -> Poly | None:
+        """What evaluating the loop's condition costs, paid once per iteration: `strlen(s)` in
+        `i < strlen(s)` is O(n) every time round. None when it is constant (the usual case)."""
+        if st.test is None or st.kind not in ("while", "for_c", "do_while"):
+            return None
+        with self.scratch() as probe:
+            self.evaluate(st.test, env.copy())
+        cost = probe.time.total()
+        return cost.order() if cost.vars() else None
 
     def _retire_caps(self, env: Env, values: dict[Var, Poly]) -> None:
         """Containers created inside a loop were sized when it closed; a name that still refers to
@@ -928,7 +1124,7 @@ class Interp:
             if cost.own.is_zero():
                 return Cost(ZERO, dict(cost.lumps))
             per = self._bound_atoms(cost.own, plan)
-            return Cost(ZERO, {**cost.lumps, target: (per * total).order()})
+            return Cost(ZERO, {**cost.lumps, target: self._amortized_sum(per, plan, total)})
 
         time = lump(inner.time)
         time = Cost(ONE, time.lumps)
@@ -941,6 +1137,17 @@ class Interp:
             rec=inner.rec,
             unflushed=set(inner.unflushed),
         )
+
+    def _amortized_sum(self, per: Poly, plan, total: Poly) -> Poly:  # noqa: ANN001
+        """`per` paid for each of `total` distinct visits. When each visit scans one row of an
+        adjacency list (`for v in graph[u]` with `u` a vertex taken off the worklist, each vertex
+        at most once) the rows add up to the entries of the whole list, not rows * longest row:
+        a walk is vertices + edges."""
+        uid = plan.ragged_uid
+        row = self.rowlen_vars.get(uid) if uid is not None else None
+        if uid is not None and row is not None and per.mentions(row):
+            return self._repeat_ragged(per, plan, row, uid)
+        return (per * total).order()
 
     def _bound_atoms(self, poly: Poly, plan) -> Poly:  # noqa: ANN001
         mapping = {atom: info.upper for atom, info in plan.atoms if poly.mentions(atom)}
@@ -1152,6 +1359,7 @@ class Interp:
                 self._cur.charge(total)
                 result = make_container(left.kind, total, left.elem, owned=True)
                 self._cur.alloc(total)
+                self.note_alloc(total, "concatenation")
                 return result
             self._cur.charge(left.length)
             return make_container(left.kind, left.length, left.elem, owned=True)
@@ -1190,6 +1398,7 @@ class Interp:
                 self._cur.charge(length)
                 result = make_container(container.kind, length, container.elem, owned=True)
                 self._cur.alloc(length)
+                self.note_alloc(length, "repetition")
                 return result
         if isinstance(left, ContV) and left.kind == "str" and op == "%":
             return make_container("str", left.length, owned=True)
@@ -1271,6 +1480,9 @@ class Interp:
                 return SCALAR
             if obj.kind == "treemap":
                 self._cur.charge(obj.length.log())  # an ordered map: log per lookup
+            if obj.kind == "dict" and obj.uid in self.autovivify and obj.cap is not None:
+                self._cur.grow(obj.cap, ONE)  # `groups[x]` on a defaultdict inserts the key
+                self._note_key(obj.cap, index)
             elem = obj.elem
             if elem is None:
                 return SCALAR if obj.kind != "dict" else UNKNOWN
@@ -1354,6 +1566,7 @@ class Interp:
         self._cur.charge(length)
         result = make_container(obj.kind, length, obj.elem, owned=True)
         self._cur.alloc(length)  # a slice copies the slots; the rows it holds stay shared
+        self.note_alloc(length, "slice")
         return result
 
     def ev_listlit(self, e: ListLit, env: Env) -> Value:
@@ -1396,7 +1609,10 @@ class Interp:
             if name in ("Array", "Int32Array", "Float64Array", "Uint8Array"):
                 kind = "list"
             elif name[:1].isupper() or name == "struct":
-                return NodeV(ONE)
+                # a fresh node is one node, unless this function strings nodes together (`tail.next
+                # = new Node(x)`): then what a pointer to one of them reaches is as long as the
+                # list that was built, which the engine does not follow node by node
+                return NodeV(self.default_size if self._links_nodes else ONE)
             else:
                 return UNKNOWN
         length = ZERO
@@ -1433,6 +1649,7 @@ class Interp:
         if elem is not None and not length.is_zero():
             self._cur.charge(mem(container))
         self._cur.alloc(mem(container) if not length.is_zero() else ONE)
+        self.note_alloc(mem(container), "new container")
         return container
 
     def _nested_array(self, dims: list[Value], depth: int) -> Value:
@@ -1446,6 +1663,7 @@ class Interp:
             total = mem(container)
             self._cur.charge(total)
             self._cur.alloc(total)
+            self.note_alloc(total, "new array")
         return container
 
     def ev_comp(self, e: Comp, env: Env) -> Value:
@@ -1489,6 +1707,7 @@ class Interp:
             kind, count, elem, owned=True, ragged=isinstance(elem, ContV) and elem.length.is_zero()
         )
         self._cur.alloc(mem(container))
+        self.note_alloc(mem(container), "comprehension")
         return container
 
     # ---- calls
@@ -1552,9 +1771,20 @@ class Interp:
             return UNKNOWN
         if result.assumed:
             self.note("assumed", result.assumed)
+        if name == "defaultdict" and isinstance(result.value, ContV):
+            self.autovivify.add(result.value.uid)
+        counted = lib.subject()
+        if counted is not None and counted.cap is not None:
+            if name in _REMOVERS:
+                self._popped.add(counted.cap)
+            elif result.grow is not None:
+                self._pushed.add(counted.cap)
         self._cur.charge(result.time)
+        if result.time.vars():
+            self.step("call", f"call to {name}() costs {{0}}", result.time, key=name)
         if result.alloc is not None:
             self._cur.alloc(result.alloc)
+            self.note_alloc(result.alloc, f"{name}()")
         subject = lib.subject()
         if result.grow is not None and subject is not None and subject.cap is not None:
             self._cur.grow(subject.cap, result.grow)
@@ -1575,10 +1805,11 @@ class Interp:
             and subject is not None
             and subject.cap is not None
             and subject.kind in ("set", "dict")
-            and name in _KEYED_INSERTS
-            and args
         ):
-            self._note_key(subject.cap, args[0])
+            if name in _KEYED_INSERTS and args:
+                self._note_key(subject.cap, args[0])
+            else:  # `update`, `addAll`, ...: keys we cannot see, so the distinct count is unknown
+                self.cap_unbounded.add(subject.cap)
         if result.grow is not None:
             for arg in args:
                 if isinstance(arg, ContV) and arg.owned and arg is not subject:
@@ -1734,13 +1965,41 @@ class Interp:
         for var, reason in self._guessed.items():  # only a guess the callee actually depends on
             if any(cost.mentions(var) for cost in costs):
                 self.note("assumed", reason)
-        self._cur.charge(summary.time.substitute(mapping))
+        callee_time = summary.time.substitute(mapping)
+        self._cur.charge(callee_time)
         self._cur.alloc(summary.space.substitute(mapping))
+        self._apply_effects(summary, args, mapping)
+        if callee_time.vars():
+            self.step("call", f"call to {func.name}() costs {{0}}", callee_time, key=func.name)
         self._adopt_outer_calls(summary, mapping, env)
         self._share(summary, args, mapping)
         if summary.recursive and not summary.solved:
             self.note("unknown", f"recursion in {func.name}() could not be solved")
-        return substitute(summary.ret, mapping) or UNKNOWN
+        result = substitute(summary.ret, mapping) or UNKNOWN
+        if isinstance(result, ContV) and result.cap is not None and result.cap.kind == "pgrow":
+            result = replace(result, cap=None)  # the callee's own handle on a parameter
+        return result
+
+    def _apply_effects(
+        self, summary: FuncSummary, args: list[Value], mapping: dict[Var, Poly]
+    ) -> None:
+        """What the call adds to containers that outlive it is added to the caller's containers:
+        the one passed for a parameter, or a captured one (the same variable in the caller)."""
+        if not summary.effects:
+            return
+        actual: dict[Var, Value] = {}
+        for index, name in enumerate(summary.params):
+            cap = summary.param_caps.get(name)
+            if cap is not None and index < len(args):
+                actual[cap] = args[index]
+        for cap, delta in summary.effects.items():
+            amount = delta.substitute(mapping)
+            if cap not in actual:
+                self._cur.grow(cap, amount)  # captured: the caller sees the same container
+                continue
+            target = actual[cap]
+            if isinstance(target, ContV) and target.cap is not None:
+                self._cur.grow(target.cap, amount)
 
     def _key_domain(self, value: Value) -> Poly | None:
         """How many distinct values a key can take, if every part of it is a loop index (or a
@@ -1930,6 +2189,16 @@ def _is_qualified_chain(expr: Expr, env: Env) -> bool:
     while isinstance(node, Attribute):
         node = node.obj
     return isinstance(node, Name) and env.get(node.id) is None and node.id not in _SELF_NAMES
+
+
+def _links_nodes(fdef: FuncDef) -> bool:
+    """Does the function store a node into a link field of another (`prev.next = cur`)?"""
+    for node in walk(fdef):
+        if isinstance(node, Assign) and node.op == "=":
+            for target in node.targets:
+                if isinstance(target, Attribute) and target.attr.lower() in NODE_ATTRS:
+                    return True
+    return False
 
 
 def assigned_names(stmts: tuple[Stmt, ...]) -> set[str]:

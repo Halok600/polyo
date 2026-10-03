@@ -28,7 +28,7 @@ property. That tradeoff is the point, not an oversight.
 from __future__ import annotations
 
 from core.ir import IRGraph
-from models.gbdt import FEATURE_NAMES
+from features.tabular import FEATURE_NAMES
 
 Span = tuple[int, int, int, int]
 

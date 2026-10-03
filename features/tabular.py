@@ -30,6 +30,7 @@ and telling them apart needs `d`'s type, which this project's static,
 no-execution design does not attempt. A candidate for a later pass, not
 silently approximated here.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -118,6 +119,9 @@ def _recursion_shape(count: int) -> str:
     if count == 1:
         return "single"
     return "multiple"
+
+
+FEATURE_NAMES: tuple[str, ...] = tuple(TabularFeatures(0, 0).as_dict().keys())
 
 
 def extract_features(ir: IRGraph) -> TabularFeatures:

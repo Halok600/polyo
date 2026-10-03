@@ -24,6 +24,11 @@ def test_predict_returns_every_documented_top_level_field(tiny_registry):
         "curve",
         "ir",
         "warnings",
+        # added in v2 (additive: engine provenance and the derivation; see tests/test_api_hybrid.py)
+        "engine",
+        "entry",
+        "assumptions",
+        "derivation",
     }
 
 
@@ -49,6 +54,12 @@ def test_predict_time_and_space_fields_have_the_documented_shape(tiny_registry):
             "conformal_set",
             "conformal_coverage",
             "abstain",
+            # added in v2 (additive)
+            "engine",
+            "certainty",
+            "expression",
+            "extended_class",
+            "projection_lossy",
         }
         assert isinstance(entry["rank"], int)
         assert 0.0 <= entry["confidence"] <= 1.0
@@ -62,7 +73,10 @@ def test_predict_time_and_space_fields_have_the_documented_shape(tiny_registry):
         taxonomy = TimeClass if dimension == "time" else SpaceClass
         ranks = sorted(list(taxonomy).index(taxonomy(c)) for c in entry["conformal_set"])
         assert ranks == list(range(ranks[0], ranks[-1] + 1))  # ordinally contiguous
-        assert entry["conformal_coverage"] == pytest.approx(0.9)
+        if entry["engine"] == "symbolic":  # a measured accuracy, not a conformal guarantee
+            assert entry["conformal_coverage"] == entry["confidence"]
+        else:
+            assert entry["conformal_coverage"] == pytest.approx(0.9)
         assert entry["abstain"] == (len(entry["conformal_set"]) >= 4)
 
 

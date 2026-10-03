@@ -13,7 +13,7 @@ from typing import TypeVar
 
 from tree_sitter import Node
 
-from analysis.nodes import Stmt
+from analysis.nodes import Stmt, TypeRef
 
 T = TypeVar("T")
 
@@ -23,6 +23,39 @@ class TSBase:
         self.src = source.encode("utf-8")
         self._pre: list[Stmt] = []
         self._post: list[Stmt] = []
+        self.aliases: dict[str, TypeRef] = {}
+
+    # ------------------------------------------------------------------ type aliases
+    def _type_ref(self, node: Node | None) -> TypeRef | None:
+        raise NotImplementedError
+
+    def type_ref(self, node: Node | None) -> TypeRef | None:
+        """The type a node names, with a name that stands for another type (`typedef vector<int>
+        vi;`, `using Grid = vector<vector<int>>;`, Go's `type stack []int`) replaced by it."""
+        return self.expand_alias(self._type_ref(node))
+
+    def expand_alias(self, ref: TypeRef | None) -> TypeRef | None:
+        if ref is None or ref.args:
+            return ref
+        alias = self.aliases.get(ref.name)
+        if alias is None:
+            return ref
+        return TypeRef(
+            alias.name,
+            alias.args,
+            alias.dims + ref.dims,
+            (*alias.sizes, *ref.sizes),
+            ref.ref or alias.ref,
+            ref.ptr + alias.ptr,
+        )
+
+    def register_alias(self, name: str, target: TypeRef | None) -> None:
+        """Remember `name` as another type, but only a collection: a numeric typedef changes
+        nothing and a struct's name is what marks its pointers as list or tree nodes."""
+        from analysis.roles import _container_kind
+
+        if target is not None and (_container_kind(target.name) is not None or target.dims > 0):
+            self.aliases[name] = target
 
     def text(self, node: Node) -> str:
         return self.src[node.start_byte : node.end_byte].decode("utf-8", "replace")

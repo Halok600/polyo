@@ -11,6 +11,7 @@ graph's edge indices are offset by the running node count, so one
 message-passing step processes an entire batch with no python loop over
 individual graphs.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,52 +19,26 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from core.ir import EDGE_KINDS, IR_SYMBOLS, IRGraph
+from models.example_graph import (
+    ALL_EDGE_KINDS,
+    EMPTY_EDGES,
+    NUM_SYMBOLS,
+    SYMBOL_INDEX,
+    ExampleGraph,
+    to_example_graph,
+)
 
-SYMBOL_INDEX: dict[str, int] = {s: i for i, s in enumerate(IR_SYMBOLS)}
-NUM_SYMBOLS = len(IR_SYMBOLS)
-ALL_EDGE_KINDS: tuple[str, ...] = tuple(sorted(EDGE_KINDS))
-
-_EMPTY_EDGES = np.zeros((0, 2), dtype=np.int64)
-
-
-@dataclass(frozen=True, slots=True)
-class ExampleGraph:
-    """One example's IR pre-converted to plain arrays -- computed once per
-    example, not once per epoch, since it never changes across training
-    steps. Always has at least one node (see `to_example_graph`'s fallback
-    for an IR that produced none), so every example contributes exactly one
-    row to any batch of predictions -- the same 1:1 contract
-    `models/gbdt.py`/`models/tfidf.py` already guarantee."""
-
-    symbol_ids: np.ndarray  # (num_nodes,) int64
-    edges_by_kind: dict[str, np.ndarray]  # kind -> (num_edges, 2) int64
-
-    @property
-    def num_nodes(self) -> int:
-        return len(self.symbol_ids)
-
-
-def to_example_graph(ir: IRGraph) -> ExampleGraph:
-    if not ir.nodes:
-        # An IR with zero nodes is a rare, degenerate parse (e.g. a
-        # genuinely empty function body) -- rather than dropping the
-        # example (which would break the 1:1 examples-in/predictions-out
-        # contract every other rung guarantees), it gets a single UNKNOWN
-        # placeholder node with no edges, so pooling has something to average.
-        return ExampleGraph(
-            symbol_ids=np.array([SYMBOL_INDEX["UNKNOWN"]], dtype=np.int64),
-            edges_by_kind={kind: _EMPTY_EDGES for kind in ALL_EDGE_KINDS},
-        )
-    symbol_ids = np.array([SYMBOL_INDEX[n.symbol] for n in ir.nodes], dtype=np.int64)
-    by_kind: dict[str, list[tuple[int, int]]] = {kind: [] for kind in ALL_EDGE_KINDS}
-    for edge in ir.edges:
-        by_kind[edge.kind].append((edge.src, edge.dst))
-    edges_by_kind = {
-        kind: (np.array(pairs, dtype=np.int64) if pairs else _EMPTY_EDGES)
-        for kind, pairs in by_kind.items()
-    }
-    return ExampleGraph(symbol_ids=symbol_ids, edges_by_kind=edges_by_kind)
+# `ExampleGraph` and friends live in `models/example_graph.py` (numpy only, so the serving image
+# can build them without torch); they are re-exported here for the training code.
+__all__ = [
+    "ALL_EDGE_KINDS",
+    "NUM_SYMBOLS",
+    "SYMBOL_INDEX",
+    "ExampleGraph",
+    "GraphBatch",
+    "collate",
+    "to_example_graph",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,7 +77,7 @@ def collate(
     batch_index = torch.from_numpy(np.concatenate(batch_chunks)).to(device)
     edge_index: dict[str, torch.Tensor] = {}
     for kind in edge_kinds:
-        stacked = np.concatenate(edge_chunks[kind], axis=0) if edge_chunks[kind] else _EMPTY_EDGES
+        stacked = np.concatenate(edge_chunks[kind], axis=0) if edge_chunks[kind] else EMPTY_EDGES
         # (num_edges, 2) -> (2, num_edges): the standard edge_index layout.
         edge_index[kind] = torch.from_numpy(np.ascontiguousarray(stacked.T)).to(device)
 

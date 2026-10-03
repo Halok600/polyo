@@ -1,0 +1,57 @@
+{
+ "source": "tests/data/blind_v1_cases.json scored at first contact (blind_v1_first_contact.json)",
+ "cases": 144,
+ "certainty_counts": {
+  "assumed": 28,
+  "certain": 112,
+  "unknown": 4
+ },
+ "levels": {
+  "certain": {
+   "time": {
+    "correct": 104,
+    "total": 112
+   },
+   "space": {
+    "correct": 106,
+    "total": 112
+   }
+  },
+  "assumed": {
+   "time": {
+    "correct": 18,
+    "total": 28
+   },
+   "space": {
+    "correct": 20,
+    "total": 28
+   }
+  }
+ },
+ "joint_accuracy_by_language": {
+  "c": {
+   "correct": 23,
+   "total": 24
+  },
+  "cpp": {
+   "correct": 21,
+   "total": 24
+  },
+  "go": {
+   "correct": 19,
+   "total": 24
+  },
+  "java": {
+   "correct": 19,
+   "total": 22
+  },
+  "javascript": {
+   "correct": 17,
+   "total": 22
+  },
+  "python": {
+   "correct": 18,
+   "total": 24
+  }
+ }
+}

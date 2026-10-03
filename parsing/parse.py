@@ -16,20 +16,12 @@ semantics live in `parsing/lang/<lang>.toml`, consumed by
 the more common case in this project's corpora and repointing it would be a
 silent behaviour change for existing C++ inputs.
 """
+
 from __future__ import annotations
 
+import importlib
 from pathlib import PurePath
 
-import tree_sitter_c
-import tree_sitter_c_sharp
-import tree_sitter_cpp
-import tree_sitter_go
-import tree_sitter_java
-import tree_sitter_javascript
-import tree_sitter_kotlin
-import tree_sitter_python
-import tree_sitter_rust
-import tree_sitter_typescript
 from tree_sitter import Language, Parser, Tree
 
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset(
@@ -55,19 +47,39 @@ _EXTENSION_TO_LANGUAGE: dict[str, str] = {
     ".kts": "kotlin",
 }
 
+
+def _grammar(module: str, factory: str = "language") -> Language:
+    return Language(getattr(importlib.import_module(module), factory)())
+
+
+def _optional_grammar(module: str, factory: str = "language") -> Language | None:
+    """Tier 3 grammars are optional: the slim serving image installs only the six languages it
+    serves (requirements-api.txt), and a grammar that is not installed is a language that is not
+    available here, not an import error for everyone."""
+    try:
+        return _grammar(module, factory)
+    except ImportError:
+        return None
+
+
 _LANGUAGE_CAPSULES: dict[str, Language] = {
-    "python": Language(tree_sitter_python.language()),
-    "cpp": Language(tree_sitter_cpp.language()),
-    "java": Language(tree_sitter_java.language()),
-    "javascript": Language(tree_sitter_javascript.language()),
-    "c": Language(tree_sitter_c.language()),
-    "go": Language(tree_sitter_go.language()),
-    # Not `language_tsx` -- this project's IR has no JSX-specific symbols.
-    "typescript": Language(tree_sitter_typescript.language_typescript()),
-    "rust": Language(tree_sitter_rust.language()),
-    "csharp": Language(tree_sitter_c_sharp.language()),
-    "kotlin": Language(tree_sitter_kotlin.language()),
+    "python": _grammar("tree_sitter_python"),
+    "cpp": _grammar("tree_sitter_cpp"),
+    "java": _grammar("tree_sitter_java"),
+    "javascript": _grammar("tree_sitter_javascript"),
+    "c": _grammar("tree_sitter_c"),
+    "go": _grammar("tree_sitter_go"),
 }
+for _name, _module, _factory in (
+    # Not `language_tsx` -- this project's IR has no JSX-specific symbols.
+    ("typescript", "tree_sitter_typescript", "language_typescript"),
+    ("rust", "tree_sitter_rust", "language"),
+    ("csharp", "tree_sitter_c_sharp", "language"),
+    ("kotlin", "tree_sitter_kotlin", "language"),
+):
+    _tier3 = _optional_grammar(_module, _factory)
+    if _tier3 is not None:
+        _LANGUAGE_CAPSULES[_name] = _tier3
 
 
 class UnsupportedLanguageError(ValueError):
@@ -119,7 +131,7 @@ def detect_language_from_source(source: str) -> str:
     source_bytes = source.encode("utf-8")
     best_language: str | None = None
     best_errors = -1
-    for language in sorted(SUPPORTED_LANGUAGES):
+    for language in sorted(_LANGUAGE_CAPSULES):  # the grammars installed here
         parser = Parser(_LANGUAGE_CAPSULES[language])
         tree = parser.parse(source_bytes)
         errors = _error_node_count(tree)

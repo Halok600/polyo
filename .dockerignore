@@ -1,4 +1,4 @@
-# The Dockerfile only COPYs core/parsing/features/models/api -- everything
+# The Dockerfile only COPYs core/parsing/analysis/features/models/api -- everything
 # else here just bloats the build context sent to the Docker daemon.
 .git/
 .venv/

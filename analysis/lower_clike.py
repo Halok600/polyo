@@ -118,7 +118,7 @@ class _CLike(TSBase):
         self.lang = language
 
     # ------------------------------------------------------------------ types
-    def type_ref(self, node: Node | None) -> TypeRef | None:  # noqa: C901
+    def _type_ref(self, node: Node | None) -> TypeRef | None:  # noqa: C901
         if node is None:
             return None
         kind = node.type
@@ -243,9 +243,17 @@ class _CLike(TSBase):
                 self.top_level(child, functions, toplevel)
         elif kind in ("lexical_declaration", "variable_declaration"):
             self.js_declaration_top(node, functions, toplevel)
+        elif kind == "alias_declaration":  # using Grid = vector<vector<int>>;
+            name = self.field(node, "name")
+            if name is not None:
+                self.register_alias(self.text(name), self.type_ref(self.field(node, "type")))
+        elif kind == "type_definition":  # typedef vector<int> vi;
+            declarator = self.field(node, "declarator")
+            if declarator is not None and declarator.type in ("type_identifier", "identifier"):
+                self.register_alias(self.text(declarator), self.type_ref(self.field(node, "type")))
         elif kind in (
             "preproc_include", "preproc_def", "preproc_function_def", "preproc_call", "preproc_if",
-            "preproc_ifdef", "using_declaration", "alias_declaration", "type_definition",
+            "preproc_ifdef", "using_declaration",
             "import_declaration", "package_declaration", "import_statement", "empty_statement",
             "static_assert_declaration", "namespace_alias_definition", "using_directive",
         ):  # fmt: skip
@@ -1134,6 +1142,10 @@ class _CLike(TSBase):
         if value is not None:
             return self.x_initializer_list(value)
         return New(TypeRef(element.name, element.args, total), (), tuple(dim_exprs))
+
+    def x_method_reference(self, node: Node) -> Expr:
+        """`Integer::sum`, `String::length`: a function value, opaque to the cost model."""
+        return Name(self.text(node))
 
     def x_lambda_expression(self, node: Node) -> Expr:
         params_node = self.field(node, "parameters")

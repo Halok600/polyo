@@ -266,6 +266,18 @@ class Poly:
             return Poly.const(1)
         return Poly._make(dict.fromkeys(kept, Fraction(1)))
 
+    def at_least_one(self) -> Poly:
+        """An upper bound that takes every size to be at least 1: a factor with a negative power
+        (`n * m^-1`, the work of a loop that advances by a data-dependent stride m >= 1) is at
+        most 1 and is dropped, so a stride variable never leaks into an answer."""
+        items: dict[Mono, Fraction] = {}
+        for mono, coef in self.terms:
+            kept = tuple((v, p, lg) for v, p, lg in mono.pows if p >= 0)
+            if len(kept) != len(mono.pows):
+                mono = Mono(kept, mono.exps, mono.facts)
+            items[mono] = items.get(mono, Fraction(0)) + coef
+        return Poly._make(items)
+
     def max(self, other: Poly) -> Poly:
         return (self + other).order()
 
@@ -541,6 +553,22 @@ def project_time(poly: Poly) -> tuple[str, bool]:
     if log == 0:
         return ("O(1)", False)
     return ("O(log n)", False) if log == 1 else ("O(n)", True)
+
+
+def project_time_extended(poly: Poly) -> tuple[str, bool]:
+    """(extended time class, lossy): the legacy classes plus O(sqrt n), O(n^2 log n) and O(n!),
+    each of which `project_time` has to round up. Anything the extended list still cannot name is
+    rounded up exactly as `project_time` does."""
+    facts, base, power, log, extras = _dominant_collapsed(poly)
+    if facts:
+        return ("O(n!)", facts > 1 or extras)
+    if base:
+        return ("O(2^n)", base != 2 or extras)
+    if power == 2 and log == 1:
+        return ("O(n^2 log n)", False)
+    if power == Fraction(1, 2) and log == 0:
+        return ("O(sqrt n)", False)
+    return project_time(poly)
 
 
 def project_space(poly: Poly) -> tuple[str, bool]:

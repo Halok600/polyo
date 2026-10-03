@@ -159,7 +159,11 @@ def _length(c: LibCall) -> LibResult | None:
     if subject is None:
         if c.name == "length" and not c.args and c.receiver is None:
             return None
+        if c.name == "strlen":  # no string known: a scan of an input-sized one
+            return LibResult(IntV(c.default_size), c.default_size)
         return LibResult(IntV(None), ONE)
+    if c.name == "strlen":  # C strings carry no length: strlen walks to the terminator
+        return LibResult(IntV(subject.length, subject.uid), subject.length)
     return LibResult(IntV(subject.length, subject.uid), ONE)
 
 
@@ -238,6 +242,8 @@ def _get(c: LibCall) -> LibResult | None:
      "addFirst", "offerFirst", "unshift", "WriteByte", "WriteRune", "WriteString",
      "appendChild", "put_if_absent")  # fmt: skip
 def _insert_like(c: LibCall) -> LibResult | None:
+    if c.lang == "go" and c.qualifier == "heap":
+        return None  # container/heap: log n per push, handled by `_go_heap`
     result = _insert_cost(c)
     subject = c.subject()
     if result is None or subject is None:
@@ -258,8 +264,11 @@ def _insert_like(c: LibCall) -> LibResult | None:
     ):
         # C++ copies an lvalue it is given (`words.push_back(cur)` copies the whole string)
         result = replace(result, time=(result.time + mem(added)).order())
+    stores_rows = subject.kind in SEQ | DEQ | STACK or (
+        subject.kind in ("dict", "treemap") and c.name in ("setdefault", "putIfAbsent")
+    )
     if (
-        subject.kind in SEQ | DEQ | STACK
+        stores_rows
         and isinstance(added, ContV)
         and (subject.elem is None or isinstance(subject.elem, ContV))
     ):
@@ -329,6 +338,8 @@ def _extend(c: LibCall) -> LibResult | None:
      "pollFirst", "removeFirst", "dequeue", "shift", "poll", "remove", "erase", "delete",
      "discard", "popitem", "Delete", "poll_first")  # fmt: skip
 def _remove_like(c: LibCall) -> LibResult | None:
+    if c.lang == "go" and c.qualifier == "heap":
+        return None  # container/heap: log n per pop, handled by `_go_heap`
     kind = c.kind()
     if kind is None:
         return None
@@ -419,6 +430,16 @@ def _view(c: LibCall) -> LibResult | None:
         )
     if c.name in ("keys", "keySet") and subject.kind == "dict":
         return LibResult(make_container("list", subject.length, SCALAR, view=True), ONE)
+    if c.name == "values" and subject.kind in ("dict", "treemap") and subject.elem is not None:
+        # the rows of a dict of lists, in one pass: they are the dict's own storage (same identity),
+        # so the entries they hold add up to the entries the dict was filled with
+        rows = isinstance(subject.elem, ContV)
+        return LibResult(
+            make_container(
+                "list", subject.length, subject.elem, view=True, uid=subject.uid, ragged=rows
+            ),
+            ONE,
+        )
     return LibResult(make_container(subject.kind, subject.length, subject.elem, view=True), ONE)
 
 

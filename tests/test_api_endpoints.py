@@ -95,3 +95,44 @@ def test_metrics_endpoint_reflects_recorded_requests(monkeypatch, tiny_registry)
     response = client.get("/metrics")
     assert response.status_code == 200
     assert "polyo_requests_total" in response.text
+
+
+_QUADRATIC_PY = "def f(a):\n    for x in a:\n        for y in a:\n            pass\n"
+
+
+def test_predict_serves_the_v2_fields_over_http(monkeypatch, tiny_registry):
+    client = _client_with_registry(monkeypatch, tiny_registry)
+    response = client.post("/v1/predict", json={"language": "python", "code": _QUADRATIC_PY})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["engine"] == "symbolic"
+    assert body["time"]["class"] == "O(n^2)"
+    assert body["time"]["expression"] == "O(n^2)"
+    assert body["time"]["certainty"] == "certain"
+    assert body["time"]["extended_class"] == "O(n^2)"
+    assert body["time"]["projection_lossy"] is False
+    assert [step["kind"] for step in body["derivation"]][:2] == ["loop", "loop"]
+    assert body["assumptions"] == []
+    assert body["entry"] == "f"
+
+
+def test_a_client_that_only_knows_the_legacy_fields_still_gets_them_all(monkeypatch, tiny_registry):
+    client = _client_with_registry(monkeypatch, tiny_registry)
+    body = client.post("/v1/predict", json={"language": "python", "code": _QUADRATIC_PY}).json()
+    assert {"language_detected", "time", "space", "attribution", "curve", "ir", "warnings"} <= set(
+        body
+    )
+    for dimension in ("time", "space"):
+        assert {
+            "class",
+            "rank",
+            "confidence",
+            "distribution",
+            "conformal_set",
+            "conformal_coverage",
+            "abstain",
+        } <= set(body[dimension])
+    assert {"n", "time", "space"} == set(body["curve"])
+    assert all(
+        {"feature", "contribution", "spans"} == set(item) for item in body["attribution"]
+    )

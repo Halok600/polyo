@@ -15,10 +15,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from analysis.env import Env
-from analysis.interp import FuncSummary, Interp, Note
+from analysis.interp import FuncSummary, Interp, Note, StepRec
 from analysis.lower import lower_source
 from analysis.nodes import Attribute, Call, FuncDef, Module, Name, walk
-from analysis.poly import Poly, Var, project_space, project_time
+from analysis.poly import Poly, Var, project_space, project_time, project_time_extended
 from analysis.roles import params_to_values
 from analysis.values import ContV, IntV, NodeV, Value
 
@@ -35,8 +35,26 @@ _INPUT_CALLS = frozenset(
 class Result:
     expr: Poly
     text: str
-    cls: str
-    lossy: bool
+    cls: str  # the legacy class, rounded up when the expression is not exactly one of them
+    lossy: bool  # `cls` is not exactly the expression
+    ext_cls: str = ""  # the extended class (time: adds sqrt n, n^2 log n, n!); space: same as cls
+
+
+@dataclass(frozen=True)
+class Step:
+    """One line of the derivation: what the engine concluded about a piece of code."""
+
+    line: int  # 1-based source line, 0 for the totals
+    kind: str  # loop | call | recursion | alloc | total
+    text: str
+
+
+@dataclass(frozen=True)
+class Assumption:
+    """A bound the engine could not prove and assumed (it errs high, never low)."""
+
+    line: int
+    reason: str
 
 
 @dataclass
@@ -47,6 +65,8 @@ class Analysis:
     notes: list[Note]
     entry: str
     names: dict[Var, str] = field(default_factory=dict)
+    steps: list[Step] = field(default_factory=list)
+    assumptions: list[Assumption] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------- entry selection
@@ -200,6 +220,40 @@ def _entry_time(summary: FuncSummary) -> Poly:
     return total.order() if not total.is_zero() else ONE
 
 
+_KIND_ORDER = {"loop": 0, "recursion": 1, "call": 2, "alloc": 3}
+
+
+def _letters_for_steps(records: list[StepRec], names: dict[Var, str]) -> dict[Var, str]:
+    """`names` plus a fresh letter for each size variable only the derivation mentions, so a step
+    never prints an internal variable name where the answer would have used a letter."""
+    out = dict(names)
+    free = [c for c in _LETTERS if c not in out.values()]
+    for rec in records:
+        for poly in rec.polys:
+            for var in sorted(poly.vars(), key=lambda v: v.uid):
+                if var not in out and var.kind != "iter" and free:
+                    out[var] = free.pop(0)
+    return out
+
+
+def _render_steps(it: Interp, names: dict[Var, str], time: Poly, space: Poly) -> list[Step]:
+    """The recorded steps by source line (a later record of the same loop, call or allocation
+    replaces an earlier one: a recursion is analysed twice and only the second pass counts), then
+    the two totals."""
+    latest: dict[tuple[str, int, str], StepRec] = {}
+    for rec in it.steps:
+        latest[(rec.kind, rec.line, rec.key)] = rec
+    records = sorted(latest.values(), key=lambda r: (r.line, _KIND_ORDER.get(r.kind, 9)))
+    shown = _letters_for_steps(records, names)
+    steps = [
+        Step(rec.line, rec.kind, rec.fmt.format(*(p.render(shown) for p in rec.polys)))
+        for rec in records
+    ]
+    steps.append(Step(0, "total", f"time: {time.render(shown)}"))
+    steps.append(Step(0, "total", f"space: {space.render(shown)}"))
+    return steps
+
+
 # ---------------------------------------------------------------------------------- analyze
 def _summarise_program(it: Interp, module: Module) -> FuncSummary:
     pseudo = FuncDef(name="<program>", params=(), body=module.toplevel)
@@ -225,13 +279,16 @@ def analyze(source: str, language: str) -> Analysis:
         entry_name = ", ".join(f.name for f in entries) if entries else "<none>"
     if not summaries:
         it.note("unknown", "no function to analyse")
-        empty = Result(ONE, "O(1)", "O(1)", False)
-        return Analysis(empty, empty, "unknown", it.notes, entry_name)
+        empty = Result(ONE, "O(1)", "O(1)", False, "O(1)")
+        return Analysis(
+            empty, empty, "unknown", it.notes, entry_name, assumptions=_assumptions(it.notes)
+        )
 
     time = _entry_time(summaries[0])
     space = summaries[0].space
     for summary in summaries[1:]:
         time, space = time.max(_entry_time(summary)), space.max(summary.space)
+    time, space = time.at_least_one().order(), space.at_least_one().order()
     for summary in summaries:
         if summary.recursive and not summary.solved:
             it.note("unknown", f"recursion in {summary.func.name}() could not be solved")
@@ -244,6 +301,7 @@ def analyze(source: str, language: str) -> Analysis:
     names = _display_names(params, [time, space], it)
     time_cls, time_lossy = project_time(time)
     space_cls, space_lossy = project_space(space)
+    time_ext, _ = project_time_extended(time)
     if any(n.kind == "unknown" for n in it.notes):
         certainty = "unknown"
     elif any(n.kind == "assumed" for n in it.notes):
@@ -251,13 +309,28 @@ def analyze(source: str, language: str) -> Analysis:
     else:
         certainty = "certain"
     return Analysis(
-        time=Result(time.order(), time.order().render(names), time_cls, time_lossy),
-        space=Result(space.order(), space.order().render(names), space_cls, space_lossy),
+        time=Result(time.order(), time.order().render(names), time_cls, time_lossy, time_ext),
+        space=Result(space.order(), space.order().render(names), space_cls, space_lossy, space_cls),
         certainty=certainty,
         notes=it.notes,
         entry=entry_name,
         names=names,
+        steps=_render_steps(it, names, time.order(), space.order()),
+        assumptions=_assumptions(it.notes),
     )
 
 
-__all__ = ["Analysis", "Env", "Result", "analyze", "params_to_values", "select_entries"]
+def _assumptions(notes: list[Note]) -> list[Assumption]:
+    return [Assumption(n.line, n.reason) for n in notes if n.kind == "assumed"]
+
+
+__all__ = [
+    "Analysis",
+    "Assumption",
+    "Env",
+    "Result",
+    "Step",
+    "analyze",
+    "params_to_values",
+    "select_entries",
+]

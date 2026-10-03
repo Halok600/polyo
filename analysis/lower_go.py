@@ -66,7 +66,7 @@ def _number(text: str) -> int | float | None:
 
 class _Go(TSBase):
     # ------------------------------------------------------------------ types
-    def type_ref(self, node: Node | None) -> TypeRef | None:  # noqa: C901
+    def _type_ref(self, node: Node | None) -> TypeRef | None:  # noqa: C901
         if node is None:
             return None
         kind = node.type
@@ -110,6 +110,13 @@ class _Go(TSBase):
     def module(self, root: Node) -> Module:
         functions: list[FuncDef] = []
         toplevel: list[Stmt] = []
+        for child in self.named(root):  # `type stack []int`: known before any function uses it
+            if child.type == "type_declaration":
+                for spec in self.named(child):
+                    name, target = self.field(spec, "name"), self.field(spec, "type")
+                    if name is not None and target is not None:
+                        if target.type in ("slice_type", "map_type", "array_type"):
+                            self.register_alias(self.text(name), self.type_ref(target))
         for child in self.named(root):
             if child.type == "function_declaration":
                 functions.append(self.function(child, None))

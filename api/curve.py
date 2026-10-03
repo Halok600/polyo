@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 
-from core.taxonomy import SpaceClass, TimeClass
+from core.taxonomy import ExtendedTimeClass, SpaceClass, TimeClass
 
 _N_MIN = 8
 _N_MAX = 2**16
@@ -24,6 +24,8 @@ _EXP_CAP = 2.0**64
 _CLASSES_BY_DIMENSION: dict[str, tuple[str, ...]] = {
     "time": tuple(c.value for c in TimeClass),
     "space": tuple(c.value for c in SpaceClass),
+    # the richer taxonomy the symbolic engine answers in (adds sqrt n, n^2 log n, n!)
+    "time_extended": tuple(c.value for c in ExtendedTimeClass),
 }
 
 
@@ -38,12 +40,16 @@ def _canonical_value(class_name: str, n: int) -> float:
         return 1.0
     if class_name == "O(log n)":
         return math.log2(n)
+    if class_name == "O(sqrt n)":
+        return math.sqrt(n)
     if class_name == "O(n)":
         return float(n)
     if class_name == "O(n log n)":
         return n * math.log2(n)
     if class_name == "O(n^2)":
         return float(n**2)
+    if class_name == "O(n^2 log n)":
+        return n**2 * math.log2(n)
     if class_name == "O(n^3)":
         return float(n**3)
     if class_name == "O(2^n)":
@@ -54,6 +60,10 @@ def _canonical_value(class_name: str, n: int) -> float:
             # float64 (n gets well past 1024 within `_n_grid`'s range) --
             # the cap is exactly what would have been returned anyway.
             return _EXP_CAP
+    if class_name == "O(n!)":
+        # capped like 2^n: lgamma(n + 1) is log(n!), and the cap is exactly what a real n! this
+        # large would be clipped to anyway
+        return _EXP_CAP if math.lgamma(n + 1) >= math.log(_EXP_CAP) else math.factorial(n)
     raise ValueError(f"unknown class: {class_name!r}")
 
 
