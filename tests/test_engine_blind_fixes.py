@@ -665,3 +665,100 @@ def f(a, lo, hi):
     f(a, p, hi)
 """
     assert _answer(source)[2] == "unknown"
+
+
+# ------------------------------------------------------------------ a container that feeds itself
+_DOUBLING_IN_PLACE = """
+def f(nums):
+    res = [[]]
+    for x in nums:
+        for r in list(res):
+            res.append(r + [x])
+    return res
+"""
+_DOUBLING_EXTEND = """
+def f(nums):
+    res = [[]]
+    for x in nums:
+        res += [r + [x] for r in res]
+    return res
+"""
+_LETTERS = """
+def f(digits):
+    mapping = {'2': 'abc', '3': 'def', '4': 'ghi'}
+    res = ['']
+    for d in digits:
+        res = [p + c for p in res for c in mapping[d]]
+    return res
+"""
+_LEVEL_LISTS = """
+def f(n):
+    cur = [1]
+    for _ in range(n):
+        nxt = []
+        for x in cur:
+            nxt.append(x)
+            nxt.append(x + 1)
+        cur = nxt
+    return cur
+"""
+_ONE_PASS_ONLY = """
+def f(m):
+    res = [0]
+    for r in list(res):
+        for j in range(m):
+            res.append(r)
+    return res
+"""
+_FIXED_ROUNDS = """
+def f(a):
+    res = list(a)
+    for _ in range(3):
+        res = res + res
+    return res
+"""
+
+
+@pytest.mark.parametrize("source", [_DOUBLING_IN_PLACE, _DOUBLING_EXTEND, _LETTERS])
+def test_a_list_that_multiplies_every_round_is_exponential_in_the_rounds(source: str) -> None:
+    assert _answer(source)[0] == "O(2^n)"
+
+
+def test_the_blind_doubling_program() -> None:
+    assert _blind("all_subsequences_strings_javascript") == ("O(2^n)", "O(n^2)")
+
+
+def test_one_pass_over_a_snapshot_is_never_called_exponential() -> None:
+    """Over-estimated (the snapshot is taken to be as long as the final list), but not 2^n."""
+    assert _answer(_ONE_PASS_ONLY)[0] != "O(2^n)"
+
+
+def test_a_fixed_number_of_doublings_is_a_constant_factor() -> None:
+    assert _answer(_FIXED_ROUNDS)[:2] == ("O(n)", "O(n)")
+
+
+_TREE_LEVELS_BY_COMPREHENSION = """
+def levels(root):
+    out = []
+    level = [root] if root else []
+    while level:
+        out.append([n.val for n in level])
+        level = [c for n in level for c in (n.left, n.right) if c]
+    return out
+"""
+_NARY_LEVELS = """
+def levels(root):
+    out = []
+    level = [root] if root else []
+    while level:
+        out.append([n.val for n in level])
+        level = [c for n in level for c in n.children]
+    return out
+"""
+
+
+@pytest.mark.parametrize("source", [_TREE_LEVELS_BY_COMPREHENSION, _NARY_LEVELS])
+def test_a_tree_walked_level_by_level_is_not_exponential(source: str) -> None:
+    """The next level is built out of the children of this one: bounded by the nodes in the tree,
+    not multiplied by a constant each round."""
+    assert _answer(source)[0] != "O(2^n)"

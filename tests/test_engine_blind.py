@@ -30,9 +30,6 @@ KNOWN_LIMITATIONS: dict[str, str] = {
     "reverse_words_backward_scan_cpp": "a backward scan that hands its pointer on and copies each "
     "word with substr: the outer scan's progress is not proven, so the answer is an assumed "
     "over-estimate",
-    "all_subsequences_strings_javascript": "a list that doubles every round (`push` while "
-    "iterating over its length at the start of the round): exponential growth through a "
-    "container that feeds itself is not modelled",
     "heap_level_sums_python": "level widths that double every round form a geometric series the "
     "loop planner does not sum",
     "prime_factors_trial_python": "the bound `d * d <= n` while `n` shrinks inside the loop: the "

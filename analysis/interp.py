@@ -217,6 +217,7 @@ class Interp:
         self.cols_vars: dict[int, Var] = {}
         self.row_owner: dict[int, int] = {}  # row uid -> uid of the container whose rows they are
         self.autovivify: set[int] = set()  # defaultdicts: reading a missing key inserts it
+        self._geometric_after: dict[str, ContV] = {}  # rebound containers that grow per round
         self._links_nodes = False  # the function being analysed links nodes through `.next`...
         self._pushed: set[Var] = set()  # containers the function being analysed adds to...
         self._popped: set[Var] = set()  # ...and removes from (a path that goes up and down)
@@ -1054,10 +1055,11 @@ class Interp:
             overhead.charge(test_cost)
         inner = overhead.then(inner)
         retired = self.resolve_caps(inner, inner.created) if inner.created else {}
+        geo = self._geometric_rounds(env, body_env, st, inner, plan, retired)
         inner = self.finalize_caps(inner, inner.created, loop_id)
         inner = self.apply_flushes(inner)
         inner = self._bound_allocs(inner, plan)
-        folded = self.fold_loop(inner, plan, loop_id)
+        folded = self.fold_loop(inner, plan, loop_id, geo)
         if plan.amortize_into is not None and plan.amortized_total is not None:
             self.step(
                 "loop",
@@ -1107,12 +1109,107 @@ class Interp:
         bounded = inner.allocs.substitute(mapping)
         return replace(inner, allocs=bounded.order() if not bounded.is_zero() else bounded)
 
-    def fold_loop(self, inner: Bundle, plan, loop_id: int) -> Bundle:  # noqa: ANN001
+    def fold_loop(
+        self,
+        inner: Bundle,
+        plan,  # noqa: ANN001
+        loop_id: int,
+        geo: dict[Var, Poly] | None = None,
+    ) -> Bundle:
         if plan.amortize_into is not None and plan.amortized_total is not None:
             return self._amortize(inner, plan)
+        if geo:
+            # a container that feeds itself has its LAST round's size in every cost that depends on
+            # it (a geometric series is its last term), not the same size once per round
+            def repeat(p: Poly) -> Poly:
+                hit = {cap: size for cap, size in geo.items() if p.mentions(cap)}
+                if hit:
+                    return p.substitute(hit).order()
+                return self.repeat_poly(p, plan)
+
+            bound = inner.allocs.substitute(geo) if inner.allocs.vars() & geo.keys() else None
+            if bound is not None:
+                inner = replace(inner, allocs=bound.order() if not bound.is_zero() else bound)
+            return inner.fold(loop_id, repeat, plan.iters, plan.exact_iters)
         return inner.fold(
             loop_id, lambda p: self.repeat_poly(p, plan), plan.iters, plan.exact_iters
         )
+
+    def _geometric_rounds(
+        self,
+        env: Env,
+        body_env: Env,
+        st: Loop,
+        inner: Bundle,
+        plan,  # noqa: ANN001
+        retired: dict[Var, Poly],
+    ) -> dict[Var, Poly]:
+        """A container whose next size is a constant multiple of its current one grows
+        exponentially in the number of rounds: `res` doubles in `for x in xs: for r in list(res):
+        res.append(r + [x])`, and becomes `k` times as long in `res = [p + c for p in res for c in
+        letters]`, or in `cur = nxt` with `nxt` built from two entries per entry of `cur`. After
+        `rounds` rounds it holds `start * base ** rounds` entries. Returns, per container (by its
+        capacity variable), that size: the one every cost that depends on it is paid at."""
+        rounds_var = _single_var(plan.iters)
+        rounds_const = plan.iters.const_value()
+        if rounds_var is None and rounds_const is None:
+            return {}
+        base_of: dict[Var, int] = {}
+        for cap, growth in inner.grows.items():  # in place: the body adds a multiple of itself
+            # a container that is also emptied from the front (a worklist: breadth-first search by
+            # levels) is refilled with the children of what it held, which the tree bounds
+            if cap not in inner.created and cap not in self._popped:
+                multiple = _self_multiple(growth.total(), cap)
+                if multiple is not None:
+                    base_of[cap] = 1 + multiple
+        for name in assigned_names(st.body):  # rebound: the body builds the next one out of it
+            before, after = env.vars.get(name), body_env.vars.get(name)
+            if (
+                isinstance(before, ContV)
+                and before.cap is not None
+                and isinstance(after, ContV)
+                and after.uid != before.uid
+            ):
+                multiple = _self_multiple(after.length.substitute(retired), before.cap)
+                if multiple is None or multiple < 2:
+                    # the engine keeps orders, not constants, so `k` entries per entry reads as
+                    # one: a comprehension over the container AND something else (`[p + c for p in
+                    # res for c in letters]`) is the product of the two, taken to be at least 2
+                    if _crosses_itself(st.body, name) and multiple is not None:
+                        multiple = 2
+                        self.note(
+                            "assumed",
+                            f"`{name}` is rebuilt from itself with another generator each round: "
+                            "assumed to at least double, so exponential in the rounds",
+                            st.line,
+                        )
+                if multiple is not None and multiple >= 2:
+                    base_of[before.cap] = multiple
+                    self._geometric_after[name] = after
+        out: dict[Var, Poly] = {}
+        for cap, base in base_of.items():
+            start = self.cap_initial.get(cap, ZERO)
+            if start.is_zero() or base < 2:
+                continue
+            if rounds_var is not None:
+                size = (start * Poly.exp(rounds_var, base)).order()
+            else:
+                assert rounds_const is not None
+                size = (start * Poly.const(base ** int(rounds_const))).order()
+            out[cap] = size
+            for name, after in list(self._geometric_after.items()):
+                held = env.vars.get(name)
+                if isinstance(held, ContV) and held.cap == cap:
+                    plan.post[name] = ContV(
+                        kind=after.kind,
+                        length=(size * base).order(),
+                        elem=after.elem,
+                        uid=after.uid,
+                        owned=True,
+                        ragged=after.ragged,
+                    )
+        self._geometric_after.clear()
+        return out
 
     def _amortize(self, inner: Bundle, plan) -> Bundle:  # noqa: ANN001
         """The loop runs `amortized_total` times IN TOTAL across the enclosing loop, not per
@@ -2189,6 +2286,52 @@ def _is_qualified_chain(expr: Expr, env: Env) -> bool:
     while isinstance(node, Attribute):
         node = node.obj
     return isinstance(node, Name) and env.get(node.id) is None and node.id not in _SELF_NAMES
+
+
+def _self_multiple(poly: Poly, cap: Var) -> int | None:
+    """`a` when `poly` is `a * cap + (something without cap)` for a constant a >= 1, else None."""
+    multiple: Fraction | None = None
+    for power, rest in poly.extract_power(cap):
+        if power == 0:
+            continue
+        coefficient = rest.const_value() if power == 1 else None
+        if coefficient is None or coefficient < 1:
+            return None
+        multiple = coefficient
+    if multiple is None:
+        return None
+    return int(-(-multiple.numerator // multiple.denominator))  # ceil: stay an upper bound
+
+
+def _crosses_itself(body: tuple[Stmt, ...], name: str) -> bool:
+    """`name = [... for x in name for y in other]`: rebuilt as the product of itself and another
+    collection (a second generator) that does NOT depend on the entries of the first: letters to
+    append to every string so far multiply them, but the children of the nodes of a tree level
+    (`for c in node.children`) only add up to the nodes of the tree."""
+    for stmt in body:
+        for node in walk(stmt):
+            if not (
+                isinstance(node, Assign)
+                and node.op == "="
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], Name)
+                and node.targets[0].id == name
+                and isinstance(node.value, Comp)
+                and len(node.value.generators) >= 2
+            ):
+                continue
+            generators = node.value.generators
+            for first in generators:
+                if not (isinstance(first.iter, Name) and first.iter.id == name):
+                    continue
+                bound = {n.id for n in walk(first.target) if isinstance(n, Name)}
+                others = [g for g in generators if g is not first]
+                if others and all(
+                    not ({n.id for n in walk(g.iter) if isinstance(n, Name)} & bound)
+                    for g in others
+                ):
+                    return True
+    return False
 
 
 def _links_nodes(fdef: FuncDef) -> bool:
