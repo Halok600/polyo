@@ -55,6 +55,7 @@ from analysis.nodes import (
     walk,
 )
 from analysis.poly import Poly, Var, new_var
+from analysis.roles import NODE_ATTRS
 from analysis.values import (
     SCALAR,
     UNKNOWN,
@@ -106,6 +107,7 @@ class LoopPlan:
     phi_step: Fraction = Fraction(1)
     pinned: set[str] = field(default_factory=set)  # names the body re-assigns but may not widen
     drain: str | None = None  # name of the container this loop drains
+    guard: str | None = None  # the visited container that bounds the pushes onto the worklist
     index_pointers: list[tuple[str, ContV]] = field(default_factory=list)
 
 
@@ -122,15 +124,73 @@ class IterSpace:
 # ================================================================================== entry
 def plan_loop(it: Interp, loop: Loop, env: Env, loop_id: int) -> LoopPlan:
     if loop.kind == "for_each":
-        return _plan_for_each(it, loop, env)
+        plan = _plan_for_each(it, loop, env)
+        _mark_drain(it, loop, plan, env)  # for _ in range(len(q)): q.popleft()
+        _maybe_amortize(it, plan, loop, env)
+        return plan
     if loop.kind == "for_c":
         for stmt in loop.init:
             it.absorb(it.exec_stmt(stmt, env))
         plan = _plan_progress(it, loop.test, (*loop.body, *loop.update), env, loop)
     else:
         plan = _plan_progress(it, loop.test, loop.body, env, loop)
+    _mark_drain(it, loop, plan, env)
     _maybe_amortize(it, plan, loop, env)
     return plan
+
+
+def _container_named_by_size(it: Interp, expr: Expr, env: Env) -> str | None:
+    """The container whose size `expr` reads: `len(q)`, `q.size()`, `q.length`, or a variable
+    that was assigned one of those (`int size = q.size()`)."""
+    target = _length_target(expr)
+    if isinstance(target, Name) and isinstance(env.get(target.id), ContV):
+        return target.id
+    if isinstance(expr, Name):
+        value = env.get(expr.id)
+        if isinstance(value, IntV) and value.of is not None:
+            scope: Env | None = env
+            while scope is not None:
+                for held, candidate in scope.vars.items():
+                    if isinstance(candidate, ContV) and candidate.uid == value.of:
+                        return held
+                scope = scope.parent
+    return None
+
+
+def _pops_from(body: tuple[Stmt, ...], name: str) -> bool:
+    for stmt in body:
+        for node in walk(stmt):
+            if (
+                isinstance(node, Call)
+                and isinstance(node.func, Attribute)
+                and node.func.attr in POP_NAMES
+                and isinstance(node.func.obj, Name)
+                and node.func.obj.id == name
+            ):
+                return True
+    return False
+
+
+def _mark_drain(it: Interp, loop: Loop, plan: LoopPlan, env: Env) -> None:
+    """`for _ in range(len(q))` / `for (i = 0; i < size; i++)` whose body pops `q` once per round:
+    over all rounds it pops each element of `q` once, which is what bounds it when enclosed."""
+    if plan.drain is not None:
+        return
+    bound: Expr | None = None
+    if loop.kind == "for_each" and isinstance(loop.iter, Call) and loop.iter.args:
+        if isinstance(loop.iter.func, Name) and loop.iter.func.id in ("range", "xrange"):
+            bound = loop.iter.args[-1] if len(loop.iter.args) <= 2 else loop.iter.args[1]
+    elif (
+        loop.kind == "for_c"
+        and isinstance(loop.test, Compare)
+        and loop.test.op in ("<", "<=", "!=")
+    ):
+        bound = loop.test.right
+    if bound is None:
+        return
+    held = _container_named_by_size(it, bound, env)
+    if held is not None and _pops_from(loop.body, held):
+        plan.drain = held
 
 
 # ============================================================================== for-each
@@ -564,10 +624,12 @@ def _worklist_plan(
         # and only the arithmetic planner binds `i` so an inner `j < i` sums to a triangle
         return plan if head is None else None
     guard = _guard_container(it, body, env, name)
-    if guard is None:
-        return None  # pushes with no visited marker: no bound
-    gname, gvalue = guard
     popped = _popped_names(body, name, head)
+    if guard is None:
+        # a level-order walk pops inside a counting loop, so look at every pop in the body
+        return _tree_worklist(it, plan, body, name, value, _popped_anywhere(body, name))
+    gname, gvalue = guard
+    plan.guard = gname
     indexed: ContV | None = None
     for stmt in body:
         for node in walk(stmt):
@@ -609,6 +671,83 @@ def _worklist_plan(
             plan.bind[pname] = IntV(Poly.var(atom))
         plan.pinned = set(popped)
         plan.ragged_uid = uid
+    return plan
+
+
+def _popped_anywhere(body: tuple[Stmt, ...], container: str) -> list[str]:
+    """Names assigned from a pop of `container` anywhere in the body, nested loops included."""
+    names: list[str] = []
+    for stmt in body:
+        for node in walk(stmt):
+            if not isinstance(node, Assign) or node.value is None:
+                continue
+            if any(
+                isinstance(sub, Call)
+                and isinstance(sub.func, Attribute)
+                and sub.func.attr in POP_NAMES
+                and isinstance(sub.func.obj, Name)
+                and sub.func.obj.id == container
+                for sub in walk(node.value)
+            ):
+                for target in node.targets:
+                    if isinstance(target, Name):
+                        names.append(target.id)
+    return names
+
+
+def _tree_worklist(
+    it: Interp,
+    plan: LoopPlan,
+    body: tuple[Stmt, ...],
+    name: str,
+    value: ContV,
+    popped: list[str],
+) -> LoopPlan | None:
+    """A breadth-first walk of a tree or list: every push is a child link of a node just popped
+    (`q.append(node.left)`, `for c in node.children: q.append(c)`), and a node has one parent, so
+    each node enters the worklist once: the loop runs at most as many times as there are nodes."""
+    if not isinstance(value.elem, NodeV) or not popped:
+        return None
+    child_vars: set[str] = set()
+    for stmt in body:
+        for node in walk(stmt):
+            if (
+                isinstance(node, Loop)
+                and node.kind == "for_each"
+                and isinstance(node.target, Name)
+                and isinstance(node.iter, Attribute)
+                and isinstance(node.iter.obj, Name)
+                and node.iter.obj.id in popped
+                and node.iter.attr.lower() in NODE_ATTRS
+            ):
+                child_vars.add(node.target.id)
+    pushed: list[Expr] = []
+    for stmt in body:
+        for node in walk(stmt):
+            if (
+                isinstance(node, Call)
+                and isinstance(node.func, Attribute)
+                and node.func.attr in PUSH_NAMES
+                and isinstance(node.func.obj, Name)
+                and node.func.obj.id == name
+                and node.args
+            ):
+                pushed.append(node.args[0])
+    if not pushed:
+        return None
+    for arg in pushed:
+        child_link = (
+            isinstance(arg, Attribute)
+            and isinstance(arg.obj, Name)
+            and arg.obj.id in popped
+            and arg.attr.lower() in NODE_ATTRS
+        )
+        if not (child_link or (isinstance(arg, Name) and arg.id in child_vars)):
+            return None
+    initial = it.cap_initial.get(value.cap, ZERO) if value.cap is not None else ZERO
+    plan.iters = _ordered(value.elem.size + initial)
+    if value.cap is not None:
+        it.cap_override[value.cap] = plan.iters
     return plan
 
 
@@ -1294,6 +1433,21 @@ def _maybe_amortize(it: Interp, plan: LoopPlan, loop: Loop, env: Env) -> None:
                 if isinstance(held, ContV) and held.uid == current.uid:
                     plan.amortize_into = frame.id
                     plan.amortized_total = Poly.var(current.cap)
+                    return
+    # (d) pushes guarded by a visited marker that no enclosing iteration resets: every cell of the
+    # marker is pushed once in total, however many times the loop is started
+    if plan.guard is not None:
+        current = env.get(plan.guard)
+        if isinstance(current, ContV):
+            for frame in stack:
+                held = frame.entry_env.get(plan.guard)
+                if (
+                    isinstance(held, ContV)
+                    and held.uid == current.uid
+                    and not _reset_in(frame.loop, loop, plan.guard)
+                ):
+                    plan.amortize_into = frame.id
+                    plan.amortized_total = plan.iters
                     return
     # (c) an index pointer that is never reset
     if plan.index_pointers:

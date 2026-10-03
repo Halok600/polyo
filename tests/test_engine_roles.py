@@ -337,3 +337,25 @@ def test_capitalised_field_names_still_walk_a_linked_structure() -> None:
     source = "def f(root):\n    return f(root.Left) + f(root.Right)\n"
     func = lower_source(source, "python").functions[0]
     assert infer_roles(func)["root"].role == "node"
+
+
+def test_a_parameter_a_worklist_is_seeded_with_is_a_node_when_what_is_popped_has_children() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    source = (
+        "from collections import deque\n\n\ndef levels(root):\n    queue = deque([root]) if root else deque()\n"
+        "    while queue:\n        node = queue.popleft()\n        if node.left:\n            queue.append(node.left)\n"
+    )
+    assert infer_roles(lower_source(source, "python").functions[0])["root"].role == "node"
+
+
+def test_a_stack_seeded_with_a_parameter_gives_it_the_role_of_what_is_popped() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    source = (
+        "def walk(root):\n    stack = [root]\n    while stack:\n        node = stack.pop()\n"
+        "        if node.right:\n            stack.append(node.right)\n"
+    )
+    assert infer_roles(lower_source(source, "python").functions[0])["root"].role == "node"

@@ -1,0 +1,1550 @@
+[
+ {
+  "id": "heldout/two_sum_brute",
+  "language": "python",
+  "source": "def two_sum(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/merge_sorted",
+  "language": "python",
+  "source": "def merge(a, b):\n    out = []\n    i = j = 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    while i < len(a):\n        out.append(a[i])\n        i += 1\n    while j < len(b):\n        out.append(b[j])\n        j += 1\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/reverse_list",
+  "language": "python",
+  "source": "def reverse_list(head):\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/binary_search_iter",
+  "language": "python",
+  "source": "def search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        elif nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n",
+  "time_class": "O(log n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/bubble_sort",
+  "language": "python",
+  "source": "def bubble_sort(nums):\n    n = len(nums)\n    for i in range(n):\n        for j in range(n - i - 1):\n            if nums[j] > nums[j + 1]:\n                nums[j], nums[j + 1] = nums[j + 1], nums[j]\n    return nums\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/contains_duplicate",
+  "language": "python",
+  "source": "def contains_duplicate(nums):\n    seen = set()\n    for x in nums:\n        if x in seen:\n            return True\n        seen.add(x)\n    return False\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/matrix_multiply",
+  "language": "python",
+  "source": "def multiply(a, b):\n    n = len(a)\n    result = [[0] * n for _ in range(n)]\n    for i in range(n):\n        for j in range(n):\n            for k in range(n):\n                result[i][j] += a[i][k] * b[k][j]\n    return result\n",
+  "time_class": "O(n^3)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/fib_iterative",
+  "language": "python",
+  "source": "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/fib_table",
+  "language": "python",
+  "source": "def fib(n):\n    dp = [0] * (n + 2)\n    dp[1] = 1\n    for i in range(2, n + 1):\n        dp[i] = dp[i - 1] + dp[i - 2]\n    return dp[n]\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/is_palindrome_two_pointers",
+  "language": "python",
+  "source": "def is_palindrome(s):\n    left, right = 0, len(s) - 1\n    while left < right:\n        if s[left] != s[right]:\n            return False\n        left += 1\n        right -= 1\n    return True\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/rotate_extra_array",
+  "language": "python",
+  "source": "def rotate(nums, k):\n    n = len(nums)\n    out = [0] * n\n    for i in range(n):\n        out[(i + k) % n] = nums[i]\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/move_zeroes",
+  "language": "python",
+  "source": "def move_zeroes(nums):\n    write = 0\n    for read in range(len(nums)):\n        if nums[read] != 0:\n            nums[write] = nums[read]\n            write += 1\n    for i in range(write, len(nums)):\n        nums[i] = 0\n    return nums\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/subarray_sum_k",
+  "language": "python",
+  "source": "def subarray_sum(nums, k):\n    count = 0\n    prefix = 0\n    seen = {0: 1}\n    for x in nums:\n        prefix += x\n        count += seen.get(prefix - k, 0)\n        seen[prefix] = seen.get(prefix, 0) + 1\n    return count\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/product_except_self",
+  "language": "python",
+  "source": "def product_except_self(nums):\n    n = len(nums)\n    out = [1] * n\n    left = 1\n    for i in range(n):\n        out[i] = left\n        left *= nums[i]\n    right = 1\n    for i in range(n - 1, -1, -1):\n        out[i] *= right\n        right *= nums[i]\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/pascal_triangle",
+  "language": "python",
+  "source": "def generate(num_rows):\n    rows = []\n    for i in range(num_rows):\n        row = [1] * (i + 1)\n        for j in range(1, i):\n            row[j] = rows[i - 1][j - 1] + rows[i - 1][j]\n        rows.append(row)\n    return rows\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/reverse_words",
+  "language": "python",
+  "source": "def reverse_words(s):\n    words = s.split()\n    out = []\n    for i in range(len(words) - 1, -1, -1):\n        out.append(words[i])\n    return \" \".join(out)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/insertion_sort",
+  "language": "python",
+  "source": "def insertion_sort(nums):\n    for i in range(1, len(nums)):\n        key = nums[i]\n        j = i - 1\n        while j >= 0 and nums[j] > key:\n            nums[j + 1] = nums[j]\n            j -= 1\n        nums[j + 1] = key\n    return nums\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/digit_sum",
+  "language": "python",
+  "source": "def digit_sum(n):\n    total = 0\n    while n > 0:\n        total += n % 10\n        n //= 10\n    return total\n",
+  "time_class": "O(log n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/is_power_of_two_loop",
+  "language": "python",
+  "source": "def is_power_of_two(n):\n    if n < 1:\n        return False\n    while n % 2 == 0:\n        n //= 2\n    return n == 1\n",
+  "time_class": "O(log n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/max_profit",
+  "language": "python",
+  "source": "def max_profit(prices):\n    best = 0\n    low = prices[0]\n    for p in prices:\n        low = min(low, p)\n        best = max(best, p - low)\n    return best\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/container_most_water",
+  "language": "python",
+  "source": "def max_area(height):\n    left, right = 0, len(height) - 1\n    best = 0\n    while left < right:\n        best = max(best, min(height[left], height[right]) * (right - left))\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return best\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/transpose",
+  "language": "python",
+  "source": "def transpose(matrix):\n    rows, cols = len(matrix), len(matrix[0])\n    out = [[0] * rows for _ in range(cols)]\n    for i in range(rows):\n        for j in range(cols):\n            out[j][i] = matrix[i][j]\n    return out\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/count_inversions_brute",
+  "language": "python",
+  "source": "def count_inversions(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] > nums[j]:\n                count += 1\n    return count\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/linear_search",
+  "language": "python",
+  "source": "def find(nums, target):\n    for i, x in enumerate(nums):\n        if x == target:\n            return i\n    return -1\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/sliding_window_max",
+  "language": "python",
+  "source": "from collections import deque\n\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/group_by_length",
+  "language": "python",
+  "source": "def group_by_length(words):\n    groups = {}\n    for w in words:\n        groups.setdefault(len(w), []).append(w)\n    return groups\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/count_chars_loop",
+  "language": "python",
+  "source": "def char_counts(s):\n    counts = {}\n    for ch in s:\n        counts[ch] = counts.get(ch, 0) + 1\n    return counts\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/all_pairs_distance",
+  "language": "python",
+  "source": "def total_distance(points):\n    total = 0\n    for a in points:\n        for b in points:\n            total += abs(a - b)\n    return total\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/three_nested_count",
+  "language": "python",
+  "source": "def count_triples(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                if nums[i] + nums[j] == nums[k]:\n                    count += 1\n    return count\n",
+  "time_class": "O(n^3)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/flatten_nested",
+  "language": "python",
+  "source": "def flatten(lists):\n    out = []\n    for row in lists:\n        for x in row:\n            out.append(x)\n    return out\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": "a list of lists is rows x columns here"
+ },
+ {
+  "id": "heldout/halve_until_one_steps",
+  "language": "python",
+  "source": "def steps(n):\n    count = 0\n    while n > 1:\n        n = n // 2\n        count += 1\n    return count\n",
+  "time_class": "O(log n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/running_prefix_sums",
+  "language": "python",
+  "source": "def prefix_sums(nums):\n    out = []\n    total = 0\n    for x in nums:\n        total += x\n        out.append(total)\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/string_build_join",
+  "language": "python",
+  "source": "def build(n):\n    parts = []\n    for i in range(n):\n        parts.append(str(i))\n    return \",\".join(parts)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/list_membership_in_loop",
+  "language": "python",
+  "source": "def common(a, b):\n    out = []\n    for x in a:\n        if x in b:\n            out.append(x)\n    return out\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/sort_then_scan",
+  "language": "python",
+  "source": "def longest_run(nums):\n    nums = sorted(nums)\n    best = cur = 1\n    for i in range(1, len(nums)):\n        if nums[i] == nums[i - 1] + 1:\n            cur += 1\n        else:\n            cur = 1\n        best = max(best, cur)\n    return best\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/two_sum_hash",
+  "language": "cpp",
+  "source": "vector<int> twoSum(vector<int>& nums, int target) {\n    unordered_map<int, int> seen;\n    for (int i = 0; i < nums.size(); i++) {\n        int need = target - nums[i];\n        if (seen.count(need)) return {seen[need], i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/bubble_sort",
+  "language": "cpp",
+  "source": "void bubbleSort(vector<int>& a) {\n    int n = a.size();\n    for (int i = 0; i < n; i++) {\n        for (int j = 0; j + 1 < n - i; j++) {\n            if (a[j] > a[j + 1]) swap(a[j], a[j + 1]);\n        }\n    }\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/matrix_multiply",
+  "language": "cpp",
+  "source": "vector<vector<int>> multiply(vector<vector<int>>& a, vector<vector<int>>& b) {\n    int n = a.size();\n    vector<vector<int>> c(n, vector<int>(n, 0));\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n; j++)\n            for (int k = 0; k < n; k++)\n                c[i][j] += a[i][k] * b[k][j];\n    return c;\n}\n",
+  "time_class": "O(n^3)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/max_subarray",
+  "language": "cpp",
+  "source": "int maxSubArray(vector<int>& nums) {\n    int best = nums[0], cur = nums[0];\n    for (int i = 1; i < nums.size(); i++) {\n        cur = max(nums[i], cur + nums[i]);\n        best = max(best, cur);\n    }\n    return best;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/reverse_string_inplace",
+  "language": "cpp",
+  "source": "void reverseString(vector<char>& s) {\n    int l = 0, r = s.size() - 1;\n    while (l < r) {\n        swap(s[l], s[r]);\n        l++;\n        r--;\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/count_primes_trial",
+  "language": "cpp",
+  "source": "int countPrimes(int n) {\n    int count = 0;\n    for (int i = 2; i < n; i++) {\n        bool prime = true;\n        for (int j = 2; j * j <= i; j++) {\n            if (i % j == 0) { prime = false; break; }\n        }\n        if (prime) count++;\n    }\n    return count;\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/unique_sorted_copy",
+  "language": "cpp",
+  "source": "vector<int> uniqueSorted(vector<int> nums) {\n    sort(nums.begin(), nums.end());\n    vector<int> out;\n    for (int i = 0; i < nums.size(); i++) {\n        if (i == 0 || nums[i] != nums[i - 1]) out.push_back(nums[i]);\n    }\n    return out;\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/lower_bound_loop",
+  "language": "cpp",
+  "source": "int countLess(vector<int>& sorted, vector<int>& queries) {\n    int total = 0;\n    for (int q : queries) {\n        total += lower_bound(sorted.begin(), sorted.end(), q) - sorted.begin();\n    }\n    return total;\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/two_sum_hash",
+  "language": "java",
+  "source": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> seen = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int need = target - nums[i];\n            if (seen.containsKey(need)) return new int[]{seen.get(need), i};\n            seen.put(nums[i], i);\n        }\n        return new int[0];\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/selection_sort",
+  "language": "java",
+  "source": "class Solution {\n    public void selectionSort(int[] a) {\n        for (int i = 0; i < a.length; i++) {\n            int min = i;\n            for (int j = i + 1; j < a.length; j++) {\n                if (a[j] < a[min]) min = j;\n            }\n            int t = a[i]; a[i] = a[min]; a[min] = t;\n        }\n    }\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/valid_parentheses",
+  "language": "java",
+  "source": "class Solution {\n    public boolean isValid(String s) {\n        Deque<Character> stack = new ArrayDeque<>();\n        for (char c : s.toCharArray()) {\n            if (c == '(' || c == '[' || c == '{') stack.push(c);\n            else {\n                if (stack.isEmpty()) return false;\n                char top = stack.pop();\n                if ((c == ')' && top != '(') || (c == ']' && top != '[') || (c == '}' && top != '{')) return false;\n            }\n        }\n        return stack.isEmpty();\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/fib_array",
+  "language": "java",
+  "source": "class Solution {\n    public int fib(int n) {\n        if (n < 2) return n;\n        int[] dp = new int[n + 1];\n        dp[1] = 1;\n        for (int i = 2; i <= n; i++) dp[i] = dp[i - 1] + dp[i - 2];\n        return dp[n];\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/count_pairs_with_diff",
+  "language": "java",
+  "source": "class Solution {\n    public int countPairs(int[] nums, int k) {\n        int count = 0;\n        for (int i = 0; i < nums.length; i++) {\n            for (int j = i + 1; j < nums.length; j++) {\n                if (Math.abs(nums[i] - nums[j]) == k) count++;\n            }\n        }\n        return count;\n    }\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/two_sum_hash",
+  "language": "javascript",
+  "source": "function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/insertion_sort",
+  "language": "javascript",
+  "source": "function insertionSort(a) {\n  for (let i = 1; i < a.length; i++) {\n    const key = a[i];\n    let j = i - 1;\n    while (j >= 0 && a[j] > key) {\n      a[j + 1] = a[j];\n      j--;\n    }\n    a[j + 1] = key;\n  }\n  return a;\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/squares_map",
+  "language": "javascript",
+  "source": "function squares(nums) {\n  return nums.map((x) => x * x);\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/nested_includes",
+  "language": "javascript",
+  "source": "function common(a, b) {\n  const out = [];\n  for (const x of a) {\n    if (b.includes(x)) out.push(x);\n  }\n  return out;\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/two_sum_hash",
+  "language": "go",
+  "source": "func twoSum(nums []int, target int) []int {\n    seen := make(map[int]int)\n    for i, x := range nums {\n        if j, ok := seen[target-x]; ok {\n            return []int{j, i}\n        }\n        seen[x] = i\n    }\n    return nil\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/reverse_slice",
+  "language": "go",
+  "source": "func reverse(a []int) {\n    for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {\n        a[i], a[j] = a[j], a[i]\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/matrix_sum",
+  "language": "go",
+  "source": "func sum(grid [][]int) int {\n    total := 0\n    for i := 0; i < len(grid); i++ {\n        for j := 0; j < len(grid[i]); j++ {\n            total += grid[i][j]\n        }\n    }\n    return total\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/count_evens",
+  "language": "c",
+  "source": "int countEvens(int* a, int n) {\n    int count = 0;\n    for (int i = 0; i < n; i++) {\n        if (a[i] % 2 == 0) count++;\n    }\n    return count;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout/pair_count",
+  "language": "c",
+  "source": "int pairs(int* a, int n, int k) {\n    int count = 0;\n    for (int i = 0; i < n; i++) {\n        for (int j = i + 1; j < n; j++) {\n            if (a[i] + a[j] == k) count++;\n        }\n    }\n    return count;\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/reverse_in_place",
+  "language": "python",
+  "source": "def reverse(nums):\n    i, j = 0, len(nums) - 1\n    while i < j:\n        nums[i], nums[j] = nums[j], nums[i]\n        i += 1\n        j -= 1\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/reverse_copy_slice",
+  "language": "python",
+  "source": "def reverse(nums):\n    return nums[::-1]\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/zero_rows_with_sets",
+  "language": "python",
+  "source": "def set_zeroes(matrix):\n    rows, cols = set(), set()\n    for i in range(len(matrix)):\n        for j in range(len(matrix[0])):\n            if matrix[i][j] == 0:\n                rows.add(i)\n                cols.add(j)\n    for i in range(len(matrix)):\n        for j in range(len(matrix[0])):\n            if i in rows or j in cols:\n                matrix[i][j] = 0\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/zero_in_place_first_row",
+  "language": "python",
+  "source": "def set_zeroes(matrix):\n    first_row = any(x == 0 for x in matrix[0])\n    first_col = any(row[0] == 0 for row in matrix)\n    for i in range(1, len(matrix)):\n        for j in range(1, len(matrix[0])):\n            if matrix[i][j] == 0:\n                matrix[i][0] = 0\n                matrix[0][j] = 0\n    for i in range(1, len(matrix)):\n        for j in range(1, len(matrix[0])):\n            if matrix[i][0] == 0 or matrix[0][j] == 0:\n                matrix[i][j] = 0\n    if first_row:\n        for j in range(len(matrix[0])):\n            matrix[0][j] = 0\n    if first_col:\n        for i in range(len(matrix)):\n            matrix[i][0] = 0\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/dp_table_two_dimensional",
+  "language": "python",
+  "source": "def lcs(a, b):\n    dp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\n    for i in range(1, len(a) + 1):\n        for j in range(1, len(b) + 1):\n            if a[i - 1] == b[j - 1]:\n                dp[i][j] = dp[i - 1][j - 1] + 1\n            else:\n                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n    return dp[len(a)][len(b)]\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/dp_two_rows",
+  "language": "python",
+  "source": "def lcs(a, b):\n    prev = [0] * (len(b) + 1)\n    for i in range(1, len(a) + 1):\n        cur = [0] * (len(b) + 1)\n        for j in range(1, len(b) + 1):\n            if a[i - 1] == b[j - 1]:\n                cur[j] = prev[j - 1] + 1\n            else:\n                cur[j] = max(prev[j], cur[j - 1])\n        prev = cur\n    return prev[len(b)]\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/fib_two_variables",
+  "language": "python",
+  "source": "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/generator_sum_is_lazy",
+  "language": "python",
+  "source": "def sum_squares(nums):\n    return sum(x * x for x in nums)\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/list_comprehension_is_materialised",
+  "language": "python",
+  "source": "def sum_squares(nums):\n    return sum([x * x for x in nums])\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/any_over_generator",
+  "language": "python",
+  "source": "def has_negative(nums):\n    return any(x < 0 for x in nums)\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/max_is_constant_space",
+  "language": "python",
+  "source": "def biggest(nums):\n    return max(nums)\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/sorted_copy_last",
+  "language": "python",
+  "source": "def biggest(nums):\n    return sorted(nums)[-1]\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/sort_in_place",
+  "language": "python",
+  "source": "def order(nums):\n    nums.sort()\n    return nums\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/heapify_in_place",
+  "language": "python",
+  "source": "import heapq\n\n\ndef smallest_first(nums):\n    heapq.heapify(nums)\n    return nums\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/set_of_input",
+  "language": "python",
+  "source": "def distinct_count(nums):\n    return len(set(nums))\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/range_loop_is_constant_space",
+  "language": "python",
+  "source": "def total(n):\n    s = 0\n    for i in range(n):\n        s += i\n    return s\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/list_of_range_is_linear",
+  "language": "python",
+  "source": "def total(n):\n    return sum(list(range(n)))\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/string_concat_result",
+  "language": "python",
+  "source": "def repeat(s, k):\n    out = \"\"\n    for _ in range(k):\n        out += s\n    return out\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/join_parts",
+  "language": "python",
+  "source": "def repeat(s, k):\n    parts = []\n    for _ in range(k):\n        parts.append(s)\n    return \"\".join(parts)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/string_to_chars_reverse",
+  "language": "python",
+  "source": "def reverse_words(s):\n    chars = list(s)\n    chars.reverse()\n    return \"\".join(chars)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/palindrome_by_reversing",
+  "language": "python",
+  "source": "def is_pal(s):\n    return s == s[::-1]\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/palindrome_two_pointers",
+  "language": "python",
+  "source": "def is_pal(s):\n    i, j = 0, len(s) - 1\n    while i < j:\n        if s[i] != s[j]:\n            return False\n        i += 1\n        j -= 1\n    return True\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/anagram_by_sorting",
+  "language": "python",
+  "source": "def is_anagram(a, b):\n    return sorted(a) == sorted(b)\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/flatten_grid",
+  "language": "python",
+  "source": "def flatten(grid):\n    out = []\n    for row in grid:\n        for x in row:\n            out.append(x)\n    return out\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/grid_transpose",
+  "language": "python",
+  "source": "def transpose(grid):\n    return [[grid[i][j] for i in range(len(grid))] for j in range(len(grid[0]))]\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/reverse_linked_list_in_place",
+  "language": "python",
+  "source": "def reverse(head):\n    prev = None\n    while head:\n        nxt = head.next\n        head.next = prev\n        prev = head\n        head = nxt\n    return prev\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/copy_list_with_map",
+  "language": "python",
+  "source": "def copy_nodes(head):\n    clones = {}\n    cur = head\n    while cur:\n        clones[cur] = Node(cur.val)\n        cur = cur.next\n    cur = head\n    while cur:\n        clones[cur].next = clones.get(cur.next)\n        cur = cur.next\n    return clones.get(head)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/rotate_by_triple_reverse",
+  "language": "python",
+  "source": "def rotate(nums, k):\n    n = len(nums)\n    k %= n\n\n    def rev(i, j):\n        while i < j:\n            nums[i], nums[j] = nums[j], nums[i]\n            i += 1\n            j -= 1\n\n    rev(0, n - 1)\n    rev(0, k - 1)\n    rev(k, n - 1)\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/prefix_sums_array",
+  "language": "python",
+  "source": "def prefix(nums):\n    out = [0] * (len(nums) + 1)\n    for i, x in enumerate(nums):\n        out[i + 1] = out[i] + x\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/counting_sort_fixed_range",
+  "language": "python",
+  "source": "def counting_sort(nums):\n    counts = [0] * 101\n    for x in nums:\n        counts[x] += 1\n    out = []\n    for v in range(101):\n        out.extend([v] * counts[v])\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/bfs_queue",
+  "language": "python",
+  "source": "from collections import deque\n\n\ndef bfs(graph, start):\n    seen = {start}\n    queue = deque([start])\n    while queue:\n        u = queue.popleft()\n        for v in graph[u]:\n            if v not in seen:\n                seen.add(v)\n                queue.append(v)\n    return len(seen)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/binary_search_recursive_slices",
+  "language": "python",
+  "source": "def search(nums, target):\n    if not nums:\n        return False\n    mid = len(nums) // 2\n    if nums[mid] == target:\n        return True\n    if nums[mid] < target:\n        return search(nums[mid + 1:], target)\n    return search(nums[:mid], target)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/digit_string_of_number",
+  "language": "python",
+  "source": "def digit_sum(n):\n    return sum(int(c) for c in str(n))\n",
+  "time_class": "O(log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/two_sum_hash_cpp",
+  "language": "cpp",
+  "source": "vector<int> twoSum(vector<int>& nums, int target) {\n    unordered_map<int, int> seen;\n    for (int i = 0; i < nums.size(); i++) {\n        auto it = seen.find(target - nums[i]);\n        if (it != seen.end()) return {it->second, i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/std_sort_cpp",
+  "language": "cpp",
+  "source": "void order(vector<int>& nums) {\n    sort(nums.begin(), nums.end());\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/copy_then_sort_cpp",
+  "language": "cpp",
+  "source": "vector<int> ordered(vector<int> nums) {\n    sort(nums.begin(), nums.end());\n    return nums;\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/array_sort_java",
+  "language": "java",
+  "source": "class Solution {\n    public int[] order(int[] nums) {\n        Arrays.sort(nums);\n        return nums;\n    }\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/collections_sort_java",
+  "language": "java",
+  "source": "class Solution {\n    public List<Integer> order(List<Integer> nums) {\n        Collections.sort(nums);\n        return nums;\n    }\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/string_builder_java",
+  "language": "java",
+  "source": "class Solution {\n    public String repeat(String s, int k) {\n        StringBuilder sb = new StringBuilder();\n        for (int i = 0; i < k; i++) sb.append(s);\n        return sb.toString();\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/sort_slice_go",
+  "language": "go",
+  "source": "func order(nums []int) []int {\n    sort.Ints(nums)\n    return nums\n}\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/map_counts_go",
+  "language": "go",
+  "source": "func counts(nums []int) map[int]int {\n    m := make(map[int]int)\n    for _, x := range nums {\n        m[x]++\n    }\n    return m\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/array_copy_js",
+  "language": "javascript",
+  "source": "function copy(nums) {\n  return [...nums];\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space/set_membership_js",
+  "language": "javascript",
+  "source": "function hasDup(nums) {\n  const seen = new Set();\n  for (const x of nums) {\n    if (seen.has(x)) return true;\n    seen.add(x);\n  }\n  return false;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/visited_matrix",
+  "language": "python",
+  "source": "def count_land(grid):\n    n, m = len(grid), len(grid[0])\n    visited = [[False] * m for _ in range(n)]\n    count = 0\n    for i in range(n):\n        for j in range(m):\n            if grid[i][j] == 1 and not visited[i][j]:\n                count += 1\n                stack = [(i, j)]\n                visited[i][j] = True\n                while stack:\n                    r, c = stack.pop()\n                    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n                        nr, nc = r + dr, c + dc\n                        if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == 1 and not visited[nr][nc]:\n                            visited[nr][nc] = True\n                            stack.append((nr, nc))\n    return count\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/slice_in_loop_is_a_temporary",
+  "language": "python",
+  "source": "def count_pal_suffixes(s):\n    count = 0\n    for i in range(len(s)):\n        tail = s[i:]\n        if tail == tail[::-1]:\n            count += 1\n    return count\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/counter_of_input",
+  "language": "python",
+  "source": "from collections import Counter\n\n\ndef most_common(nums):\n    counts = Counter(nums)\n    return max(counts, key=counts.get)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/sorted_set_of_input",
+  "language": "python",
+  "source": "def distinct_sorted(nums):\n    return sorted(set(nums))\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/split_words",
+  "language": "python",
+  "source": "def word_count(s):\n    return len(s.split())\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/dict_zip",
+  "language": "python",
+  "source": "def to_dict(keys, values):\n    return dict(zip(keys, values))\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/zip_is_lazy_in_loop",
+  "language": "python",
+  "source": "def dot(a, b):\n    total = 0\n    for x, y in zip(a, b):\n        total += x * y\n    return total\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/list_zip_is_materialised",
+  "language": "python",
+  "source": "def pairs(a, b):\n    return list(zip(a, b))\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/group_by_key",
+  "language": "python",
+  "source": "from collections import defaultdict\n\n\ndef group(words):\n    groups = defaultdict(list)\n    for w in words:\n        groups[\"\".join(sorted(w))].append(w)\n    return list(groups.values())\n",
+  "time_class": "O(n^3)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": "a word has its own length variable: n * m log m"
+ },
+ {
+  "id": "heldout_space2/bfs_levels",
+  "language": "python",
+  "source": "from collections import deque\n\n\ndef levels(root):\n    out = []\n    queue = deque([root]) if root else deque()\n    while queue:\n        level = []\n        for _ in range(len(queue)):\n            node = queue.popleft()\n            level.append(node.val)\n            if node.left:\n                queue.append(node.left)\n            if node.right:\n                queue.append(node.right)\n        out.append(level)\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/accumulate_prefix",
+  "language": "python",
+  "source": "def running_totals(nums):\n    totals = []\n    s = 0\n    for x in nums:\n        s += x\n        totals.append(s)\n    return totals\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/in_place_dedupe_sorted",
+  "language": "python",
+  "source": "def dedupe(nums):\n    if not nums:\n        return 0\n    write = 1\n    for read in range(1, len(nums)):\n        if nums[read] != nums[read - 1]:\n            nums[write] = nums[read]\n            write += 1\n    return write\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/reversed_join",
+  "language": "python",
+  "source": "def reverse(s):\n    return \"\".join(reversed(s))\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/matrix_row_sums",
+  "language": "python",
+  "source": "def row_sums(grid):\n    return [sum(row) for row in grid]\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/diagonal_without_storage",
+  "language": "python",
+  "source": "def trace(grid):\n    total = 0\n    for i in range(len(grid)):\n        total += grid[i][i]\n    return total\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/recursion_depth_only",
+  "language": "python",
+  "source": "def depth(n):\n    if n == 0:\n        return 0\n    return 1 + depth(n - 1)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/two_pointer_merge_into_new",
+  "language": "python",
+  "source": "def merge(a, b):\n    out = []\n    i = j = 0\n    while i < len(a) or j < len(b):\n        if j == len(b) or (i < len(a) and a[i] <= b[j]):\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    return out\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/sieve_flags",
+  "language": "python",
+  "source": "def primes_up_to(n):\n    flags = [True] * (n + 1)\n    flags[0] = flags[1] = False\n    for i in range(2, n + 1):\n        if flags[i]:\n            for j in range(i * i, n + 1, i):\n                flags[j] = False\n    return [i for i in range(n + 1) if flags[i]]\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/stack_of_open_brackets",
+  "language": "python",
+  "source": "def balanced(s):\n    stack = []\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    for ch in s:\n        if ch in pairs.values():\n            stack.append(ch)\n        elif not stack or stack.pop() != pairs[ch]:\n            return False\n    return not stack\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/vector_of_vectors_cpp",
+  "language": "cpp",
+  "source": "vector<vector<int>> makeGrid(int n, int m) {\n    vector<vector<int>> g(n, vector<int>(m, 0));\n    return g;\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/array_in_place_cpp",
+  "language": "cpp",
+  "source": "void reverseInPlace(vector<int>& a) {\n    int i = 0, j = (int)a.size() - 1;\n    while (i < j) swap(a[i++], a[j--]);\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/unordered_set_cpp",
+  "language": "cpp",
+  "source": "bool hasDuplicate(vector<int>& nums) {\n    unordered_set<int> seen;\n    for (int x : nums) {\n        if (!seen.insert(x).second) return true;\n    }\n    return false;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/stack_cpp",
+  "language": "cpp",
+  "source": "int evalRPN(vector<string>& tokens) {\n    stack<int> st;\n    for (auto& t : tokens) {\n        if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n            int b = st.top(); st.pop();\n            int a = st.top(); st.pop();\n            st.push(t == \"+\" ? a + b : t == \"-\" ? a - b : t == \"*\" ? a * b : a / b);\n        } else {\n            st.push(stoi(t));\n        }\n    }\n    return st.top();\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/int_matrix_java",
+  "language": "java",
+  "source": "class Solution {\n    public int[][] identity(int n) {\n        int[][] g = new int[n][n];\n        for (int i = 0; i < n; i++) g[i][i] = 1;\n        return g;\n    }\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/hashset_java",
+  "language": "java",
+  "source": "class Solution {\n    public boolean hasDuplicate(int[] nums) {\n        Set<Integer> seen = new HashSet<>();\n        for (int x : nums) {\n            if (!seen.add(x)) return true;\n        }\n        return false;\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/string_chars_java",
+  "language": "java",
+  "source": "class Solution {\n    public String reverse(String s) {\n        char[] chars = s.toCharArray();\n        int i = 0, j = chars.length - 1;\n        while (i < j) {\n            char t = chars[i]; chars[i] = chars[j]; chars[j] = t;\n            i++; j--;\n        }\n        return new String(chars);\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/object_map_js",
+  "language": "javascript",
+  "source": "function countWords(words) {\n  const counts = {};\n  for (const w of words) {\n    counts[w] = (counts[w] || 0) + 1;\n  }\n  return counts;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/array_fill_js",
+  "language": "javascript",
+  "source": "function zeros(n) {\n  return new Array(n).fill(0);\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/two_pointer_js",
+  "language": "javascript",
+  "source": "function isPalindrome(s) {\n  let i = 0, j = s.length - 1;\n  while (i < j) {\n    if (s[i] !== s[j]) return false;\n    i++;\n    j--;\n  }\n  return true;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/append_go",
+  "language": "go",
+  "source": "func evens(nums []int) []int {\n    out := []int{}\n    for _, x := range nums {\n        if x%2 == 0 {\n            out = append(out, x)\n        }\n    }\n    return out\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/grid_make_go",
+  "language": "go",
+  "source": "func grid(n, m int) [][]int {\n    g := make([][]int, n)\n    for i := range g {\n        g[i] = make([]int, m)\n    }\n    return g\n}\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/running_max_go",
+  "language": "go",
+  "source": "func maxOf(nums []int) int {\n    best := nums[0]\n    for _, x := range nums {\n        if x > best {\n            best = x\n        }\n    }\n    return best\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/c_array_malloc",
+  "language": "c",
+  "source": "int* squares(int n) {\n    int* out = malloc(n * sizeof(int));\n    for (int i = 0; i < n; i++) out[i] = i * i;\n    return out;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_space2/c_in_place_sum",
+  "language": "c",
+  "source": "int sum(int* a, int n) {\n    int s = 0;\n    for (int i = 0; i < n; i++) s += a[i];\n    return s;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(1)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/power_naive",
+  "language": "python",
+  "source": "def power(x, n):\n    if n == 0:\n        return 1\n    return x * power(x, n - 1)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/sum_digits",
+  "language": "python",
+  "source": "def sum_digits(n):\n    if n == 0:\n        return 0\n    return n % 10 + sum_digits(n // 10)\n",
+  "time_class": "O(log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/reverse_string_slices",
+  "language": "python",
+  "source": "def reverse(s):\n    if len(s) <= 1:\n        return s\n    return reverse(s[1:]) + s[0]\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/palindrome_two_index",
+  "language": "python",
+  "source": "def is_pal(s, i, j):\n    if i >= j:\n        return True\n    if s[i] != s[j]:\n        return False\n    return is_pal(s, i + 1, j - 1)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/inorder_collect",
+  "language": "python",
+  "source": "def inorder(root, out):\n    if root is None:\n        return\n    inorder(root.left, out)\n    out.append(root.val)\n    inorder(root.right, out)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/invert_tree",
+  "language": "python",
+  "source": "def invert(root):\n    if root is None:\n        return None\n    root.left, root.right = invert(root.right), invert(root.left)\n    return root\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/same_tree",
+  "language": "python",
+  "source": "def same(p, q):\n    if p is None and q is None:\n        return True\n    if p is None or q is None:\n        return False\n    return p.val == q.val and same(p.left, q.left) and same(p.right, q.right)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/climb_stairs_naive",
+  "language": "python",
+  "source": "def climb(n):\n    if n <= 2:\n        return n\n    return climb(n - 1) + climb(n - 2)\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/climb_stairs_memo",
+  "language": "python",
+  "source": "def climb(n, memo):\n    if n <= 2:\n        return n\n    if n in memo:\n        return memo[n]\n    memo[n] = climb(n - 1, memo) + climb(n - 2, memo)\n    return memo[n]\n\n\ndef climb_stairs(n):\n    return climb(n, {})\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/factorial_tail",
+  "language": "python",
+  "source": "def fact(n, acc):\n    if n <= 1:\n        return acc\n    return fact(n - 1, acc * n)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/count_down",
+  "language": "python",
+  "source": "def count_down(n):\n    if n < 0:\n        return\n    count_down(n - 1)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/is_palindrome_slices",
+  "language": "python",
+  "source": "def is_pal(s):\n    if len(s) <= 1:\n        return True\n    if s[0] != s[-1]:\n        return False\n    return is_pal(s[1:-1])\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/count_leaves",
+  "language": "python",
+  "source": "def leaves(root):\n    if root is None:\n        return 0\n    if root.left is None and root.right is None:\n        return 1\n    return leaves(root.left) + leaves(root.right)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/min_depth_nary",
+  "language": "python",
+  "source": "def depth(node):\n    if node is None:\n        return 0\n    best = 0\n    for child in node.children:\n        best = max(best, depth(child))\n    return best + 1\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/merge_sort_return_lists",
+  "language": "python",
+  "source": "def msort(a):\n    if len(a) <= 1:\n        return a\n    mid = len(a) // 2\n    left = msort(a[:mid])\n    right = msort(a[mid:])\n    out = []\n    i = j = 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i])\n            i += 1\n        else:\n            out.append(right[j])\n            j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n",
+  "time_class": "O(n log n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/binary_exponent_rec",
+  "language": "python",
+  "source": "def pow2(x, n):\n    if n == 0:\n        return 1\n    half = pow2(x, n // 2)\n    if n % 2:\n        return half * half * x\n    return half * half\n",
+  "time_class": "O(log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/subset_sum_bool",
+  "language": "python",
+  "source": "def can(nums, i, target):\n    if target == 0:\n        return True\n    if i == len(nums) or target < 0:\n        return False\n    return can(nums, i + 1, target - nums[i]) or can(nums, i + 1, target)\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/lru_fib",
+  "language": "python",
+  "source": "from functools import lru_cache\n\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/nested_dfs_visited_set",
+  "language": "python",
+  "source": "def count_components(graph):\n    seen = set()\n\n    def dfs(u):\n        seen.add(u)\n        for v in graph[u]:\n            if v not in seen:\n                dfs(v)\n\n    count = 0\n    for u in range(len(graph)):\n        if u not in seen:\n            count += 1\n            dfs(u)\n    return count\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": "class of O(n + m) is O(n)"
+ },
+ {
+  "id": "heldout_rec/fib_cpp_naive",
+  "language": "cpp",
+  "source": "int fib(int n) {\n    if (n < 2) return n;\n    return fib(n - 1) + fib(n - 2);\n}\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/tree_height_java",
+  "language": "java",
+  "source": "class Solution {\n    public int height(TreeNode root) {\n        if (root == null) return 0;\n        return 1 + Math.max(height(root.left), height(root.right));\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/hanoi_js",
+  "language": "javascript",
+  "source": "function hanoi(n, from, to, via) {\n  if (n === 0) return 0;\n  return hanoi(n - 1, from, via, to) + 1 + hanoi(n - 1, via, to, from);\n}\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/sum_array_go",
+  "language": "go",
+  "source": "func sum(nums []int, i int) int {\n    if i == len(nums) {\n        return 0\n    }\n    return nums[i] + sum(nums, i+1)\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/gcd_c",
+  "language": "c",
+  "source": "int gcd(int a, int b) {\n    if (b == 0) return a;\n    return gcd(b, a % b);\n}\n",
+  "time_class": "O(log n)",
+  "space_class": "O(log n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/quick_sort_lists",
+  "language": "python",
+  "source": "def qsort(a):\n    if len(a) <= 1:\n        return a\n    pivot = a[0]\n    left = [x for x in a[1:] if x < pivot]\n    right = [x for x in a[1:] if x >= pivot]\n    return qsort(left) + [pivot] + qsort(right)\n",
+  "time_class": "UNKNOWN",
+  "space_class": "UNKNOWN",
+  "expect": "unknown",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/collatz",
+  "language": "python",
+  "source": "def collatz(n):\n    if n == 1:\n        return 0\n    if n % 2 == 0:\n        return 1 + collatz(n // 2)\n    return 1 + collatz(3 * n + 1)\n",
+  "time_class": "UNKNOWN",
+  "space_class": "UNKNOWN",
+  "expect": "unknown",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/flatten_nested",
+  "language": "python",
+  "source": "def flatten(items):\n    out = []\n    for x in items:\n        if isinstance(x, list):\n            out.extend(flatten(x))\n        else:\n            out.append(x)\n    return out\n",
+  "time_class": "UNKNOWN",
+  "space_class": "UNKNOWN",
+  "expect": "unknown",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec/permutations_used_array",
+  "language": "python",
+  "source": "def permute(nums, path, used):\n    if len(path) == len(nums):\n        return 1\n    count = 0\n    for i in range(len(nums)):\n        if used[i]:\n            continue\n        used[i] = True\n        path.append(nums[i])\n        count += permute(nums, path, used)\n        path.pop()\n        used[i] = False\n    return count\n",
+  "time_class": "UNKNOWN",
+  "space_class": "UNKNOWN",
+  "expect": "unknown",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/java field memo",
+  "language": "java",
+  "source": "\nclass Solution {\n    Map<Integer, Integer> memo = new HashMap<>();\n    public int fib(int n) {\n        if (n < 2) return n;\n        if (memo.containsKey(n)) return memo.get(n);\n        int r = fib(n - 1) + fib(n - 2);\n        memo.put(n, r);\n        return r;\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/cpp vector memo param",
+  "language": "cpp",
+  "source": "\nint fib(int n, vector<int>& memo) {\n    if (n < 2) return n;\n    if (memo[n] != -1) return memo[n];\n    memo[n] = fib(n - 1, memo) + fib(n - 2, memo);\n    return memo[n];\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/cpp global map memo",
+  "language": "cpp",
+  "source": "\nunordered_map<int, int> memo;\nint fib(int n) {\n    if (n < 2) return n;\n    if (memo.count(n)) return memo[n];\n    return memo[n] = fib(n - 1) + fib(n - 2);\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/js object memo",
+  "language": "javascript",
+  "source": "\nconst memo = {};\nfunction fib(n) {\n  if (n < 2) return n;\n  if (n in memo) return memo[n];\n  memo[n] = fib(n - 1) + fib(n - 2);\n  return memo[n];\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/go package memo",
+  "language": "go",
+  "source": "\nvar memo = map[int]int{}\n\nfunc fib(n int) int {\n    if n < 2 {\n        return n\n    }\n    if v, ok := memo[n]; ok {\n        return v\n    }\n    memo[n] = fib(n-1) + fib(n-2)\n    return memo[n]\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/java naive fib",
+  "language": "java",
+  "source": "\nclass Solution {\n    public int fib(int n) {\n        if (n < 2) return n;\n        return fib(n - 1) + fib(n - 2);\n    }\n}\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/cpp dfs visited vector",
+  "language": "cpp",
+  "source": "\nvoid dfs(vector<vector<int>>& graph, int u, vector<bool>& visited) {\n    visited[u] = true;\n    for (int v : graph[u]) {\n        if (!visited[v]) dfs(graph, v, visited);\n    }\n}\nint countReachable(vector<vector<int>>& graph, int start) {\n    vector<bool> visited(graph.size(), false);\n    dfs(graph, start, visited);\n    int c = 0;\n    for (bool b : visited) if (b) c++;\n    return c;\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/java tree max depth",
+  "language": "java",
+  "source": "\nclass Solution {\n    public int maxDepth(TreeNode root) {\n        if (root == null) return 0;\n        return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n    }\n}\n",
+  "time_class": "O(n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ },
+ {
+  "id": "heldout_rec2/python binary tree paths",
+  "language": "python",
+  "source": "\ndef paths(root, prefix, out):\n    if root is None:\n        return\n    prefix.append(root.val)\n    if root.left is None and root.right is None:\n        out.append(list(prefix))\n    paths(root.left, prefix, out)\n    paths(root.right, prefix, out)\n    prefix.pop()\n",
+  "time_class": "O(n^2)",
+  "space_class": "O(n^2)",
+  "expect": "exact",
+  "note": "copying the path at each leaf costs the depth"
+ },
+ {
+  "id": "heldout_rec2/js permutations swap",
+  "language": "javascript",
+  "source": "\nfunction permute(nums, i) {\n  if (i === nums.length) return 1;\n  let count = 0;\n  for (let j = i; j < nums.length; j++) {\n    [nums[i], nums[j]] = [nums[j], nums[i]];\n    count += permute(nums, i + 1);\n    [nums[i], nums[j]] = [nums[j], nums[i]];\n  }\n  return count;\n}\n",
+  "time_class": "O(2^n)",
+  "space_class": "O(n)",
+  "expect": "exact",
+  "note": ""
+ }
+]

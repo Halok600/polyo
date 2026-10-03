@@ -21,7 +21,9 @@ from analysis.nodes import (
     Compare,
     Expr,
     FuncDef,
+    IfExp,
     Lambda,
+    ListLit,
     Loop,
     Name,
     New,
@@ -205,6 +207,21 @@ def infer_roles(
             return
         container_depth[root[0]] = max(container_depth.get(root[0], 0), root[1] + extra)
 
+    # a worklist seeded with a parameter hands that parameter out again when it is popped
+    holders: dict[str, str] = {}
+    for node in walk(func):
+        if isinstance(node, Assign) and node.value is not None and len(node.targets) == 1:
+            target = node.targets[0]
+            seed = _seeded_with(node.value, names)
+            if isinstance(target, Name) and seed is not None:
+                holders[target.id] = seed
+    for node in walk(func):
+        if isinstance(node, Assign) and node.value is not None and len(node.targets) == 1:
+            target = node.targets[0]
+            popped_from = _popped_holder(node.value)
+            if isinstance(target, Name) and popped_from in holders:
+                aliases[target.id] = (holders[popped_from], 0)
+
     # aliases first: `for row in grid` makes `row` one level below `grid`
     for node in walk(func):
         if isinstance(node, Loop) and node.kind == "for_each" and isinstance(node.target, Name):
@@ -318,6 +335,42 @@ def infer_roles(
         else:
             infos[name] = RoleInfo("int")
     return infos
+
+
+def _seeded_with(expr: Expr, names: list[str]) -> str | None:
+    """The parameter a container literal / constructor is started with: `[root]`,
+    `deque([root])`, `[root] if root else []`."""
+    if isinstance(expr, IfExp):
+        return _seeded_with(expr.body, names) or _seeded_with(expr.orelse, names)
+    if isinstance(expr, ListLit):
+        for item in expr.elts:
+            if isinstance(item, Name) and item.id in names:
+                return item.id
+        return None
+    if isinstance(expr, Call) and len(expr.args) == 1:
+        callee = expr.func
+        label = (
+            callee.id
+            if isinstance(callee, Name)
+            else (callee.attr if isinstance(callee, Attribute) else "")
+        )
+        if label in ("deque", "list", "Queue", "LifoQueue", "ArrayDeque", "LinkedList"):
+            return _seeded_with(expr.args[0], names)
+    return None
+
+
+_POPPING = frozenset(
+    {"pop", "popleft", "poll", "pollFirst", "pollLast", "shift", "peek", "top", "front"}
+)
+
+
+def _popped_holder(expr: Expr) -> str | None:
+    """The container a value is taken out of: `q.popleft()`, `stack.pop()`, `q[0]`."""
+    if isinstance(expr, Call) and isinstance(expr.func, Attribute) and expr.func.attr in _POPPING:
+        return expr.func.obj.id if isinstance(expr.func.obj, Name) else None
+    if isinstance(expr, Subscript) and isinstance(expr.obj, Name):
+        return expr.obj.id
+    return None
 
 
 def _callee_evidence(  # noqa: PLR0913

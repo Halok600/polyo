@@ -106,6 +106,9 @@ _HOF_FOLDS = frozenset({"reduce", "reduceRight"})
 _NEGATED = {"<": ">=", "<=": ">", ">": "<=", ">=": "<", "==": "!=", "!=": "=="}
 _SIZE_OPS = frozenset(_NEGATED)
 _EMPTY_TESTS = frozenset({"empty", "isEmpty", "is_empty", "isempty"})
+_KEYED_INSERTS = frozenset(
+    {"add", "put", "insert", "emplace", "set", "setdefault", "putIfAbsent", "computeIfAbsent"}
+)
 _HOF_RECEIVER, _HOF_ITEM, _HOF_ACC = "<hof receiver>", "<hof item>", "<hof acc>"
 
 
@@ -176,6 +179,8 @@ class Interp:
         self.monotone: dict[Var, int] = {}  # progress atoms added by nested monotone loops
         self.cap_initial: dict[Var, Poly] = {}
         self.cap_override: dict[Var, Poly] = {}
+        self.cap_distinct: dict[Var, Poly] = {}  # a hash container holds at most this many keys
+        self.cap_unbounded: set[Var] = set()  # ...unless some key comes from data
         self.rowlen_vars: dict[int, Var] = {}
         self.total_vars: dict[int, Var] = {}
         self.cols_vars: dict[int, Var] = {}
@@ -312,8 +317,10 @@ class Interp:
         self._cur, self._returns, self._loop_stack, self._conds = Bundle(), [], [], []
         params = params_to_values(fdef, self.lang, self._callee_table)
         self.default_size = self._first_size(params)
+        self._copy_by_value_params(fdef, params)
+        prologue = self._cur  # what happens before the first statement: copying the arguments
         env = Env(dict(params), closure)
-        body = self.exec_block(fdef.body, env)
+        body = prologue.then(self.exec_block(fdef.body, env))
         # entries pushed into the rows of a container built here add up to its total
         body.created |= {v for v in body.grows if v.kind == "total"}
         retired = self.resolve_caps(body, body.created) if body.created else {}
@@ -329,6 +336,29 @@ class Interp:
                 fixed = replace(fixed, cap=None)
             ret = fixed
         return params, body, ret
+
+    def _copy_by_value_params(self, fdef: FuncDef, params: dict[str, Value]) -> None:
+        """A C++ container parameter that is not a reference or pointer is COPIED for the call:
+        O(size) time and space in every frame (a recursion that passes a vector by value holds one
+        copy per level). Python, Java, JavaScript and Go pass references or slice headers."""
+        if self.lang != "cpp":
+            return
+        for param in fdef.params:
+            value = params.get(param.name)
+            typ = param.type
+            if (
+                typ is not None
+                and isinstance(value, ContV)
+                and not typ.ref
+                and typ.ptr == 0
+                and typ.dims == 0
+            ):
+                size = mem(value)
+                self._cur.charge(size)
+                self._cur.alloc(size)
+                self.note(
+                    "info", f"{param.name} is taken by value: copied on every call", fdef.line
+                )
 
     @staticmethod
     def _calls_itself(fdef: FuncDef, body: Bundle) -> bool:
@@ -664,6 +694,7 @@ class Interp:
                     self._cur.charge(container.length.log())  # an ordered map: log per insert
                 if container.kind in ("dict", "treemap") and container.cap is not None:
                     self._cur.grow(container.cap, mem(value))
+                    self._note_key(container.cap, self.pure(target.index, env))
                 restored = isinstance(container.elem, ContV) and (
                     isinstance(value, ContV) and value.uid == container.elem.uid
                 )  # `g[u] = append(g[u], v)` stores the very row it read: nothing new retained
@@ -707,20 +738,38 @@ class Interp:
         return replace(value, length=Poly.var(cap), cap=cap)
 
     # ---------------------------------------------------------------- capacities
-    def resolve_caps(self, bundle: Bundle, caps: set[Var]) -> dict[Var, Poly]:
+    def resolve_caps(
+        self, bundle: Bundle, caps: set[Var], skip_lump: int | None = None
+    ) -> dict[Var, Poly]:
+        """The final size of each growable container. With `skip_lump` the growth that belongs to
+        that loop as a whole (its amortised part) is left out: what is left is what a single
+        iteration adds by itself."""
         values: dict[Var, Poly] = {}
         for _ in range(8):
             changed = False
             for cap in caps:
                 growth = bundle.grows.get(cap)
-                total = self.cap_initial.get(cap, ZERO) + (
-                    growth.total() if growth is not None else ZERO
-                )
+                added = ZERO
+                if growth is not None:
+                    added = growth.own
+                    for key, lump in growth.lumps.items():
+                        if key != skip_lump:
+                            added = added + lump
+                total = self.cap_initial.get(cap, ZERO) + added
                 value = total.substitute(values)
                 value = value.order() if not value.is_zero() else ZERO
                 if cap in self.cap_override:
                     value = self.cap_override[cap].substitute(values)
                     value = value.order() if not value.is_zero() else ZERO
+                elif cap in self.cap_distinct and cap not in self.cap_unbounded:
+                    # a set / dict never holds more entries than there are distinct keys: adding
+                    # the row index i for every cell of an n x m grid stores n entries, not n * m
+                    capped = (self.cap_initial.get(cap, ZERO) + self.cap_distinct[cap]).substitute(
+                        values
+                    )
+                    capped = capped.order() if not capped.is_zero() else ZERO
+                    if value.max(capped).order() == value.order() != capped.order():
+                        value = capped
                 if values.get(cap) != value:
                     values[cap] = value
                     changed = True
@@ -732,15 +781,27 @@ class Interp:
             self.note("assumed", f"size of container {cap.name} depends on itself; assumed linear")
         return {c: (v if not v.is_zero() else ZERO) for c, v in values.items()}
 
-    def finalize_caps(self, bundle: Bundle, caps: set[Var]) -> Bundle:
+    def finalize_caps(self, bundle: Bundle, caps: set[Var], loop_id: int | None = None) -> Bundle:
         if not caps:
             return bundle
         values = self.resolve_caps(bundle, caps)
+        # A container built in a loop body whose growth is amortised over the whole loop (a level
+        # list filled from a shared queue) is only as big as one round makes it, and all rounds
+        # together add up to the amortised total. A cost per round that mentions its size is paid
+        # in full once, not once per round: split it into the round's own part and that lump.
+        split = loop_id is not None and any(
+            loop_id in bundle.grows[c].lumps for c in caps if c in bundle.grows
+        )
+        own_values = self.resolve_caps(bundle, caps, loop_id) if split else values
 
         def sub_cost(cost: Cost) -> Cost:
-            own = cost.own.substitute(values) if not cost.own.is_zero() else cost.own
+            full = cost.own.substitute(values) if not cost.own.is_zero() else cost.own
+            part = cost.own.substitute(own_values) if split and not cost.own.is_zero() else full
             lumps = {k: v.substitute(values) for k, v in cost.lumps.items()}
-            return Cost(own.order() if not own.is_zero() else own, lumps)
+            if split and loop_id is not None and not (full - part).is_zero():
+                extra = (full - part).order()
+                lumps[loop_id] = (lumps[loop_id] + extra).order() if loop_id in lumps else extra
+            return Cost(part.order() if not part.is_zero() else part, lumps)
 
         final_space = ZERO
         for cap in caps:
@@ -822,7 +883,7 @@ class Interp:
         overhead.charge(ONE)
         inner = overhead.then(inner)
         retired = self.resolve_caps(inner, inner.created) if inner.created else {}
-        inner = self.finalize_caps(inner, inner.created)
+        inner = self.finalize_caps(inner, inner.created, loop_id)
         inner = self.apply_flushes(inner)
         inner = self._bound_allocs(inner, plan)
         folded = self.fold_loop(inner, plan, loop_id)
@@ -1150,7 +1211,9 @@ class Interp:
                 self._cur.charge(cost)
         elif e.op in ("==", "!=") and isinstance(left, ContV) and isinstance(right, ContV):
             if self._compares_by_value(left, right):
-                self._cur.charge(left.length)
+                # the scan stops at the shorter operand: against a literal that is a constant
+                constant = not left.length.vars() or not right.length.vars()
+                self._cur.charge(ONE if constant else left.length)
         return SCALAR
 
     def _compares_by_value(self, left: ContV, right: ContV) -> bool:
@@ -1306,7 +1369,9 @@ class Interp:
                 part: Value | None = item.elem
             else:
                 length = length + ONE
-                part = item if isinstance(item, ContV | NodeV | IntV) else None
+                # an int element is not remembered: counts = [0] * k is incremented later, so
+                # its entries are not zero
+                part = item if isinstance(item, ContV | NodeV) else None
             if part is not None:
                 elem = part if elem is None else join(elem, part)
         kind = "set" if e.kind == "set" else "list"
@@ -1497,6 +1562,23 @@ class Interp:
             self._cur.grow(self.total_var(self.row_owner[subject.uid]), result.grow)
         if result.reset and subject is not None and subject.cap is not None:
             self._cur.reset(subject.cap)
+        if (
+            name == "setdefault"
+            and isinstance(receiver, ContV)
+            and receiver.owned
+            and isinstance(result.value, ContV)
+            and result.value.owned
+        ):
+            self.row_owner[result.value.uid] = receiver.uid
+        if (
+            result.grow is not None
+            and subject is not None
+            and subject.cap is not None
+            and subject.kind in ("set", "dict")
+            and name in _KEYED_INSERTS
+            and args
+        ):
+            self._note_key(subject.cap, args[0])
         if result.grow is not None:
             for arg in args:
                 if isinstance(arg, ContV) and arg.owned and arg is not subject:
@@ -1659,6 +1741,34 @@ class Interp:
         if summary.recursive and not summary.solved:
             self.note("unknown", f"recursion in {func.name}() could not be solved")
         return substitute(summary.ret, mapping) or UNKNOWN
+
+    def _key_domain(self, value: Value) -> Poly | None:
+        """How many distinct values a key can take, if every part of it is a loop index (or a
+        constant): the product of the ranges of the loops. None when it comes from data."""
+        if isinstance(value, TupleV):
+            total = ONE
+            for part in value.items:
+                domain = self._key_domain(part)
+                if domain is None:
+                    return None
+                total = (total * domain).order()
+            return total
+        if isinstance(value, IntV) and value.mag is not None:
+            atoms = value.mag.vars()
+            if not atoms:
+                return ONE
+            if all(v.kind == "iter" and v in self.iters for v in atoms):
+                bound = value.mag.substitute({v: self.iters[v].upper for v in atoms})
+                return bound.order() if not bound.is_zero() else ONE
+        return None
+
+    def _note_key(self, cap: Var, key: Value) -> None:
+        domain = self._key_domain(key)
+        if domain is None:
+            self.cap_unbounded.add(cap)
+            return
+        previous = self.cap_distinct.get(cap)
+        self.cap_distinct[cap] = domain if previous is None else (previous + domain).order()
 
     def _call_lambda(self, target: FuncV, args: list[Value]) -> Value:
         func = target.func

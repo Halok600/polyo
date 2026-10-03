@@ -440,6 +440,13 @@ def _copy(c: LibCall) -> LibResult | None:
             kind = {"list": "list", "tuple": "list", "set": "set", "frozenset": "set",
                     "dict": "dict", "deque": "deque", "Counter": "dict"}[name]  # fmt: skip
             return LibResult(_fresh(kind, ONE), ONE, alloc=ONE)
+        if name == "defaultdict":
+            # defaultdict(list): every missing key starts an empty list of its own
+            factory = c.arg_exprs[0] if c.arg_exprs else None
+            kinds = {"list": "list", "set": "set", "deque": "deque", "dict": "dict"}
+            row_kind = kinds.get(factory.id) if isinstance(factory, Name) else None
+            row = _fresh(row_kind, ZERO) if row_kind is not None else None
+            return LibResult(_fresh("dict", ZERO, row), ONE, alloc=ONE)
         return None
     kind = {"list": "list", "tuple": "list", "set": "set", "frozenset": "set", "dict": "dict",
             "deque": "deque", "Counter": "dict", "OrderedDict": "dict",
@@ -729,6 +736,16 @@ def _repeat(c: LibCall) -> LibResult | None:
 @lib("toString", "String", "str", "String.valueOf", "valueOf", "to_string", "Itoa", "string",
      "tostring", "repr", "StringBuilder", "StringBuffer", "to_str")  # fmt: skip
 def _stringify(c: LibCall) -> LibResult | None:
+    arg = c.args[0] if c.args else None
+    if (
+        isinstance(arg, IntV)
+        and arg.mag is not None
+        and any(v.kind == "val" for v in arg.mag.vars())
+    ):
+        # the text of a number has as many characters as it has digits: log of its value. (Only a
+        # parameter counts as a size; converting a loop index is a machine-word operation.)
+        digits = arg.mag.log()
+        return LibResult(_fresh("str", digits), digits, alloc=digits)
     subject = c.subject()
     if subject is not None and subject.kind != "str":
         return LibResult(_fresh("str", subject.length), subject.length, alloc=subject.length)
