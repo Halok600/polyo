@@ -1,0 +1,1480 @@
+# Golden group: algorithms with more than one independent size.
+# Naming convention for expressions: size variables are named n, m, k in the order their
+# parameters appear, among the variables used by the time or space expression. A 2-D parameter
+# contributes rows then columns. For a graph given as an adjacency list, n is the number of
+# nodes (len of the outer list) and m is the total number of adjacency entries (the edges).
+# Factors in a product and terms in a sum are compared order-insensitively; the legacy class
+# column collapses every variable to n.
+
+[[case]]
+id = "grid_sum_rectangular"
+title = "Sum a rows x cols grid"
+tags = ["multi-variable", "grid", "nested-loop"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n * m)"
+space_expr = "O(1)"
+rationale = "Independent row and column counts: rows * cols cell visits. The legacy class collapses both to n."
+
+[case.sources]
+python = '''
+def grid_sum(grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    total = 0
+    for i in range(rows):
+        for j in range(cols):
+            total += grid[i][j]
+    return total
+'''
+cpp = '''
+int gridSum(vector<vector<int>>& grid) {
+    int rows = grid.size();
+    int cols = grid[0].size();
+    int total = 0;
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            total += grid[i][j];
+        }
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int gridSum(int[][] grid) {
+        int rows = grid.length;
+        int cols = grid[0].length;
+        int total = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                total += grid[i][j];
+            }
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function gridSum(grid) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let total = 0;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      total += grid[i][j];
+    }
+  }
+  return total;
+}
+'''
+go = '''
+func gridSum(grid [][]int) int {
+    rows := len(grid)
+    cols := len(grid[0])
+    total := 0
+    for i := 0; i < rows; i++ {
+        for j := 0; j < cols; j++ {
+            total += grid[i][j]
+        }
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "grid_transpose_new_matrix"
+title = "Transpose into a new matrix"
+tags = ["multi-variable", "grid", "nested-loop", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n * m)"
+space_expr = "O(n * m)"
+rationale = "rows*cols reads and writes; the result is a freshly allocated cols x rows matrix."
+
+[case.sources]
+python = '''
+def transpose(grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    result = [[0] * rows for _ in range(cols)]
+    for i in range(rows):
+        for j in range(cols):
+            result[j][i] = grid[i][j]
+    return result
+'''
+cpp = '''
+vector<vector<int>> transpose(vector<vector<int>>& grid) {
+    int rows = grid.size();
+    int cols = grid[0].size();
+    vector<vector<int>> result(cols, vector<int>(rows, 0));
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[j][i] = grid[i][j];
+        }
+    }
+    return result;
+}
+'''
+java = '''
+class Solution {
+    public int[][] transpose(int[][] grid) {
+        int rows = grid.length;
+        int cols = grid[0].length;
+        int[][] result = new int[cols][rows];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result[j][i] = grid[i][j];
+            }
+        }
+        return result;
+    }
+}
+'''
+javascript = '''
+function transpose(grid) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const result = Array.from({ length: cols }, () => new Array(rows).fill(0));
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      result[j][i] = grid[i][j];
+    }
+  }
+  return result;
+}
+'''
+go = '''
+func transpose(grid [][]int) [][]int {
+    rows := len(grid)
+    cols := len(grid[0])
+    result := make([][]int, cols)
+    for j := range result {
+        result[j] = make([]int, rows)
+    }
+    for i := 0; i < rows; i++ {
+        for j := 0; j < cols; j++ {
+            result[j][i] = grid[i][j]
+        }
+    }
+    return result
+}
+'''
+
+[[case]]
+id = "two_arrays_sequential"
+title = "Sum two arrays one after the other"
+tags = ["multi-variable", "sequential"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n + m)"
+space_expr = "O(1)"
+rationale = "Sequential loops add: len(a) + len(b). They are independent sizes, so the expression keeps both."
+
+[case.sources]
+python = '''
+def sum_both(a, b):
+    total = 0
+    for x in a:
+        total += x
+    for y in b:
+        total += y
+    return total
+'''
+cpp = '''
+int sumBoth(vector<int>& a, vector<int>& b) {
+    int total = 0;
+    for (int x : a) total += x;
+    for (int y : b) total += y;
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int sumBoth(int[] a, int[] b) {
+        int total = 0;
+        for (int x : a) total += x;
+        for (int y : b) total += y;
+        return total;
+    }
+}
+'''
+javascript = '''
+function sumBoth(a, b) {
+  let total = 0;
+  for (const x of a) total += x;
+  for (const y of b) total += y;
+  return total;
+}
+'''
+go = '''
+func sumBoth(a []int, b []int) int {
+    total := 0
+    for _, x := range a {
+        total += x
+    }
+    for _, y := range b {
+        total += y
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "two_arrays_nested_matches"
+title = "Count equal pairs across two arrays"
+tags = ["multi-variable", "nested-loop"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n * m)"
+space_expr = "O(1)"
+rationale = "Every element of a is compared with every element of b: len(a) * len(b)."
+
+[case.sources]
+python = '''
+def count_matches(a, b):
+    count = 0
+    for x in a:
+        for y in b:
+            if x == y:
+                count += 1
+    return count
+'''
+cpp = '''
+int countMatches(vector<int>& a, vector<int>& b) {
+    int count = 0;
+    for (int x : a) {
+        for (int y : b) {
+            if (x == y) count++;
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countMatches(int[] a, int[] b) {
+        int count = 0;
+        for (int x : a) {
+            for (int y : b) {
+                if (x == y) count++;
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countMatches(a, b) {
+  let count = 0;
+  for (const x of a) {
+    for (const y of b) {
+      if (x === y) count++;
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countMatches(a []int, b []int) int {
+    count := 0
+    for _, x := range a {
+        for _, y := range b {
+            if x == y {
+                count++
+            }
+        }
+    }
+    return count
+}
+'''
+
+[[case]]
+id = "merge_sorted_two_pointers"
+title = "Merge two sorted arrays"
+tags = ["multi-variable", "two-pointers", "while", "allocation"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n + m)"
+space_expr = "O(n + m)"
+rationale = "Each iteration advances i or j; the tail loops drain what is left: len(a) + len(b) steps. The merged output holds len(a) + len(b) elements."
+
+[case.sources]
+python = '''
+def merge_sorted(a, b):
+    out = []
+    i = 0
+    j = 0
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            out.append(a[i])
+            i += 1
+        else:
+            out.append(b[j])
+            j += 1
+    while i < len(a):
+        out.append(a[i])
+        i += 1
+    while j < len(b):
+        out.append(b[j])
+        j += 1
+    return out
+'''
+cpp = '''
+vector<int> mergeSorted(vector<int>& a, vector<int>& b) {
+    vector<int> out;
+    int i = 0;
+    int j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (a[i] <= b[j]) {
+            out.push_back(a[i]);
+            i++;
+        } else {
+            out.push_back(b[j]);
+            j++;
+        }
+    }
+    while (i < a.size()) {
+        out.push_back(a[i]);
+        i++;
+    }
+    while (j < b.size()) {
+        out.push_back(b[j]);
+        j++;
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> mergeSorted(int[] a, int[] b) {
+        List<Integer> out = new ArrayList<>();
+        int i = 0;
+        int j = 0;
+        while (i < a.length && j < b.length) {
+            if (a[i] <= b[j]) {
+                out.add(a[i]);
+                i++;
+            } else {
+                out.add(b[j]);
+                j++;
+            }
+        }
+        while (i < a.length) {
+            out.add(a[i]);
+            i++;
+        }
+        while (j < b.length) {
+            out.add(b[j]);
+            j++;
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function mergeSorted(a, b) {
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] <= b[j]) {
+      out.push(a[i]);
+      i++;
+    } else {
+      out.push(b[j]);
+      j++;
+    }
+  }
+  while (i < a.length) {
+    out.push(a[i]);
+    i++;
+  }
+  while (j < b.length) {
+    out.push(b[j]);
+    j++;
+  }
+  return out;
+}
+'''
+go = '''
+func mergeSorted(a []int, b []int) []int {
+    out := []int{}
+    i, j := 0, 0
+    for i < len(a) && j < len(b) {
+        if a[i] <= b[j] {
+            out = append(out, a[i])
+            i++
+        } else {
+            out = append(out, b[j])
+            j++
+        }
+    }
+    for i < len(a) {
+        out = append(out, a[i])
+        i++
+    }
+    for j < len(b) {
+        out = append(out, b[j])
+        j++
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "lcs_dp_full_table"
+title = "Longest common subsequence with a full DP table"
+tags = ["multi-variable", "dp", "nested-loop", "allocation", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n * m)"
+space_expr = "O(n * m)"
+rationale = "(len(a)+1) x (len(b)+1) table filled once: n*m time and n*m space."
+
+[case.sources]
+python = '''
+def lcs(a, b):
+    n = len(a)
+    m = len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[n][m]
+'''
+cpp = '''
+int lcs(string& a, string& b) {
+    int n = a.size();
+    int m = b.size();
+    vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= m; j++) {
+            if (a[i - 1] == b[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    return dp[n][m];
+}
+'''
+java = '''
+class Solution {
+    public int lcs(String a, String b) {
+        int n = a.length();
+        int m = b.length();
+        int[][] dp = new int[n + 1][m + 1];
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= m; j++) {
+                if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+        return dp[n][m];
+    }
+}
+'''
+javascript = '''
+function lcs(a, b) {
+  const n = a.length;
+  const m = b.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[n][m];
+}
+'''
+go = '''
+func lcs(a string, b string) int {
+    n := len(a)
+    m := len(b)
+    dp := make([][]int, n+1)
+    for i := range dp {
+        dp[i] = make([]int, m+1)
+    }
+    for i := 1; i <= n; i++ {
+        for j := 1; j <= m; j++ {
+            if a[i-1] == b[j-1] {
+                dp[i][j] = dp[i-1][j-1] + 1
+            } else if dp[i-1][j] > dp[i][j-1] {
+                dp[i][j] = dp[i-1][j]
+            } else {
+                dp[i][j] = dp[i][j-1]
+            }
+        }
+    }
+    return dp[n][m]
+}
+'''
+
+[[case]]
+id = "lcs_dp_rolling_rows"
+title = "Longest common subsequence keeping only two rows"
+tags = ["multi-variable", "dp", "nested-loop", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n * m)"
+space_expr = "O(m)"
+rationale = "Same n*m time, but only the previous and current rows (each len(b)+1) are alive at once, and the old row is released when prev is reassigned: O(m) space."
+
+[case.sources]
+python = '''
+def lcs(a, b):
+    n = len(a)
+    m = len(b)
+    prev = [0] * (m + 1)
+    for i in range(1, n + 1):
+        cur = [0] * (m + 1)
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                cur[j] = prev[j - 1] + 1
+            else:
+                cur[j] = max(prev[j], cur[j - 1])
+        prev = cur
+    return prev[m]
+'''
+cpp = '''
+int lcs(string& a, string& b) {
+    int n = a.size();
+    int m = b.size();
+    vector<int> prev(m + 1, 0);
+    for (int i = 1; i <= n; i++) {
+        vector<int> cur(m + 1, 0);
+        for (int j = 1; j <= m; j++) {
+            if (a[i - 1] == b[j - 1]) {
+                cur[j] = prev[j - 1] + 1;
+            } else {
+                cur[j] = max(prev[j], cur[j - 1]);
+            }
+        }
+        prev = cur;
+    }
+    return prev[m];
+}
+'''
+java = '''
+class Solution {
+    public int lcs(String a, String b) {
+        int n = a.length();
+        int m = b.length();
+        int[] prev = new int[m + 1];
+        for (int i = 1; i <= n; i++) {
+            int[] cur = new int[m + 1];
+            for (int j = 1; j <= m; j++) {
+                if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    cur[j] = prev[j - 1] + 1;
+                } else {
+                    cur[j] = Math.max(prev[j], cur[j - 1]);
+                }
+            }
+            prev = cur;
+        }
+        return prev[m];
+    }
+}
+'''
+javascript = '''
+function lcs(a, b) {
+  const n = a.length;
+  const m = b.length;
+  let prev = new Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    const cur = new Array(m + 1).fill(0);
+    for (let j = 1; j <= m; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        cur[j] = prev[j - 1] + 1;
+      } else {
+        cur[j] = Math.max(prev[j], cur[j - 1]);
+      }
+    }
+    prev = cur;
+  }
+  return prev[m];
+}
+'''
+go = '''
+func lcs(a string, b string) int {
+    n := len(a)
+    m := len(b)
+    prev := make([]int, m+1)
+    for i := 1; i <= n; i++ {
+        cur := make([]int, m+1)
+        for j := 1; j <= m; j++ {
+            if a[i-1] == b[j-1] {
+                cur[j] = prev[j-1] + 1
+            } else if prev[j] > cur[j-1] {
+                cur[j] = prev[j]
+            } else {
+                cur[j] = cur[j-1]
+            }
+        }
+        prev = cur
+    }
+    return prev[m]
+}
+'''
+
+[[case]]
+id = "substring_search_naive"
+title = "Naive substring search"
+tags = ["multi-variable", "nested-loop", "while", "early-exit", "string"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n * m)"
+space_expr = "O(1)"
+rationale = "Worst case: for each of about len(text) alignments, up to len(pattern) characters are compared."
+
+[case.sources]
+python = '''
+def find_substring(text, pattern):
+    n = len(text)
+    m = len(pattern)
+    for i in range(n - m + 1):
+        j = 0
+        while j < m and text[i + j] == pattern[j]:
+            j += 1
+        if j == m:
+            return i
+    return -1
+'''
+cpp = '''
+int findSubstring(string& text, string& pattern) {
+    int n = text.size();
+    int m = pattern.size();
+    for (int i = 0; i + m <= n; i++) {
+        int j = 0;
+        while (j < m && text[i + j] == pattern[j]) {
+            j++;
+        }
+        if (j == m) return i;
+    }
+    return -1;
+}
+'''
+java = '''
+class Solution {
+    public int findSubstring(String text, String pattern) {
+        int n = text.length();
+        int m = pattern.length();
+        for (int i = 0; i + m <= n; i++) {
+            int j = 0;
+            while (j < m && text.charAt(i + j) == pattern.charAt(j)) {
+                j++;
+            }
+            if (j == m) return i;
+        }
+        return -1;
+    }
+}
+'''
+javascript = '''
+function findSubstring(text, pattern) {
+  const n = text.length;
+  const m = pattern.length;
+  for (let i = 0; i + m <= n; i++) {
+    let j = 0;
+    while (j < m && text[i + j] === pattern[j]) {
+      j++;
+    }
+    if (j === m) return i;
+  }
+  return -1;
+}
+'''
+go = '''
+func findSubstring(text string, pattern string) int {
+    n := len(text)
+    m := len(pattern)
+    for i := 0; i+m <= n; i++ {
+        j := 0
+        for j < m && text[i+j] == pattern[j] {
+            j++
+        }
+        if j == m {
+            return i
+        }
+    }
+    return -1
+}
+'''
+
+[[case]]
+id = "graph_bfs_adjacency_list"
+title = "Breadth-first traversal of an adjacency list"
+tags = ["multi-variable", "graph", "queue", "visited-guard", "amortized", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n + m)"
+space_expr = "O(n)"
+rationale = "Each node is enqueued at most once (the visited guard), and each adjacency entry is scanned once: nodes + edges. The visited set, queue and order list are O(nodes)."
+
+[case.sources]
+python = '''
+from collections import deque
+
+
+def bfs_order(graph, start):
+    visited = {start}
+    queue = deque([start])
+    order = []
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for nxt in graph[node]:
+            if nxt not in visited:
+                visited.add(nxt)
+                queue.append(nxt)
+    return order
+'''
+cpp = '''
+vector<int> bfsOrder(vector<vector<int>>& graph, int start) {
+    vector<bool> visited(graph.size(), false);
+    queue<int> q;
+    vector<int> order;
+    visited[start] = true;
+    q.push(start);
+    while (!q.empty()) {
+        int node = q.front();
+        q.pop();
+        order.push_back(node);
+        for (int nxt : graph[node]) {
+            if (!visited[nxt]) {
+                visited[nxt] = true;
+                q.push(nxt);
+            }
+        }
+    }
+    return order;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> bfsOrder(List<List<Integer>> graph, int start) {
+        boolean[] visited = new boolean[graph.size()];
+        Queue<Integer> queue = new ArrayDeque<>();
+        List<Integer> order = new ArrayList<>();
+        visited[start] = true;
+        queue.add(start);
+        while (!queue.isEmpty()) {
+            int node = queue.poll();
+            order.add(node);
+            for (int nxt : graph.get(node)) {
+                if (!visited[nxt]) {
+                    visited[nxt] = true;
+                    queue.add(nxt);
+                }
+            }
+        }
+        return order;
+    }
+}
+'''
+javascript = '''
+function bfsOrder(graph, start) {
+  const visited = new Array(graph.length).fill(false);
+  const queue = [start];
+  const order = [];
+  visited[start] = true;
+  let head = 0;
+  while (head < queue.length) {
+    const node = queue[head++];
+    order.push(node);
+    for (const nxt of graph[node]) {
+      if (!visited[nxt]) {
+        visited[nxt] = true;
+        queue.push(nxt);
+      }
+    }
+  }
+  return order;
+}
+'''
+go = '''
+func bfsOrder(graph [][]int, start int) []int {
+    visited := make([]bool, len(graph))
+    queue := []int{start}
+    order := []int{}
+    visited[start] = true
+    for len(queue) > 0 {
+        node := queue[0]
+        queue = queue[1:]
+        order = append(order, node)
+        for _, nxt := range graph[node] {
+            if !visited[nxt] {
+                visited[nxt] = true
+                queue = append(queue, nxt)
+            }
+        }
+    }
+    return order
+}
+'''
+
+[[case]]
+id = "graph_dfs_recursive_count"
+title = "Recursive depth-first reachability count"
+tags = ["multi-variable", "graph", "recursion", "visited-guard", "interprocedural"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n + m)"
+space_expr = "O(n)"
+rationale = "The visited guard makes each node expand once, scanning its adjacency list once: nodes + edges. The visited array is O(nodes) and the recursion can be nodes deep."
+
+[case.sources]
+python = '''
+def dfs(graph, node, visited):
+    visited[node] = True
+    count = 1
+    for nxt in graph[node]:
+        if not visited[nxt]:
+            count += dfs(graph, nxt, visited)
+    return count
+
+
+def count_reachable(graph, start):
+    visited = [False] * len(graph)
+    return dfs(graph, start, visited)
+'''
+cpp = '''
+int dfs(vector<vector<int>>& graph, int node, vector<bool>& visited) {
+    visited[node] = true;
+    int count = 1;
+    for (int nxt : graph[node]) {
+        if (!visited[nxt]) count += dfs(graph, nxt, visited);
+    }
+    return count;
+}
+
+int countReachable(vector<vector<int>>& graph, int start) {
+    vector<bool> visited(graph.size(), false);
+    return dfs(graph, start, visited);
+}
+'''
+java = '''
+class Solution {
+    public int countReachable(List<List<Integer>> graph, int start) {
+        boolean[] visited = new boolean[graph.size()];
+        return dfs(graph, start, visited);
+    }
+
+    private int dfs(List<List<Integer>> graph, int node, boolean[] visited) {
+        visited[node] = true;
+        int count = 1;
+        for (int nxt : graph.get(node)) {
+            if (!visited[nxt]) count += dfs(graph, nxt, visited);
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function dfs(graph, node, visited) {
+  visited[node] = true;
+  let count = 1;
+  for (const nxt of graph[node]) {
+    if (!visited[nxt]) count += dfs(graph, nxt, visited);
+  }
+  return count;
+}
+
+function countReachable(graph, start) {
+  const visited = new Array(graph.length).fill(false);
+  return dfs(graph, start, visited);
+}
+'''
+go = '''
+func dfs(graph [][]int, node int, visited []bool) int {
+    visited[node] = true
+    count := 1
+    for _, nxt := range graph[node] {
+        if !visited[nxt] {
+            count += dfs(graph, nxt, visited)
+        }
+    }
+    return count
+}
+
+func countReachable(graph [][]int, start int) int {
+    visited := make([]bool, len(graph))
+    return dfs(graph, start, visited)
+}
+'''
+
+[[case]]
+id = "graph_topological_sort_kahn"
+title = "Topological order with Kahn's algorithm"
+tags = ["multi-variable", "graph", "queue", "amortized", "allocation"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n + m)"
+space_expr = "O(n + m)"
+rationale = "n is the node count (an integer parameter) and m is len(edges). Building the adjacency list is O(n + m); every node is enqueued once (its in-degree reaches zero once) and every edge is relaxed once. The adjacency list, in-degree array and queue are O(n + m)."
+
+[case.sources]
+python = '''
+def topo_order(n, edges):
+    graph = [[] for _ in range(n)]
+    indeg = [0] * n
+    for u, v in edges:
+        graph[u].append(v)
+        indeg[v] += 1
+    queue = [i for i in range(n) if indeg[i] == 0]
+    order = []
+    head = 0
+    while head < len(queue):
+        u = queue[head]
+        head += 1
+        order.append(u)
+        for v in graph[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                queue.append(v)
+    return order
+'''
+cpp = '''
+vector<int> topoOrder(int n, vector<vector<int>>& edges) {
+    vector<vector<int>> graph(n);
+    vector<int> indeg(n, 0);
+    for (auto& e : edges) {
+        graph[e[0]].push_back(e[1]);
+        indeg[e[1]]++;
+    }
+    vector<int> order;
+    queue<int> q;
+    for (int i = 0; i < n; i++) {
+        if (indeg[i] == 0) q.push(i);
+    }
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        order.push_back(u);
+        for (int v : graph[u]) {
+            indeg[v]--;
+            if (indeg[v] == 0) q.push(v);
+        }
+    }
+    return order;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> topoOrder(int n, int[][] edges) {
+        List<List<Integer>> graph = new ArrayList<>();
+        for (int i = 0; i < n; i++) graph.add(new ArrayList<>());
+        int[] indeg = new int[n];
+        for (int[] e : edges) {
+            graph.get(e[0]).add(e[1]);
+            indeg[e[1]]++;
+        }
+        Queue<Integer> queue = new ArrayDeque<>();
+        for (int i = 0; i < n; i++) {
+            if (indeg[i] == 0) queue.add(i);
+        }
+        List<Integer> order = new ArrayList<>();
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            order.add(u);
+            for (int v : graph.get(u)) {
+                indeg[v]--;
+                if (indeg[v] == 0) queue.add(v);
+            }
+        }
+        return order;
+    }
+}
+'''
+javascript = '''
+function topoOrder(n, edges) {
+  const graph = Array.from({ length: n }, () => []);
+  const indeg = new Array(n).fill(0);
+  for (const [u, v] of edges) {
+    graph[u].push(v);
+    indeg[v]++;
+  }
+  const queue = [];
+  for (let i = 0; i < n; i++) {
+    if (indeg[i] === 0) queue.push(i);
+  }
+  const order = [];
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head++];
+    order.push(u);
+    for (const v of graph[u]) {
+      indeg[v]--;
+      if (indeg[v] === 0) queue.push(v);
+    }
+  }
+  return order;
+}
+'''
+go = '''
+func topoOrder(n int, edges [][]int) []int {
+    graph := make([][]int, n)
+    indeg := make([]int, n)
+    for _, e := range edges {
+        graph[e[0]] = append(graph[e[0]], e[1])
+        indeg[e[1]]++
+    }
+    queue := []int{}
+    for i := 0; i < n; i++ {
+        if indeg[i] == 0 {
+            queue = append(queue, i)
+        }
+    }
+    order := []int{}
+    head := 0
+    for head < len(queue) {
+        u := queue[head]
+        head++
+        order = append(order, u)
+        for _, v := range graph[u] {
+            indeg[v]--
+            if indeg[v] == 0 {
+                queue = append(queue, v)
+            }
+        }
+    }
+    return order
+}
+'''
+
+[[case]]
+id = "grid_bfs_shortest_path"
+title = "Shortest path in a grid with breadth-first search"
+tags = ["multi-variable", "grid", "queue", "visited-guard", "amortized", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n * m)"
+space_expr = "O(n * m)"
+rationale = "Each cell is enqueued at most once (the dist == -1 guard) and expands four constant neighbours: rows*cols. The distance table and the queue are O(rows*cols)."
+
+[case.sources]
+python = '''
+from collections import deque
+
+
+def shortest_path(grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    dist = [[-1] * cols for _ in range(rows)]
+    dist[0][0] = 0
+    queue = deque([(0, 0)])
+    while queue:
+        r, c = queue.popleft()
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr = r + dr
+            nc = c + dc
+            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 0 and dist[nr][nc] == -1:
+                dist[nr][nc] = dist[r][c] + 1
+                queue.append((nr, nc))
+    return dist[rows - 1][cols - 1]
+'''
+cpp = '''
+int shortestPath(vector<vector<int>>& grid) {
+    int rows = grid.size();
+    int cols = grid[0].size();
+    vector<vector<int>> dist(rows, vector<int>(cols, -1));
+    int dr[4] = {1, -1, 0, 0};
+    int dc[4] = {0, 0, 1, -1};
+    queue<pair<int, int>> q;
+    dist[0][0] = 0;
+    q.push({0, 0});
+    while (!q.empty()) {
+        pair<int, int> cur = q.front();
+        q.pop();
+        int r = cur.first;
+        int c = cur.second;
+        for (int d = 0; d < 4; d++) {
+            int nr = r + dr[d];
+            int nc = c + dc[d];
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == 0 && dist[nr][nc] == -1) {
+                dist[nr][nc] = dist[r][c] + 1;
+                q.push({nr, nc});
+            }
+        }
+    }
+    return dist[rows - 1][cols - 1];
+}
+'''
+java = '''
+class Solution {
+    public int shortestPath(int[][] grid) {
+        int rows = grid.length;
+        int cols = grid[0].length;
+        int[][] dist = new int[rows][cols];
+        for (int[] row : dist) Arrays.fill(row, -1);
+        int[] dr = {1, -1, 0, 0};
+        int[] dc = {0, 0, 1, -1};
+        Queue<int[]> queue = new ArrayDeque<>();
+        dist[0][0] = 0;
+        queue.add(new int[]{0, 0});
+        while (!queue.isEmpty()) {
+            int[] cur = queue.poll();
+            int r = cur[0];
+            int c = cur[1];
+            for (int d = 0; d < 4; d++) {
+                int nr = r + dr[d];
+                int nc = c + dc[d];
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == 0 && dist[nr][nc] == -1) {
+                    dist[nr][nc] = dist[r][c] + 1;
+                    queue.add(new int[]{nr, nc});
+                }
+            }
+        }
+        return dist[rows - 1][cols - 1];
+    }
+}
+'''
+javascript = '''
+function shortestPath(grid) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const dist = Array.from({ length: rows }, () => new Array(cols).fill(-1));
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const queue = [[0, 0]];
+  dist[0][0] = 0;
+  let head = 0;
+  while (head < queue.length) {
+    const [r, c] = queue[head++];
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === 0 && dist[nr][nc] === -1) {
+        dist[nr][nc] = dist[r][c] + 1;
+        queue.push([nr, nc]);
+      }
+    }
+  }
+  return dist[rows - 1][cols - 1];
+}
+'''
+go = '''
+func shortestPath(grid [][]int) int {
+    rows := len(grid)
+    cols := len(grid[0])
+    dist := make([][]int, rows)
+    for i := range dist {
+        dist[i] = make([]int, cols)
+        for j := range dist[i] {
+            dist[i][j] = -1
+        }
+    }
+    dirs := [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    queue := [][2]int{{0, 0}}
+    dist[0][0] = 0
+    for len(queue) > 0 {
+        cur := queue[0]
+        queue = queue[1:]
+        for _, d := range dirs {
+            nr := cur[0] + d[0]
+            nc := cur[1] + d[1]
+            if nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == 0 && dist[nr][nc] == -1 {
+                dist[nr][nc] = dist[cur[0]][cur[1]] + 1
+                queue = append(queue, [2]int{nr, nc})
+            }
+        }
+    }
+    return dist[rows-1][cols-1]
+}
+'''
+
+[[case]]
+id = "grid_dfs_island_count"
+title = "Count islands by sinking visited land with DFS"
+tags = ["multi-variable", "grid", "recursion", "visited-guard", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n * m)"
+space_expr = "O(n * m)"
+rationale = "The scan visits rows*cols cells; sink() turns a land cell to water before recursing, so each cell is expanded at most once. In the worst case (all land) the recursion is rows*cols deep, so the stack is O(rows*cols)."
+
+[case.sources]
+python = '''
+def sink(grid, r, c):
+    if r < 0 or c < 0 or r >= len(grid) or c >= len(grid[0]) or grid[r][c] != 1:
+        return
+    grid[r][c] = 0
+    sink(grid, r + 1, c)
+    sink(grid, r - 1, c)
+    sink(grid, r, c + 1)
+    sink(grid, r, c - 1)
+
+
+def num_islands(grid):
+    count = 0
+    for r in range(len(grid)):
+        for c in range(len(grid[0])):
+            if grid[r][c] == 1:
+                count += 1
+                sink(grid, r, c)
+    return count
+'''
+cpp = '''
+void sink(vector<vector<int>>& grid, int r, int c) {
+    if (r < 0 || c < 0 || r >= grid.size() || c >= grid[0].size() || grid[r][c] != 1) return;
+    grid[r][c] = 0;
+    sink(grid, r + 1, c);
+    sink(grid, r - 1, c);
+    sink(grid, r, c + 1);
+    sink(grid, r, c - 1);
+}
+
+int numIslands(vector<vector<int>>& grid) {
+    int count = 0;
+    for (int r = 0; r < grid.size(); r++) {
+        for (int c = 0; c < grid[0].size(); c++) {
+            if (grid[r][c] == 1) {
+                count++;
+                sink(grid, r, c);
+            }
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int numIslands(int[][] grid) {
+        int count = 0;
+        for (int r = 0; r < grid.length; r++) {
+            for (int c = 0; c < grid[0].length; c++) {
+                if (grid[r][c] == 1) {
+                    count++;
+                    sink(grid, r, c);
+                }
+            }
+        }
+        return count;
+    }
+
+    private void sink(int[][] grid, int r, int c) {
+        if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length || grid[r][c] != 1) return;
+        grid[r][c] = 0;
+        sink(grid, r + 1, c);
+        sink(grid, r - 1, c);
+        sink(grid, r, c + 1);
+        sink(grid, r, c - 1);
+    }
+}
+'''
+javascript = '''
+function sink(grid, r, c) {
+  if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length || grid[r][c] !== 1) return;
+  grid[r][c] = 0;
+  sink(grid, r + 1, c);
+  sink(grid, r - 1, c);
+  sink(grid, r, c + 1);
+  sink(grid, r, c - 1);
+}
+
+function numIslands(grid) {
+  let count = 0;
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[0].length; c++) {
+      if (grid[r][c] === 1) {
+        count++;
+        sink(grid, r, c);
+      }
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func sink(grid [][]int, r int, c int) {
+    if r < 0 || c < 0 || r >= len(grid) || c >= len(grid[0]) || grid[r][c] != 1 {
+        return
+    }
+    grid[r][c] = 0
+    sink(grid, r+1, c)
+    sink(grid, r-1, c)
+    sink(grid, r, c+1)
+    sink(grid, r, c-1)
+}
+
+func numIslands(grid [][]int) int {
+    count := 0
+    for r := 0; r < len(grid); r++ {
+        for c := 0; c < len(grid[0]); c++ {
+            if grid[r][c] == 1 {
+                count++
+                sink(grid, r, c)
+            }
+        }
+    }
+    return count
+}
+'''
+
+[[case]]
+id = "matrix_search_staircase"
+title = "Search a row- and column-sorted matrix from the corner"
+tags = ["multi-variable", "grid", "while", "two-pointers", "leetcode"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n + m)"
+space_expr = "O(1)"
+rationale = "Every iteration moves one step left or down, so at most rows + cols steps."
+
+[case.sources]
+python = '''
+def search_matrix(matrix, target):
+    r = 0
+    c = len(matrix[0]) - 1
+    while r < len(matrix) and c >= 0:
+        if matrix[r][c] == target:
+            return True
+        if matrix[r][c] > target:
+            c -= 1
+        else:
+            r += 1
+    return False
+'''
+cpp = '''
+bool searchMatrix(vector<vector<int>>& matrix, int target) {
+    int r = 0;
+    int c = matrix[0].size() - 1;
+    while (r < matrix.size() && c >= 0) {
+        if (matrix[r][c] == target) return true;
+        if (matrix[r][c] > target) {
+            c--;
+        } else {
+            r++;
+        }
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean searchMatrix(int[][] matrix, int target) {
+        int r = 0;
+        int c = matrix[0].length - 1;
+        while (r < matrix.length && c >= 0) {
+            if (matrix[r][c] == target) return true;
+            if (matrix[r][c] > target) {
+                c--;
+            } else {
+                r++;
+            }
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function searchMatrix(matrix, target) {
+  let r = 0;
+  let c = matrix[0].length - 1;
+  while (r < matrix.length && c >= 0) {
+    if (matrix[r][c] === target) return true;
+    if (matrix[r][c] > target) {
+      c--;
+    } else {
+      r++;
+    }
+  }
+  return false;
+}
+'''
+go = '''
+func searchMatrix(matrix [][]int, target int) bool {
+    r := 0
+    c := len(matrix[0]) - 1
+    for r < len(matrix) && c >= 0 {
+        if matrix[r][c] == target {
+            return true
+        }
+        if matrix[r][c] > target {
+            c--
+        } else {
+            r++
+        }
+    }
+    return false
+}
+'''
+
+[[case]]
+id = "knapsack_rolling_dp"
+title = "0/1 knapsack with a one-dimensional table"
+tags = ["multi-variable", "dp", "nested-loop", "integer-parameter", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n * m)"
+space_expr = "O(m)"
+rationale = "n is the number of items; m is the capacity (an integer VALUE used as a bound). For each item the inner loop walks at most capacity+1 slots: n*m time. The table has capacity+1 slots: O(m) space."
+
+[case.sources]
+python = '''
+def knapsack(weights, values, capacity):
+    dp = [0] * (capacity + 1)
+    for i in range(len(weights)):
+        for w in range(capacity, weights[i] - 1, -1):
+            dp[w] = max(dp[w], dp[w - weights[i]] + values[i])
+    return dp[capacity]
+'''
+cpp = '''
+int knapsack(vector<int>& weights, vector<int>& values, int capacity) {
+    vector<int> dp(capacity + 1, 0);
+    for (int i = 0; i < weights.size(); i++) {
+        for (int w = capacity; w >= weights[i]; w--) {
+            dp[w] = max(dp[w], dp[w - weights[i]] + values[i]);
+        }
+    }
+    return dp[capacity];
+}
+'''
+java = '''
+class Solution {
+    public int knapsack(int[] weights, int[] values, int capacity) {
+        int[] dp = new int[capacity + 1];
+        for (int i = 0; i < weights.length; i++) {
+            for (int w = capacity; w >= weights[i]; w--) {
+                dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+            }
+        }
+        return dp[capacity];
+    }
+}
+'''
+javascript = '''
+function knapsack(weights, values, capacity) {
+  const dp = new Array(capacity + 1).fill(0);
+  for (let i = 0; i < weights.length; i++) {
+    for (let w = capacity; w >= weights[i]; w--) {
+      dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+    }
+  }
+  return dp[capacity];
+}
+'''
+go = '''
+func knapsack(weights []int, values []int, capacity int) int {
+    dp := make([]int, capacity+1)
+    for i := 0; i < len(weights); i++ {
+        for w := capacity; w >= weights[i]; w-- {
+            if dp[w-weights[i]]+values[i] > dp[w] {
+                dp[w] = dp[w-weights[i]] + values[i]
+            }
+        }
+    }
+    return dp[capacity]
+}
+'''

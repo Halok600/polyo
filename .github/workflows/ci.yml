@@ -21,6 +21,28 @@ jobs:
       - name: Test
         run: pytest -q
 
+  golden:
+    # The safety net behind PolyO v2: hand-labelled cases in every language, perturbation
+    # invariance, and the scorecard. Its own job so its status is not hidden by unrelated jobs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install -r requirements-dev.txt
+      - name: Golden suite, perturbations and regressions
+        run: >
+          pytest -q tests/test_golden_suite.py tests/test_golden_integrity.py
+          tests/test_golden_perturbations.py tests/test_eval_perturb.py
+          tests/test_eval_predictors.py tests/test_eval_scorecard.py
+          tests/test_diagnosis_regressions.py
+      - name: Scorecard
+        run: python -m eval.scorecard --predictors rule,gnn --out scorecard.md
+      - name: Publish the scorecard to the run summary
+        run: cat scorecard.md >> "$GITHUB_STEP_SUMMARY"
+
   web:
     runs-on: ubuntu-latest
     defaults:

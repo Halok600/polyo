@@ -1,0 +1,1176 @@
+# Golden group: hash containers, strings and hidden library costs.
+# Convention: hash-map / hash-set operations are O(1) average (the LeetCode editorial convention);
+# list membership, front removal and immutable-string concatenation are O(n) per operation.
+# Where a language genuinely differs (Go slicing is an O(1) view, C++ std::string appends are
+# amortised O(1)) the case carries an explicit per-language override explained in its rationale.
+
+[[case]]
+id = "hash_two_sum"
+title = "Two Sum with a hash map"
+tags = ["hash-map", "leetcode", "early-exit"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "One pass; each lookup/insert is O(1) average. The map holds up to n entries."
+
+[case.sources]
+python = '''
+def two_sum(nums, target):
+    seen = {}
+    for i, x in enumerate(nums):
+        if target - x in seen:
+            return [seen[target - x], i]
+        seen[x] = i
+    return []
+'''
+cpp = '''
+vector<int> twoSum(vector<int>& nums, int target) {
+    unordered_map<int, int> seen;
+    for (int i = 0; i < nums.size(); i++) {
+        auto it = seen.find(target - nums[i]);
+        if (it != seen.end()) return {it->second, i};
+        seen[nums[i]] = i;
+    }
+    return {};
+}
+'''
+java = '''
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        Map<Integer, Integer> seen = new HashMap<>();
+        for (int i = 0; i < nums.length; i++) {
+            if (seen.containsKey(target - nums[i])) {
+                return new int[]{seen.get(target - nums[i]), i};
+            }
+            seen.put(nums[i], i);
+        }
+        return new int[]{};
+    }
+}
+'''
+javascript = '''
+function twoSum(nums, target) {
+  const seen = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    if (seen.has(target - nums[i])) {
+      return [seen.get(target - nums[i]), i];
+    }
+    seen.set(nums[i], i);
+  }
+  return [];
+}
+'''
+go = '''
+func twoSum(nums []int, target int) []int {
+    seen := make(map[int]int)
+    for i, x := range nums {
+        if j, ok := seen[target-x]; ok {
+            return []int{j, i}
+        }
+        seen[x] = i
+    }
+    return []int{}
+}
+'''
+
+[[case]]
+id = "hash_contains_duplicate_set"
+title = "Contains Duplicate with a hash set"
+tags = ["hash-set", "leetcode", "early-exit"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "One pass with O(1) average set operations; the set holds up to n values."
+
+[case.sources]
+python = '''
+def contains_duplicate(nums):
+    seen = set()
+    for x in nums:
+        if x in seen:
+            return True
+        seen.add(x)
+    return False
+'''
+cpp = '''
+bool containsDuplicate(vector<int>& nums) {
+    unordered_set<int> seen;
+    for (int x : nums) {
+        if (seen.count(x)) return true;
+        seen.insert(x);
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean containsDuplicate(int[] nums) {
+        Set<Integer> seen = new HashSet<>();
+        for (int x : nums) {
+            if (!seen.add(x)) return true;
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function containsDuplicate(nums) {
+  const seen = new Set();
+  for (const x of nums) {
+    if (seen.has(x)) return true;
+    seen.add(x);
+  }
+  return false;
+}
+'''
+go = '''
+func containsDuplicate(nums []int) bool {
+    seen := make(map[int]bool)
+    for _, x := range nums {
+        if seen[x] {
+            return true
+        }
+        seen[x] = true
+    }
+    return false
+}
+'''
+
+[[case]]
+id = "hash_most_frequent"
+title = "Most frequent value via a counter map"
+tags = ["hash-map", "counting"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Counting pass is O(n); the second loop walks the distinct keys, of which there are at most n."
+
+[case.sources]
+python = '''
+def most_frequent(nums):
+    counts = {}
+    for x in nums:
+        counts[x] = counts.get(x, 0) + 1
+    best = nums[0]
+    for x in counts:
+        if counts[x] > counts[best]:
+            best = x
+    return best
+'''
+cpp = '''
+int mostFrequent(vector<int>& nums) {
+    unordered_map<int, int> counts;
+    for (int x : nums) counts[x]++;
+    int best = nums[0];
+    int bestCount = 0;
+    for (auto& kv : counts) {
+        if (kv.second > bestCount) {
+            best = kv.first;
+            bestCount = kv.second;
+        }
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int mostFrequent(int[] nums) {
+        Map<Integer, Integer> counts = new HashMap<>();
+        for (int x : nums) {
+            counts.put(x, counts.getOrDefault(x, 0) + 1);
+        }
+        int best = nums[0];
+        int bestCount = 0;
+        for (Map.Entry<Integer, Integer> e : counts.entrySet()) {
+            if (e.getValue() > bestCount) {
+                best = e.getKey();
+                bestCount = e.getValue();
+            }
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function mostFrequent(nums) {
+  const counts = new Map();
+  for (const x of nums) {
+    counts.set(x, (counts.get(x) || 0) + 1);
+  }
+  let best = nums[0];
+  let bestCount = 0;
+  for (const [k, v] of counts) {
+    if (v > bestCount) {
+      best = k;
+      bestCount = v;
+    }
+  }
+  return best;
+}
+'''
+go = '''
+func mostFrequent(nums []int) int {
+    counts := make(map[int]int)
+    for _, x := range nums {
+        counts[x]++
+    }
+    best := nums[0]
+    bestCount := 0
+    for k, v := range counts {
+        if v > bestCount {
+            best = k
+            bestCount = v
+        }
+    }
+    return best
+}
+'''
+
+[[case]]
+id = "hash_first_unique_char_table"
+title = "First non-repeating character with a 26-slot table"
+tags = ["counting", "fixed-table", "string", "leetcode"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "Two linear passes over the string; the counter is a fixed 26-slot array, so space is constant (unlike a dict keyed by arbitrary characters)."
+
+[case.sources]
+python = '''
+def first_unique_char(s):
+    counts = [0] * 26
+    for ch in s:
+        counts[ord(ch) - ord("a")] += 1
+    for i in range(len(s)):
+        if counts[ord(s[i]) - ord("a")] == 1:
+            return i
+    return -1
+'''
+cpp = '''
+int firstUniqueChar(string& s) {
+    int counts[26] = {0};
+    for (char ch : s) counts[ch - 'a']++;
+    for (int i = 0; i < s.size(); i++) {
+        if (counts[s[i] - 'a'] == 1) return i;
+    }
+    return -1;
+}
+'''
+java = '''
+class Solution {
+    public int firstUniqueChar(String s) {
+        int[] counts = new int[26];
+        for (int i = 0; i < s.length(); i++) counts[s.charAt(i) - 'a']++;
+        for (int i = 0; i < s.length(); i++) {
+            if (counts[s.charAt(i) - 'a'] == 1) return i;
+        }
+        return -1;
+    }
+}
+'''
+javascript = '''
+function firstUniqueChar(s) {
+  const counts = new Array(26).fill(0);
+  for (let i = 0; i < s.length; i++) counts[s.charCodeAt(i) - 97]++;
+  for (let i = 0; i < s.length; i++) {
+    if (counts[s.charCodeAt(i) - 97] === 1) return i;
+  }
+  return -1;
+}
+'''
+go = '''
+func firstUniqueChar(s string) int {
+    var counts [26]int
+    for i := 0; i < len(s); i++ {
+        counts[s[i]-'a']++
+    }
+    for i := 0; i < len(s); i++ {
+        if counts[s[i]-'a'] == 1 {
+            return i
+        }
+    }
+    return -1
+}
+'''
+c = '''
+int firstUniqueChar(char* s) {
+    int counts[26] = {0};
+    for (int i = 0; s[i] != '\0'; i++) counts[s[i] - 'a']++;
+    for (int i = 0; s[i] != '\0'; i++) {
+        if (counts[s[i] - 'a'] == 1) return i;
+    }
+    return -1;
+}
+'''
+
+[[case]]
+id = "hidden_list_membership_dedupe"
+title = "Dedupe by testing membership in a list"
+tags = ["library-call", "hidden-cost", "membership", "nested-cost"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "TRAP: there is no inner loop in the source, but 'x in list' scans the list, which grows to n, so each of the n iterations costs up to O(n). Hash-set membership would be O(1)."
+
+[case.sources]
+python = '''
+def dedupe_keep_order(nums):
+    seen = []
+    for x in nums:
+        if x not in seen:
+            seen.append(x)
+    return seen
+'''
+cpp = '''
+vector<int> dedupeKeepOrder(vector<int>& nums) {
+    vector<int> seen;
+    for (int x : nums) {
+        if (find(seen.begin(), seen.end(), x) == seen.end()) seen.push_back(x);
+    }
+    return seen;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> dedupeKeepOrder(int[] nums) {
+        List<Integer> seen = new ArrayList<>();
+        for (int x : nums) {
+            if (!seen.contains(x)) seen.add(x);
+        }
+        return seen;
+    }
+}
+'''
+javascript = '''
+function dedupeKeepOrder(nums) {
+  const seen = [];
+  for (const x of nums) {
+    if (!seen.includes(x)) seen.push(x);
+  }
+  return seen;
+}
+'''
+go = '''
+func dedupeKeepOrder(nums []int) []int {
+    seen := []int{}
+    for _, x := range nums {
+        if !slices.Contains(seen, x) {
+            seen = append(seen, x)
+        }
+    }
+    return seen
+}
+'''
+
+[[case]]
+id = "hash_set_membership_dedupe"
+title = "Dedupe by testing membership in a set"
+tags = ["hash-set", "membership"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "The same loop as hidden_list_membership_dedupe, but the membership test is on a hash set: O(1) average."
+
+[case.sources]
+python = '''
+def dedupe_keep_order(nums):
+    seen = set()
+    out = []
+    for x in nums:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+'''
+cpp = '''
+vector<int> dedupeKeepOrder(vector<int>& nums) {
+    unordered_set<int> seen;
+    vector<int> out;
+    for (int x : nums) {
+        if (seen.find(x) == seen.end()) {
+            seen.insert(x);
+            out.push_back(x);
+        }
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> dedupeKeepOrder(int[] nums) {
+        Set<Integer> seen = new HashSet<>();
+        List<Integer> out = new ArrayList<>();
+        for (int x : nums) {
+            if (!seen.contains(x)) {
+                seen.add(x);
+                out.add(x);
+            }
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function dedupeKeepOrder(nums) {
+  const seen = new Set();
+  const out = [];
+  for (const x of nums) {
+    if (!seen.has(x)) {
+      seen.add(x);
+      out.push(x);
+    }
+  }
+  return out;
+}
+'''
+go = '''
+func dedupeKeepOrder(nums []int) []int {
+    seen := make(map[int]bool)
+    out := []int{}
+    for _, x := range nums {
+        if !seen[x] {
+            seen[x] = true
+            out = append(out, x)
+        }
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "hash_prefix_sum_subarray_count"
+title = "Subarray Sum Equals K with prefix sums"
+tags = ["hash-map", "prefix-sum", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "One pass; each step is two O(1) average map operations. The map holds up to n+1 prefix sums. k is only added and compared, never a bound."
+
+[case.sources]
+python = '''
+def subarray_sum(nums, k):
+    counts = {0: 1}
+    prefix = 0
+    total = 0
+    for x in nums:
+        prefix += x
+        total += counts.get(prefix - k, 0)
+        counts[prefix] = counts.get(prefix, 0) + 1
+    return total
+'''
+cpp = '''
+int subarraySum(vector<int>& nums, int k) {
+    unordered_map<int, int> counts;
+    counts[0] = 1;
+    int prefix = 0;
+    int total = 0;
+    for (int x : nums) {
+        prefix += x;
+        if (counts.count(prefix - k)) total += counts[prefix - k];
+        counts[prefix]++;
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int subarraySum(int[] nums, int k) {
+        Map<Integer, Integer> counts = new HashMap<>();
+        counts.put(0, 1);
+        int prefix = 0;
+        int total = 0;
+        for (int x : nums) {
+            prefix += x;
+            total += counts.getOrDefault(prefix - k, 0);
+            counts.put(prefix, counts.getOrDefault(prefix, 0) + 1);
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function subarraySum(nums, k) {
+  const counts = new Map();
+  counts.set(0, 1);
+  let prefix = 0;
+  let total = 0;
+  for (const x of nums) {
+    prefix += x;
+    total += counts.get(prefix - k) || 0;
+    counts.set(prefix, (counts.get(prefix) || 0) + 1);
+  }
+  return total;
+}
+'''
+go = '''
+func subarraySum(nums []int, k int) int {
+    counts := map[int]int{0: 1}
+    prefix := 0
+    total := 0
+    for _, x := range nums {
+        prefix += x
+        total += counts[prefix-k]
+        counts[prefix]++
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "hidden_pop_front_in_loop"
+title = "Drain a list from the front"
+tags = ["library-call", "hidden-cost", "queue"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "TRAP: removing the first element of an array-backed list shifts every remaining element, O(n) each, n times. A deque or head index would be O(n). The Go version uses the copy-shift idiom (a plain items[1:] would be an O(1) view)."
+
+[case.sources]
+python = '''
+def drain_front(nums):
+    items = list(nums)
+    total = 0
+    while items:
+        total += items.pop(0)
+    return total
+'''
+cpp = '''
+int drainFront(vector<int>& nums) {
+    vector<int> items = nums;
+    int total = 0;
+    while (!items.empty()) {
+        total += items.front();
+        items.erase(items.begin());
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int drainFront(int[] nums) {
+        List<Integer> items = new ArrayList<>();
+        for (int x : nums) items.add(x);
+        int total = 0;
+        while (!items.isEmpty()) {
+            total += items.remove(0);
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function drainFront(nums) {
+  const items = [...nums];
+  let total = 0;
+  while (items.length > 0) {
+    total += items.shift();
+  }
+  return total;
+}
+'''
+go = '''
+func drainFront(nums []int) int {
+    items := append([]int(nil), nums...)
+    total := 0
+    for len(items) > 0 {
+        total += items[0]
+        items = append(items[:0], items[1:]...)
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "string_concat_in_loop"
+title = "Build a string with += in a loop"
+tags = ["string", "hidden-cost", "language-semantics"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "Immutable strings: each += copies the whole prefix, so n appends cost 1+2+...+n = O(n^2) (the standard convention, even though CPython and V8 sometimes optimise it). C++ std::string is mutable and += is amortised O(1), so the cpp override is O(n) time. This differs by language on purpose."
+
+[case.sources]
+python = '''
+def join_chars(chars):
+    result = ""
+    for ch in chars:
+        result += ch
+    return result
+'''
+cpp = '''
+string joinChars(vector<char>& chars) {
+    string result;
+    for (char ch : chars) {
+        result += ch;
+    }
+    return result;
+}
+'''
+java = '''
+class Solution {
+    public String joinChars(char[] chars) {
+        String result = "";
+        for (char ch : chars) {
+            result += ch;
+        }
+        return result;
+    }
+}
+'''
+javascript = '''
+function joinChars(chars) {
+  let result = "";
+  for (const ch of chars) {
+    result += ch;
+  }
+  return result;
+}
+'''
+go = '''
+func joinChars(chars []rune) string {
+    result := ""
+    for _, ch := range chars {
+        result += string(ch)
+    }
+    return result
+}
+'''
+
+[case.overrides.cpp]
+time_class = "O(n)"
+time_expr = "O(n)"
+
+[[case]]
+id = "string_builder_join"
+title = "Build a string with a builder / join"
+tags = ["string", "builder"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Appending to a builder (or collecting parts and joining once) is amortised O(1) per character: O(n) total."
+
+[case.sources]
+python = '''
+def join_chars(chars):
+    parts = []
+    for ch in chars:
+        parts.append(ch)
+    return "".join(parts)
+'''
+cpp = '''
+string joinChars(vector<char>& chars) {
+    string result;
+    for (char ch : chars) {
+        result.push_back(ch);
+    }
+    return result;
+}
+'''
+java = '''
+class Solution {
+    public String joinChars(char[] chars) {
+        StringBuilder sb = new StringBuilder();
+        for (char ch : chars) {
+            sb.append(ch);
+        }
+        return sb.toString();
+    }
+}
+'''
+javascript = '''
+function joinChars(chars) {
+  const parts = [];
+  for (const ch of chars) {
+    parts.push(ch);
+  }
+  return parts.join("");
+}
+'''
+go = '''
+func joinChars(chars []rune) string {
+    var sb strings.Builder
+    for _, ch := range chars {
+        sb.WriteRune(ch)
+    }
+    return sb.String()
+}
+'''
+
+[[case]]
+id = "cubic_substring_palindrome_check"
+title = "Count palindromic substrings by slicing each one"
+tags = ["string", "hidden-cost", "nested-loop", "language-semantics"]
+time_class = "O(n^3)"
+space_class = "O(n)"
+time_expr = "O(n^3)"
+space_expr = "O(n)"
+rationale = "TRAP: two visible loops hide a third factor: each of the n^2 substrings is copied and reversed or compared in O(n). The Go version slices (an O(1) view) and uses an allocation-free palindrome helper, so its time is still n^3 but its auxiliary space is O(1): that space override differs by language on purpose."
+
+[case.sources]
+python = '''
+def count_palindromes(s):
+    count = 0
+    for i in range(len(s)):
+        for j in range(i + 1, len(s) + 1):
+            sub = s[i:j]
+            if sub == sub[::-1]:
+                count += 1
+    return count
+'''
+cpp = '''
+int countPalindromes(string& s) {
+    int count = 0;
+    for (int i = 0; i < s.size(); i++) {
+        for (int j = i + 1; j <= s.size(); j++) {
+            string sub = s.substr(i, j - i);
+            string rev(sub.rbegin(), sub.rend());
+            if (sub == rev) count++;
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countPalindromes(String s) {
+        int count = 0;
+        for (int i = 0; i < s.length(); i++) {
+            for (int j = i + 1; j <= s.length(); j++) {
+                String sub = s.substring(i, j);
+                String rev = new StringBuilder(sub).reverse().toString();
+                if (sub.equals(rev)) count++;
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countPalindromes(s) {
+  let count = 0;
+  for (let i = 0; i < s.length; i++) {
+    for (let j = i + 1; j <= s.length; j++) {
+      const sub = s.slice(i, j);
+      const rev = sub.split("").reverse().join("");
+      if (sub === rev) count++;
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func isPalindrome(sub string) bool {
+    i := 0
+    j := len(sub) - 1
+    for i < j {
+        if sub[i] != sub[j] {
+            return false
+        }
+        i++
+        j--
+    }
+    return true
+}
+
+func countPalindromes(s string) int {
+    count := 0
+    for i := 0; i < len(s); i++ {
+        for j := i + 1; j <= len(s); j++ {
+            if isPalindrome(s[i:j]) {
+                count++
+            }
+        }
+    }
+    return count
+}
+'''
+
+[case.overrides.go]
+space_class = "O(1)"
+space_expr = "O(1)"
+
+[[case]]
+id = "hidden_slice_copy_in_loop"
+title = "Copy the tail of the array on every iteration"
+tags = ["slice", "hidden-cost", "language-semantics"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "TRAP: nums[i:] copies n-i elements, so n iterations cost O(n^2) time, and each copy is O(n) peak space. Go slicing is an O(1) view over the same backing array, so the Go override is O(n) time and O(1) space. This differs by language on purpose."
+
+[case.sources]
+python = '''
+def tail_lengths(nums):
+    total = 0
+    for i in range(len(nums)):
+        tail = nums[i:]
+        total += len(tail)
+    return total
+'''
+cpp = '''
+int tailLengths(vector<int>& nums) {
+    int total = 0;
+    for (int i = 0; i < nums.size(); i++) {
+        vector<int> tail(nums.begin() + i, nums.end());
+        total += tail.size();
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int tailLengths(int[] nums) {
+        int total = 0;
+        for (int i = 0; i < nums.length; i++) {
+            int[] tail = Arrays.copyOfRange(nums, i, nums.length);
+            total += tail.length;
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function tailLengths(nums) {
+  let total = 0;
+  for (let i = 0; i < nums.length; i++) {
+    const tail = nums.slice(i);
+    total += tail.length;
+  }
+  return total;
+}
+'''
+go = '''
+func tailLengths(nums []int) int {
+    total := 0
+    for i := 0; i < len(nums); i++ {
+        tail := nums[i:]
+        total += len(tail)
+    }
+    return total
+}
+'''
+
+[case.overrides.go]
+time_class = "O(n)"
+time_expr = "O(n)"
+space_class = "O(1)"
+space_expr = "O(1)"
+
+[[case]]
+id = "hidden_count_in_loop"
+title = "Frequency of every element via a counting call"
+tags = ["library-call", "hidden-cost", "nested-cost"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "TRAP: one loop in the source, but the count call scans the whole array each time: n * n."
+
+[case.sources]
+python = '''
+def max_frequency(nums):
+    best = 0
+    for x in nums:
+        best = max(best, nums.count(x))
+    return best
+'''
+cpp = '''
+int maxFrequency(vector<int>& nums) {
+    int best = 0;
+    for (int x : nums) {
+        best = max(best, (int)count(nums.begin(), nums.end(), x));
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int maxFrequency(List<Integer> nums) {
+        int best = 0;
+        for (int x : nums) {
+            best = Math.max(best, Collections.frequency(nums, x));
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function maxFrequency(nums) {
+  let best = 0;
+  for (const x of nums) {
+    const c = nums.reduce((acc, y) => acc + (y === x ? 1 : 0), 0);
+    best = Math.max(best, c);
+  }
+  return best;
+}
+'''
+go = '''
+func maxFrequency(nums []int) int {
+    best := 0
+    for _, x := range nums {
+        c := 0
+        for _, y := range nums {
+            if y == x {
+                c++
+            }
+        }
+        if c > best {
+            best = c
+        }
+    }
+    return best
+}
+'''
+
+[[case]]
+id = "lib_range_of_values"
+title = "Range of values with built-in min, max and sum"
+tags = ["library-call", "builtin"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "Each of the three built-in reductions is one O(n) scan; constant extra space."
+
+[case.sources]
+python = '''
+def value_range(nums):
+    return max(nums) - min(nums) + sum(nums)
+'''
+cpp = '''
+int valueRange(vector<int>& nums) {
+    int hi = *max_element(nums.begin(), nums.end());
+    int lo = *min_element(nums.begin(), nums.end());
+    int total = accumulate(nums.begin(), nums.end(), 0);
+    return hi - lo + total;
+}
+'''
+java = '''
+class Solution {
+    public int valueRange(int[] nums) {
+        int hi = Arrays.stream(nums).max().getAsInt();
+        int lo = Arrays.stream(nums).min().getAsInt();
+        int total = Arrays.stream(nums).sum();
+        return hi - lo + total;
+    }
+}
+'''
+javascript = '''
+function valueRange(nums) {
+  const hi = nums.reduce((a, b) => Math.max(a, b));
+  const lo = nums.reduce((a, b) => Math.min(a, b));
+  const total = nums.reduce((a, b) => a + b, 0);
+  return hi - lo + total;
+}
+'''
+go = '''
+func valueRange(nums []int) int {
+    hi, lo, total := nums[0], nums[0], 0
+    for _, x := range nums {
+        if x > hi {
+            hi = x
+        }
+        if x < lo {
+            lo = x
+        }
+        total += x
+    }
+    return hi - lo + total
+}
+'''
+
+[[case]]
+id = "lib_reversed_copy"
+title = "Return a reversed copy"
+tags = ["library-call", "copy"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "One O(n) pass producing a new O(n) list."
+
+[case.sources]
+python = '''
+def reversed_copy(nums):
+    return list(reversed(nums))
+'''
+cpp = '''
+vector<int> reversedCopy(vector<int>& nums) {
+    vector<int> out(nums.rbegin(), nums.rend());
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public int[] reversedCopy(int[] nums) {
+        int[] out = new int[nums.length];
+        for (int i = 0; i < nums.length; i++) {
+            out[i] = nums[nums.length - 1 - i];
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function reversedCopy(nums) {
+  return [...nums].reverse();
+}
+'''
+go = '''
+func reversedCopy(nums []int) []int {
+    out := make([]int, len(nums))
+    for i := 0; i < len(nums); i++ {
+        out[i] = nums[len(nums)-1-i]
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "lib_distinct_count"
+title = "Number of distinct values via a set"
+tags = ["hash-set", "library-call"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Building the set is n O(1) average insertions; the set holds up to n values."
+
+[case.sources]
+python = '''
+def distinct_count(nums):
+    return len(set(nums))
+'''
+cpp = '''
+int distinctCount(vector<int>& nums) {
+    unordered_set<int> s(nums.begin(), nums.end());
+    return s.size();
+}
+'''
+java = '''
+class Solution {
+    public int distinctCount(int[] nums) {
+        Set<Integer> s = new HashSet<>();
+        for (int x : nums) s.add(x);
+        return s.size();
+    }
+}
+'''
+javascript = '''
+function distinctCount(nums) {
+  return new Set(nums).size;
+}
+'''
+go = '''
+func distinctCount(nums []int) int {
+    s := make(map[int]bool)
+    for _, x := range nums {
+        s[x] = true
+    }
+    return len(s)
+}
+'''
+
+[[case]]
+id = "stack_balanced_brackets"
+title = "Balanced brackets with a stack"
+tags = ["stack", "string", "leetcode", "literal-lookup"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "One pass; every push/pop is O(1); the bracket table is a constant-size literal. The stack can hold up to n characters."
+
+[case.sources]
+python = '''
+def is_balanced(s):
+    stack = []
+    pairs = {")": "(", "]": "[", "}": "{"}
+    for ch in s:
+        if ch in pairs:
+            if not stack or stack.pop() != pairs[ch]:
+                return False
+        else:
+            stack.append(ch)
+    return not stack
+'''
+cpp = '''
+bool isBalanced(string& s) {
+    stack<char> st;
+    for (char ch : s) {
+        if (ch == '(' || ch == '[' || ch == '{') {
+            st.push(ch);
+        } else {
+            if (st.empty()) return false;
+            char top = st.top();
+            st.pop();
+            if ((ch == ')' && top != '(') || (ch == ']' && top != '[') || (ch == '}' && top != '{')) {
+                return false;
+            }
+        }
+    }
+    return st.empty();
+}
+'''
+java = '''
+class Solution {
+    public boolean isBalanced(String s) {
+        Deque<Character> stack = new ArrayDeque<>();
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == '(' || ch == '[' || ch == '{') {
+                stack.push(ch);
+            } else {
+                if (stack.isEmpty()) return false;
+                char top = stack.pop();
+                if ((ch == ')' && top != '(') || (ch == ']' && top != '[') || (ch == '}' && top != '{')) {
+                    return false;
+                }
+            }
+        }
+        return stack.isEmpty();
+    }
+}
+'''
+javascript = '''
+function isBalanced(s) {
+  const stack = [];
+  const pairs = { ")": "(", "]": "[", "}": "{" };
+  for (const ch of s) {
+    if (ch in pairs) {
+      if (stack.length === 0 || stack.pop() !== pairs[ch]) return false;
+    } else {
+      stack.push(ch);
+    }
+  }
+  return stack.length === 0;
+}
+'''
+go = '''
+func isBalanced(s string) bool {
+    stack := []rune{}
+    pairs := map[rune]rune{')': '(', ']': '[', '}': '{'}
+    for _, ch := range s {
+        if open, ok := pairs[ch]; ok {
+            if len(stack) == 0 || stack[len(stack)-1] != open {
+                return false
+            }
+            stack = stack[:len(stack)-1]
+        } else {
+            stack = append(stack, ch)
+        }
+    }
+    return len(stack) == 0
+}
+'''

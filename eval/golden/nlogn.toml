@@ -1,0 +1,1098 @@
+# Golden group: n log n and n^2 log n.
+# Includes the two classic traps where multiplying loop bounds is WRONG or needs a closed-form
+# sum: the harmonic sieve (sum of n/i) and a doubling outer loop around a linear inner loop.
+# Space convention for sorts: most cases sort a COPY, so the O(n) copy dominates in every
+# language and the label does not depend on the library sort's own auxiliary space.
+
+[[case]]
+id = "nlogn_sorted_unique"
+title = "Sort a copy, then drop adjacent duplicates"
+tags = ["sorting", "library-call", "copy"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Library sort of a copy is n log n; the dedupe pass is linear and dominated. The copy and the output are O(n)."
+
+[case.sources]
+python = '''
+def sorted_unique(nums):
+    ordered = sorted(nums)
+    out = []
+    for x in ordered:
+        if not out or out[-1] != x:
+            out.append(x)
+    return out
+'''
+cpp = '''
+vector<int> sortedUnique(vector<int>& nums) {
+    vector<int> ordered = nums;
+    sort(ordered.begin(), ordered.end());
+    vector<int> out;
+    for (int x : ordered) {
+        if (out.empty() || out.back() != x) out.push_back(x);
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> sortedUnique(int[] nums) {
+        int[] ordered = nums.clone();
+        Arrays.sort(ordered);
+        List<Integer> out = new ArrayList<>();
+        for (int x : ordered) {
+            if (out.isEmpty() || out.get(out.size() - 1) != x) out.add(x);
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function sortedUnique(nums) {
+  const ordered = [...nums].sort((a, b) => a - b);
+  const out = [];
+  for (const x of ordered) {
+    if (out.length === 0 || out[out.length - 1] !== x) out.push(x);
+  }
+  return out;
+}
+'''
+go = '''
+func sortedUnique(nums []int) []int {
+    ordered := make([]int, len(nums))
+    copy(ordered, nums)
+    sort.Ints(ordered)
+    out := []int{}
+    for _, x := range ordered {
+        if len(out) == 0 || out[len(out)-1] != x {
+            out = append(out, x)
+        }
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "nlogn_min_adjacent_gap"
+title = "Smallest gap between any two values via sort"
+tags = ["sorting", "library-call", "copy"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Sorting a copy dominates; the adjacent-difference scan is linear."
+
+[case.sources]
+python = '''
+def min_gap(nums):
+    ordered = sorted(nums)
+    best = float("inf")
+    for i in range(1, len(ordered)):
+        best = min(best, ordered[i] - ordered[i - 1])
+    return best
+'''
+cpp = '''
+int minGap(vector<int>& nums) {
+    vector<int> ordered = nums;
+    sort(ordered.begin(), ordered.end());
+    int best = INT_MAX;
+    for (int i = 1; i < ordered.size(); i++) {
+        best = min(best, ordered[i] - ordered[i - 1]);
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int minGap(int[] nums) {
+        int[] ordered = nums.clone();
+        Arrays.sort(ordered);
+        int best = Integer.MAX_VALUE;
+        for (int i = 1; i < ordered.length; i++) {
+            best = Math.min(best, ordered[i] - ordered[i - 1]);
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function minGap(nums) {
+  const ordered = [...nums].sort((a, b) => a - b);
+  let best = Infinity;
+  for (let i = 1; i < ordered.length; i++) {
+    best = Math.min(best, ordered[i] - ordered[i - 1]);
+  }
+  return best;
+}
+'''
+go = '''
+func minGap(nums []int) int {
+    ordered := make([]int, len(nums))
+    copy(ordered, nums)
+    sort.Ints(ordered)
+    best := math.MaxInt
+    for i := 1; i < len(ordered); i++ {
+        if ordered[i]-ordered[i-1] < best {
+            best = ordered[i] - ordered[i-1]
+        }
+    }
+    return best
+}
+'''
+
+[[case]]
+id = "nlogn_sort_in_place"
+title = "Sort the input in place with the library sort"
+tags = ["sorting", "library-call", "in-place", "language-semantics"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Time is n log n everywhere. Auxiliary space differs by library, so the per-language overrides below are deliberate: Python's Timsort and JavaScript's V8 TimSort may allocate an O(n) merge buffer; C++ std::sort (introsort), Java Arrays.sort(int[]) (dual-pivot quicksort) and Go sort.Ints (pdqsort) sort in place with O(log n) recursion stack."
+
+[case.sources]
+python = '''
+def sort_in_place(nums):
+    nums.sort()
+    return nums
+'''
+cpp = '''
+void sortInPlace(vector<int>& nums) {
+    sort(nums.begin(), nums.end());
+}
+'''
+java = '''
+class Solution {
+    public void sortInPlace(int[] nums) {
+        Arrays.sort(nums);
+    }
+}
+'''
+javascript = '''
+function sortInPlace(nums) {
+  nums.sort((a, b) => a - b);
+  return nums;
+}
+'''
+go = '''
+func sortInPlace(nums []int) {
+    sort.Ints(nums)
+}
+'''
+
+[case.overrides.cpp]
+space_class = "O(log n)"
+space_expr = "O(log n)"
+
+[case.overrides.java]
+space_class = "O(log n)"
+space_expr = "O(log n)"
+
+[case.overrides.go]
+space_class = "O(log n)"
+space_expr = "O(log n)"
+
+[[case]]
+id = "nlogn_merge_sort"
+title = "Top-down merge sort"
+tags = ["sorting", "recursion", "divide-and-conquer", "master-theorem"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "T(n) = 2T(n/2) + O(n) by the master theorem (case 2) is n log n. The merge buffer / result lists make the auxiliary space O(n); recursion adds only O(log n)."
+
+[case.sources]
+python = '''
+def merge_sort(nums):
+    if len(nums) <= 1:
+        return nums
+    mid = len(nums) // 2
+    left = merge_sort(nums[:mid])
+    right = merge_sort(nums[mid:])
+    result = []
+    i = 0
+    j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+'''
+cpp = '''
+void mergeSort(vector<int>& nums, vector<int>& tmp, int lo, int hi) {
+    if (hi - lo <= 1) return;
+    int mid = (lo + hi) / 2;
+    mergeSort(nums, tmp, lo, mid);
+    mergeSort(nums, tmp, mid, hi);
+    int i = lo;
+    int j = mid;
+    int k = lo;
+    while (i < mid && j < hi) {
+        if (nums[i] <= nums[j]) {
+            tmp[k++] = nums[i++];
+        } else {
+            tmp[k++] = nums[j++];
+        }
+    }
+    while (i < mid) tmp[k++] = nums[i++];
+    while (j < hi) tmp[k++] = nums[j++];
+    for (k = lo; k < hi; k++) nums[k] = tmp[k];
+}
+
+void sortArray(vector<int>& nums) {
+    vector<int> tmp(nums.size());
+    mergeSort(nums, tmp, 0, nums.size());
+}
+'''
+java = '''
+class Solution {
+    public void sortArray(int[] nums) {
+        int[] tmp = new int[nums.length];
+        mergeSort(nums, tmp, 0, nums.length);
+    }
+
+    private void mergeSort(int[] nums, int[] tmp, int lo, int hi) {
+        if (hi - lo <= 1) return;
+        int mid = (lo + hi) / 2;
+        mergeSort(nums, tmp, lo, mid);
+        mergeSort(nums, tmp, mid, hi);
+        int i = lo;
+        int j = mid;
+        int k = lo;
+        while (i < mid && j < hi) {
+            if (nums[i] <= nums[j]) {
+                tmp[k++] = nums[i++];
+            } else {
+                tmp[k++] = nums[j++];
+            }
+        }
+        while (i < mid) tmp[k++] = nums[i++];
+        while (j < hi) tmp[k++] = nums[j++];
+        for (k = lo; k < hi; k++) nums[k] = tmp[k];
+    }
+}
+'''
+javascript = '''
+function mergeSort(nums) {
+  if (nums.length <= 1) return nums;
+  const mid = Math.floor(nums.length / 2);
+  const left = mergeSort(nums.slice(0, mid));
+  const right = mergeSort(nums.slice(mid));
+  const result = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] <= right[j]) {
+      result.push(left[i]);
+      i++;
+    } else {
+      result.push(right[j]);
+      j++;
+    }
+  }
+  while (i < left.length) result.push(left[i++]);
+  while (j < right.length) result.push(right[j++]);
+  return result;
+}
+'''
+go = '''
+func mergeSort(nums []int) []int {
+    if len(nums) <= 1 {
+        return nums
+    }
+    mid := len(nums) / 2
+    left := mergeSort(nums[:mid])
+    right := mergeSort(nums[mid:])
+    result := make([]int, 0, len(nums))
+    i, j := 0, 0
+    for i < len(left) && j < len(right) {
+        if left[i] <= right[j] {
+            result = append(result, left[i])
+            i++
+        } else {
+            result = append(result, right[j])
+            j++
+        }
+    }
+    result = append(result, left[i:]...)
+    result = append(result, right[j:]...)
+    return result
+}
+'''
+c = '''
+void mergeSort(int* nums, int* tmp, int lo, int hi) {
+    if (hi - lo <= 1) return;
+    int mid = (lo + hi) / 2;
+    mergeSort(nums, tmp, lo, mid);
+    mergeSort(nums, tmp, mid, hi);
+    int i = lo;
+    int j = mid;
+    int k = lo;
+    while (i < mid && j < hi) {
+        if (nums[i] <= nums[j]) {
+            tmp[k++] = nums[i++];
+        } else {
+            tmp[k++] = nums[j++];
+        }
+    }
+    while (i < mid) tmp[k++] = nums[i++];
+    while (j < hi) tmp[k++] = nums[j++];
+    for (k = lo; k < hi; k++) nums[k] = tmp[k];
+}
+
+void sortArray(int* nums, int n) {
+    int* tmp = malloc(n * sizeof(int));
+    mergeSort(nums, tmp, 0, n);
+    free(tmp);
+}
+'''
+
+[[case]]
+id = "nlogn_heap_sort_with_queue"
+title = "Sort by pushing everything into a heap and popping it back"
+tags = ["sorting", "heap", "library-call"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "n pushes and n pops at O(log n) each; the heap and the output list are O(n). Go defines the heap.Interface methods, which are O(1) helpers."
+
+[case.sources]
+python = '''
+import heapq
+
+
+def heap_sort(nums):
+    heap = []
+    for x in nums:
+        heapq.heappush(heap, x)
+    out = []
+    while heap:
+        out.append(heapq.heappop(heap))
+    return out
+'''
+cpp = '''
+vector<int> heapSort(vector<int>& nums) {
+    priority_queue<int, vector<int>, greater<int>> heap;
+    for (int x : nums) heap.push(x);
+    vector<int> out;
+    while (!heap.empty()) {
+        out.push_back(heap.top());
+        heap.pop();
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> heapSort(int[] nums) {
+        PriorityQueue<Integer> heap = new PriorityQueue<>();
+        for (int x : nums) heap.add(x);
+        List<Integer> out = new ArrayList<>();
+        while (!heap.isEmpty()) {
+            out.add(heap.poll());
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function heapSort(nums) {
+  const heap = new MinPriorityQueue();
+  for (const x of nums) heap.enqueue(x);
+  const out = [];
+  while (!heap.isEmpty()) {
+    out.push(heap.dequeue());
+  }
+  return out;
+}
+'''
+go = '''
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *IntHeap) Push(x any)        { *h = append(*h, x.(int)) }
+func (h *IntHeap) Pop() any {
+    old := *h
+    n := len(old)
+    x := old[n-1]
+    *h = old[:n-1]
+    return x
+}
+
+func heapSort(nums []int) []int {
+    h := &IntHeap{}
+    for _, x := range nums {
+        heap.Push(h, x)
+    }
+    out := []int{}
+    for h.Len() > 0 {
+        out = append(out, heap.Pop(h).(int))
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "nlogn_pair_sum_with_binary_search"
+title = "Pair with a target sum: sort, then binary-search each complement"
+tags = ["sorting", "binary-search", "nested-loop", "early-exit"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Sort is n log n; then n iterations each run a binary search over at most n elements (log n). The sorted copy is O(n)."
+
+[case.sources]
+python = '''
+def has_pair_with_sum(nums, target):
+    ordered = sorted(nums)
+    for i in range(len(ordered)):
+        want = target - ordered[i]
+        lo, hi = i + 1, len(ordered) - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if ordered[mid] == want:
+                return True
+            if ordered[mid] < want:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+    return False
+'''
+cpp = '''
+bool hasPairWithSum(vector<int>& nums, int target) {
+    vector<int> ordered = nums;
+    sort(ordered.begin(), ordered.end());
+    for (int i = 0; i < ordered.size(); i++) {
+        int want = target - ordered[i];
+        int lo = i + 1;
+        int hi = ordered.size() - 1;
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (ordered[mid] == want) return true;
+            if (ordered[mid] < want) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean hasPairWithSum(int[] nums, int target) {
+        int[] ordered = nums.clone();
+        Arrays.sort(ordered);
+        for (int i = 0; i < ordered.length; i++) {
+            int want = target - ordered[i];
+            int lo = i + 1;
+            int hi = ordered.length - 1;
+            while (lo <= hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (ordered[mid] == want) return true;
+                if (ordered[mid] < want) {
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function hasPairWithSum(nums, target) {
+  const ordered = [...nums].sort((a, b) => a - b);
+  for (let i = 0; i < ordered.length; i++) {
+    const want = target - ordered[i];
+    let lo = i + 1;
+    let hi = ordered.length - 1;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (ordered[mid] === want) return true;
+      if (ordered[mid] < want) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+  }
+  return false;
+}
+'''
+go = '''
+func hasPairWithSum(nums []int, target int) bool {
+    ordered := make([]int, len(nums))
+    copy(ordered, nums)
+    sort.Ints(ordered)
+    for i := 0; i < len(ordered); i++ {
+        want := target - ordered[i]
+        lo := i + 1
+        hi := len(ordered) - 1
+        for lo <= hi {
+            mid := lo + (hi-lo)/2
+            if ordered[mid] == want {
+                return true
+            }
+            if ordered[mid] < want {
+                lo = mid + 1
+            } else {
+                hi = mid - 1
+            }
+        }
+    }
+    return false
+}
+'''
+
+[[case]]
+id = "nlogn_harmonic_divisor_sieve"
+title = "Divisor counts for 1..n with a sieve"
+tags = ["harmonic", "nested-loop", "variable-stride", "integer-parameter", "trap"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "TRAP: the inner loop runs n/i times, so the total is n(1 + 1/2 + 1/3 + ...) = n ln n. Multiplying the bounds (n * n) would wrongly give O(n^2). The counts array is the auxiliary space and the output."
+
+[case.sources]
+python = '''
+def divisor_counts(n):
+    counts = [0] * (n + 1)
+    for i in range(1, n + 1):
+        for j in range(i, n + 1, i):
+            counts[j] += 1
+    return counts
+'''
+cpp = '''
+vector<int> divisorCounts(int n) {
+    vector<int> counts(n + 1, 0);
+    for (int i = 1; i <= n; i++) {
+        for (int j = i; j <= n; j += i) {
+            counts[j]++;
+        }
+    }
+    return counts;
+}
+'''
+java = '''
+class Solution {
+    public int[] divisorCounts(int n) {
+        int[] counts = new int[n + 1];
+        for (int i = 1; i <= n; i++) {
+            for (int j = i; j <= n; j += i) {
+                counts[j]++;
+            }
+        }
+        return counts;
+    }
+}
+'''
+javascript = '''
+function divisorCounts(n) {
+  const counts = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    for (let j = i; j <= n; j += i) {
+      counts[j]++;
+    }
+  }
+  return counts;
+}
+'''
+go = '''
+func divisorCounts(n int) []int {
+    counts := make([]int, n+1)
+    for i := 1; i <= n; i++ {
+        for j := i; j <= n; j += i {
+            counts[j]++
+        }
+    }
+    return counts
+}
+'''
+c = '''
+int* divisorCounts(int n) {
+    int* counts = calloc(n + 1, sizeof(int));
+    for (int i = 1; i <= n; i++) {
+        for (int j = i; j <= n; j += i) {
+            counts[j]++;
+        }
+    }
+    return counts;
+}
+'''
+
+[[case]]
+id = "nlogn_doubling_outer_linear_inner"
+title = "log n passes over the array"
+tags = ["geometric-outer", "nested-loop", "doubling"]
+time_class = "O(n log n)"
+space_class = "O(1)"
+time_expr = "O(n log n)"
+space_expr = "O(1)"
+rationale = "The outer variable doubles up to n (log n iterations) and the inner loop is a full linear pass that does not depend on the outer variable: n * log n."
+
+[case.sources]
+python = '''
+def doubling_passes(nums):
+    n = len(nums)
+    total = 0
+    step = 1
+    while step < n:
+        for i in range(n):
+            total += nums[i]
+        step *= 2
+    return total
+'''
+cpp = '''
+int doublingPasses(vector<int>& nums) {
+    int n = nums.size();
+    int total = 0;
+    for (int step = 1; step < n; step *= 2) {
+        for (int i = 0; i < n; i++) {
+            total += nums[i];
+        }
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int doublingPasses(int[] nums) {
+        int n = nums.length;
+        int total = 0;
+        for (int step = 1; step < n; step *= 2) {
+            for (int i = 0; i < n; i++) {
+                total += nums[i];
+            }
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function doublingPasses(nums) {
+  const n = nums.length;
+  let total = 0;
+  for (let step = 1; step < n; step *= 2) {
+    for (let i = 0; i < n; i++) {
+      total += nums[i];
+    }
+  }
+  return total;
+}
+'''
+go = '''
+func doublingPasses(nums []int) int {
+    n := len(nums)
+    total := 0
+    for step := 1; step < n; step *= 2 {
+        for i := 0; i < n; i++ {
+            total += nums[i]
+        }
+    }
+    return total
+}
+'''
+c = '''
+int doublingPasses(int* nums, int n) {
+    int total = 0;
+    for (int step = 1; step < n; step *= 2) {
+        for (int i = 0; i < n; i++) {
+            total += nums[i];
+        }
+    }
+    return total;
+}
+'''
+
+[[case]]
+id = "nlogn_linear_outer_halving_inner"
+title = "A halving loop run once per element"
+tags = ["nested-loop", "halving"]
+time_class = "O(n log n)"
+space_class = "O(1)"
+time_expr = "O(n log n)"
+space_expr = "O(1)"
+rationale = "n outer iterations, each running an inner loop that halves j from n down to 1 (log n iterations)."
+
+[case.sources]
+python = '''
+def total_halving_steps(nums):
+    n = len(nums)
+    total = 0
+    for i in range(n):
+        j = n
+        while j > 1:
+            j //= 2
+            total += 1
+    return total
+'''
+cpp = '''
+int totalHalvingSteps(vector<int>& nums) {
+    int n = nums.size();
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+        int j = n;
+        while (j > 1) {
+            j /= 2;
+            total++;
+        }
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int totalHalvingSteps(int[] nums) {
+        int n = nums.length;
+        int total = 0;
+        for (int i = 0; i < n; i++) {
+            int j = n;
+            while (j > 1) {
+                j /= 2;
+                total++;
+            }
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function totalHalvingSteps(nums) {
+  const n = nums.length;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    let j = n;
+    while (j > 1) {
+      j = Math.floor(j / 2);
+      total++;
+    }
+  }
+  return total;
+}
+'''
+go = '''
+func totalHalvingSteps(nums []int) int {
+    n := len(nums)
+    total := 0
+    for i := 0; i < n; i++ {
+        j := n
+        for j > 1 {
+            j /= 2
+            total++
+        }
+    }
+    return total
+}
+'''
+c = '''
+int totalHalvingSteps(int* nums, int n) {
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+        int j = n;
+        while (j > 1) {
+            j /= 2;
+            total++;
+        }
+    }
+    return total;
+}
+'''
+
+[[case]]
+id = "nlogn_merge_intervals"
+title = "Merge overlapping intervals"
+tags = ["sorting", "library-call", "leetcode", "copy"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Sort a copy of the intervals by start (n log n), then one linear merge pass. The sorted copy and the merged list are O(n)."
+
+[case.sources]
+python = '''
+def merge_intervals(intervals):
+    ordered = sorted(intervals, key=lambda iv: iv[0])
+    merged = []
+    for start, end in ordered:
+        if merged and merged[-1][1] >= start:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return merged
+'''
+cpp = '''
+vector<vector<int>> mergeIntervals(vector<vector<int>>& intervals) {
+    vector<vector<int>> ordered = intervals;
+    sort(ordered.begin(), ordered.end());
+    vector<vector<int>> merged;
+    for (auto& iv : ordered) {
+        if (!merged.empty() && merged.back()[1] >= iv[0]) {
+            merged.back()[1] = max(merged.back()[1], iv[1]);
+        } else {
+            merged.push_back(iv);
+        }
+    }
+    return merged;
+}
+'''
+java = '''
+class Solution {
+    public List<int[]> mergeIntervals(int[][] intervals) {
+        int[][] ordered = intervals.clone();
+        Arrays.sort(ordered, (a, b) -> a[0] - b[0]);
+        List<int[]> merged = new ArrayList<>();
+        for (int[] iv : ordered) {
+            if (!merged.isEmpty() && merged.get(merged.size() - 1)[1] >= iv[0]) {
+                int[] last = merged.get(merged.size() - 1);
+                last[1] = Math.max(last[1], iv[1]);
+            } else {
+                merged.add(iv);
+            }
+        }
+        return merged;
+    }
+}
+'''
+javascript = '''
+function mergeIntervals(intervals) {
+  const ordered = [...intervals].sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const iv of ordered) {
+    if (merged.length > 0 && merged[merged.length - 1][1] >= iv[0]) {
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], iv[1]);
+    } else {
+      merged.push(iv);
+    }
+  }
+  return merged;
+}
+'''
+go = '''
+func mergeIntervals(intervals [][]int) [][]int {
+    ordered := make([][]int, len(intervals))
+    copy(ordered, intervals)
+    sort.Slice(ordered, func(i, j int) bool { return ordered[i][0] < ordered[j][0] })
+    merged := [][]int{}
+    for _, iv := range ordered {
+        if len(merged) > 0 && merged[len(merged)-1][1] >= iv[0] {
+            if iv[1] > merged[len(merged)-1][1] {
+                merged[len(merged)-1][1] = iv[1]
+            }
+        } else {
+            merged = append(merged, iv)
+        }
+    }
+    return merged
+}
+'''
+
+[[case]]
+id = "n2logn_sort_inside_loop"
+title = "Sort a fresh copy on every iteration"
+tags = ["sorting", "library-call", "nested-cost", "lossy-projection"]
+time_class = "O(n^3)"
+space_class = "O(n)"
+time_expr = "O(n^2 log n)"
+space_expr = "O(n)"
+rationale = "n iterations, each sorting an n-element copy (n log n): n^2 log n. The legacy taxonomy has no n^2 log n class, so time_class is the next class that upper-bounds it (O(n^3)); the expression is the truth. Each copy is freed, so the peak auxiliary space is one copy, O(n)."
+
+[case.sources]
+python = '''
+def repeated_sorting(nums):
+    total = 0
+    for i in range(len(nums)):
+        copy = sorted(nums)
+        total += copy[i]
+    return total
+'''
+cpp = '''
+int repeatedSorting(vector<int>& nums) {
+    int total = 0;
+    for (int i = 0; i < nums.size(); i++) {
+        vector<int> copy = nums;
+        sort(copy.begin(), copy.end());
+        total += copy[i];
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int repeatedSorting(int[] nums) {
+        int total = 0;
+        for (int i = 0; i < nums.length; i++) {
+            int[] copy = nums.clone();
+            Arrays.sort(copy);
+            total += copy[i];
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function repeatedSorting(nums) {
+  let total = 0;
+  for (let i = 0; i < nums.length; i++) {
+    const copy = [...nums].sort((a, b) => a - b);
+    total += copy[i];
+  }
+  return total;
+}
+'''
+go = '''
+func repeatedSorting(nums []int) int {
+    total := 0
+    for i := 0; i < len(nums); i++ {
+        copyOfNums := make([]int, len(nums))
+        copy(copyOfNums, nums)
+        sort.Ints(copyOfNums)
+        total += copyOfNums[i]
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "n2logn_three_sum_binary_search"
+title = "3Sum by fixing two elements and binary-searching the third"
+tags = ["sorting", "binary-search", "nested-loop", "early-exit", "lossy-projection"]
+time_class = "O(n^3)"
+space_class = "O(n)"
+time_expr = "O(n^2 log n)"
+space_expr = "O(n)"
+rationale = "Sorting is n log n; n^2/2 pairs each cost a log n binary search: n^2 log n. time_class is the lossy legacy round-up; the sorted copy is O(n)."
+
+[case.sources]
+python = '''
+def has_three_sum(nums, target):
+    ordered = sorted(nums)
+    n = len(ordered)
+    for i in range(n):
+        for j in range(i + 1, n):
+            want = target - ordered[i] - ordered[j]
+            lo, hi = j + 1, n - 1
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                if ordered[mid] == want:
+                    return True
+                if ordered[mid] < want:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
+    return False
+'''
+cpp = '''
+bool hasThreeSum(vector<int>& nums, int target) {
+    vector<int> ordered = nums;
+    sort(ordered.begin(), ordered.end());
+    int n = ordered.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            int want = target - ordered[i] - ordered[j];
+            int lo = j + 1;
+            int hi = n - 1;
+            while (lo <= hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (ordered[mid] == want) return true;
+                if (ordered[mid] < want) {
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+        }
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean hasThreeSum(int[] nums, int target) {
+        int[] ordered = nums.clone();
+        Arrays.sort(ordered);
+        int n = ordered.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int want = target - ordered[i] - ordered[j];
+                int lo = j + 1;
+                int hi = n - 1;
+                while (lo <= hi) {
+                    int mid = lo + (hi - lo) / 2;
+                    if (ordered[mid] == want) return true;
+                    if (ordered[mid] < want) {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function hasThreeSum(nums, target) {
+  const ordered = [...nums].sort((a, b) => a - b);
+  const n = ordered.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const want = target - ordered[i] - ordered[j];
+      let lo = j + 1;
+      let hi = n - 1;
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (ordered[mid] === want) return true;
+        if (ordered[mid] < want) {
+          lo = mid + 1;
+        } else {
+          hi = mid - 1;
+        }
+      }
+    }
+  }
+  return false;
+}
+'''
+go = '''
+func hasThreeSum(nums []int, target int) bool {
+    ordered := make([]int, len(nums))
+    copy(ordered, nums)
+    sort.Ints(ordered)
+    n := len(ordered)
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            want := target - ordered[i] - ordered[j]
+            lo := j + 1
+            hi := n - 1
+            for lo <= hi {
+                mid := lo + (hi-lo)/2
+                if ordered[mid] == want {
+                    return true
+                }
+                if ordered[mid] < want {
+                    lo = mid + 1
+                } else {
+                    hi = mid - 1
+                }
+            }
+        }
+    }
+    return false
+}
+'''

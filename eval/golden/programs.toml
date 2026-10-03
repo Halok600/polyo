@@ -1,0 +1,807 @@
+# Golden group: whole programs, harnesses and cross-function composition.
+# Two conventions matter here:
+#   1. Entry selection: `main`, `Main`, test harnesses and the `if __name__ == "__main__"` block
+#      call the solution on tiny constant inputs; they are NOT the answer. The answer is the
+#      solution function's cost as a function of its own input size. (The original bug report was
+#      exactly this: a C++ two-sum wrapped in class Solution plus a main() came out O(2^n).)
+#   2. A program that reads its input has ONE size variable: every size derived from that input
+#      (a scalar n read from stdin, the length of a list built from it) is the same `n`.
+
+[[case]]
+id = "program_two_sum_with_main_harness"
+title = "Brute-force Two Sum inside class Solution with a main() test driver"
+tags = ["harness", "entry-selection", "nested-loop", "early-exit", "leetcode", "regression"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "REGRESSION for the original bug report. The nested loops are O(n^2); main() only calls twoSum on a 4-element literal, which must not turn the answer into O(1) or anything else. The result is a constant-size pair."
+
+[case.sources]
+python = '''
+class Solution:
+    def twoSum(self, nums, target):
+        n = len(nums)
+        for i in range(n):
+            for j in range(i + 1, n):
+                if nums[i] + nums[j] == target:
+                    return [i, j]
+        return []
+
+
+if __name__ == "__main__":
+    print(Solution().twoSum([2, 7, 11, 15], 9))
+'''
+cpp = '''
+#include <iostream>
+#include <vector>
+using namespace std;
+
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        int n = nums.size();
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (nums[i] + nums[j] == target) return {i, j};
+            }
+        }
+        return {};
+    }
+};
+
+int main() {
+    Solution sol;
+    vector<int> nums = {2, 7, 11, 15};
+    vector<int> result = sol.twoSum(nums, 9);
+    cout << result[0] << " " << result[1] << endl;
+    return 0;
+}
+'''
+java = '''
+import java.util.*;
+
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (nums[i] + nums[j] == target) return new int[]{i, j};
+            }
+        }
+        return new int[]{};
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Solution sol = new Solution();
+        int[] result = sol.twoSum(new int[]{2, 7, 11, 15}, 9);
+        System.out.println(Arrays.toString(result));
+    }
+}
+'''
+javascript = '''
+var twoSum = function(nums, target) {
+  const n = nums.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (nums[i] + nums[j] === target) return [i, j];
+    }
+  }
+  return [];
+};
+
+console.log(twoSum([2, 7, 11, 15], 9));
+'''
+go = '''
+package main
+
+import "fmt"
+
+func twoSum(nums []int, target int) []int {
+    n := len(nums)
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            if nums[i]+nums[j] == target {
+                return []int{i, j}
+            }
+        }
+    }
+    return []int{}
+}
+
+func main() {
+    fmt.Println(twoSum([]int{2, 7, 11, 15}, 9))
+}
+'''
+
+[[case]]
+id = "program_read_and_sum_stream"
+title = "Read n, then sum n numbers as they arrive"
+tags = ["program", "stdin", "single-loop"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "n is read from input and bounds the loop; values are consumed one at a time. JavaScript's readFileSync loads the entire input into memory, so its space differs: that override is deliberate."
+
+[case.sources]
+python = '''
+n = int(input())
+total = 0
+for _ in range(n):
+    total += int(input())
+print(total)
+'''
+cpp = '''
+#include <iostream>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    long long total = 0;
+    for (int i = 0; i < n; i++) {
+        int x;
+        cin >> x;
+        total += x;
+    }
+    cout << total << endl;
+    return 0;
+}
+'''
+java = '''
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        long total = 0;
+        for (int i = 0; i < n; i++) {
+            total += sc.nextInt();
+        }
+        System.out.println(total);
+    }
+}
+'''
+javascript = '''
+const lines = require("fs").readFileSync(0, "utf8").split("\n");
+const n = parseInt(lines[0]);
+let total = 0;
+for (let i = 1; i <= n; i++) {
+  total += parseInt(lines[i]);
+}
+console.log(total);
+'''
+go = '''
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+)
+
+func main() {
+    reader := bufio.NewReader(os.Stdin)
+    var n int
+    fmt.Fscan(reader, &n)
+    total := 0
+    for i := 0; i < n; i++ {
+        var x int
+        fmt.Fscan(reader, &x)
+        total += x
+    }
+    fmt.Println(total)
+}
+'''
+
+[case.overrides.javascript]
+space_class = "O(n)"
+space_expr = "O(n)"
+
+[[case]]
+id = "program_pairs_quadratic"
+title = "Read an array and count pairs with a given sum"
+tags = ["program", "stdin", "nested-loop", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "The array read from input has n elements (stored: O(n) space); the double loop over it is n(n-1)/2 pair checks."
+
+[case.sources]
+python = '''
+n, k = map(int, input().split())
+a = list(map(int, input().split()))
+count = 0
+for i in range(n):
+    for j in range(i + 1, n):
+        if a[i] + a[j] == k:
+            count += 1
+print(count)
+'''
+cpp = '''
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int n, k;
+    cin >> n >> k;
+    vector<int> a(n);
+    for (int i = 0; i < n; i++) cin >> a[i];
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (a[i] + a[j] == k) count++;
+        }
+    }
+    cout << count << endl;
+    return 0;
+}
+'''
+java = '''
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int k = sc.nextInt();
+        int[] a = new int[n];
+        for (int i = 0; i < n; i++) a[i] = sc.nextInt();
+        int count = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (a[i] + a[j] == k) count++;
+            }
+        }
+        System.out.println(count);
+    }
+}
+'''
+javascript = '''
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n");
+const [n, k] = lines[0].split(" ").map(Number);
+const a = lines[1].split(" ").map(Number);
+let count = 0;
+for (let i = 0; i < n; i++) {
+  for (let j = i + 1; j < n; j++) {
+    if (a[i] + a[j] === k) count++;
+  }
+}
+console.log(count);
+'''
+go = '''
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+)
+
+func main() {
+    reader := bufio.NewReader(os.Stdin)
+    var n, k int
+    fmt.Fscan(reader, &n, &k)
+    a := make([]int, n)
+    for i := 0; i < n; i++ {
+        fmt.Fscan(reader, &a[i])
+    }
+    count := 0
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            if a[i]+a[j] == k {
+                count++
+            }
+        }
+    }
+    fmt.Println(count)
+}
+'''
+
+[[case]]
+id = "program_sort_and_print"
+title = "Read an array, sort it, print it"
+tags = ["program", "stdin", "sorting", "allocation"]
+time_class = "O(n log n)"
+space_class = "O(n)"
+time_expr = "O(n log n)"
+space_expr = "O(n)"
+rationale = "Reading is O(n), the library sort is n log n, printing is O(n). The array is stored: O(n)."
+
+[case.sources]
+python = '''
+n = int(input())
+a = list(map(int, input().split()))
+a.sort()
+print(" ".join(map(str, a)))
+'''
+cpp = '''
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<int> a(n);
+    for (int i = 0; i < n; i++) cin >> a[i];
+    sort(a.begin(), a.end());
+    for (int i = 0; i < n; i++) cout << a[i] << " ";
+    cout << endl;
+    return 0;
+}
+'''
+java = '''
+import java.util.Arrays;
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int[] a = new int[n];
+        for (int i = 0; i < n; i++) a[i] = sc.nextInt();
+        Arrays.sort(a);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) sb.append(a[i]).append(" ");
+        System.out.println(sb);
+    }
+}
+'''
+javascript = '''
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n");
+const n = parseInt(lines[0]);
+const a = lines[1].split(" ").map(Number);
+a.sort((x, y) => x - y);
+console.log(a.join(" "));
+'''
+go = '''
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+    "sort"
+)
+
+func main() {
+    reader := bufio.NewReader(os.Stdin)
+    var n int
+    fmt.Fscan(reader, &n)
+    a := make([]int, n)
+    for i := 0; i < n; i++ {
+        fmt.Fscan(reader, &a[i])
+    }
+    sort.Ints(a)
+    for i := 0; i < n; i++ {
+        fmt.Print(a[i], " ")
+    }
+    fmt.Println()
+}
+'''
+
+[[case]]
+id = "interprocedural_helper_in_loop"
+title = "A linear helper called once per element"
+tags = ["interprocedural", "nested-cost", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "TRAP: the outer function has one visible loop, but each iteration calls count_smaller, a full O(n) scan. Composing costs across the call gives n * n. The ranks list is O(n)."
+
+[case.sources]
+python = '''
+def count_smaller(nums, i):
+    count = 0
+    for x in nums:
+        if x < nums[i]:
+            count += 1
+    return count
+
+
+def rank_all(nums):
+    ranks = []
+    for i in range(len(nums)):
+        ranks.append(count_smaller(nums, i))
+    return ranks
+'''
+cpp = '''
+int countSmaller(vector<int>& nums, int i) {
+    int count = 0;
+    for (int x : nums) {
+        if (x < nums[i]) count++;
+    }
+    return count;
+}
+
+vector<int> rankAll(vector<int>& nums) {
+    vector<int> ranks;
+    for (int i = 0; i < nums.size(); i++) {
+        ranks.push_back(countSmaller(nums, i));
+    }
+    return ranks;
+}
+'''
+java = '''
+class Solution {
+    private int countSmaller(int[] nums, int i) {
+        int count = 0;
+        for (int x : nums) {
+            if (x < nums[i]) count++;
+        }
+        return count;
+    }
+
+    public List<Integer> rankAll(int[] nums) {
+        List<Integer> ranks = new ArrayList<>();
+        for (int i = 0; i < nums.length; i++) {
+            ranks.add(countSmaller(nums, i));
+        }
+        return ranks;
+    }
+}
+'''
+javascript = '''
+function countSmaller(nums, i) {
+  let count = 0;
+  for (const x of nums) {
+    if (x < nums[i]) count++;
+  }
+  return count;
+}
+
+function rankAll(nums) {
+  const ranks = [];
+  for (let i = 0; i < nums.length; i++) {
+    ranks.push(countSmaller(nums, i));
+  }
+  return ranks;
+}
+'''
+go = '''
+func countSmaller(nums []int, i int) int {
+    count := 0
+    for _, x := range nums {
+        if x < nums[i] {
+            count++
+        }
+    }
+    return count
+}
+
+func rankAll(nums []int) []int {
+    ranks := []int{}
+    for i := 0; i < len(nums); i++ {
+        ranks = append(ranks, countSmaller(nums, i))
+    }
+    return ranks
+}
+'''
+
+[[case]]
+id = "interprocedural_binary_search_helper"
+title = "A binary-search helper called for every query"
+tags = ["interprocedural", "multi-variable", "binary-search"]
+time_class = "O(n log n)"
+space_class = "O(1)"
+time_expr = "O(m * log n)"
+space_expr = "O(1)"
+rationale = "n = len(sorted_nums) (first parameter), m = len(queries). Each of the m queries runs a binary search over n sorted values: m log n. The legacy class collapses both to n."
+
+[case.sources]
+python = '''
+def contains(sorted_nums, x):
+    lo = 0
+    hi = len(sorted_nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if sorted_nums[mid] == x:
+            return True
+        if sorted_nums[mid] < x:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return False
+
+
+def count_present(sorted_nums, queries):
+    count = 0
+    for q in queries:
+        if contains(sorted_nums, q):
+            count += 1
+    return count
+'''
+cpp = '''
+bool contains(vector<int>& sortedNums, int x) {
+    int lo = 0;
+    int hi = sortedNums.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (sortedNums[mid] == x) return true;
+        if (sortedNums[mid] < x) {
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return false;
+}
+
+int countPresent(vector<int>& sortedNums, vector<int>& queries) {
+    int count = 0;
+    for (int q : queries) {
+        if (contains(sortedNums, q)) count++;
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    private boolean contains(int[] sortedNums, int x) {
+        int lo = 0;
+        int hi = sortedNums.length - 1;
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (sortedNums[mid] == x) return true;
+            if (sortedNums[mid] < x) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return false;
+    }
+
+    public int countPresent(int[] sortedNums, int[] queries) {
+        int count = 0;
+        for (int q : queries) {
+            if (contains(sortedNums, q)) count++;
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function contains(sortedNums, x) {
+  let lo = 0;
+  let hi = sortedNums.length - 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (sortedNums[mid] === x) return true;
+    if (sortedNums[mid] < x) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return false;
+}
+
+function countPresent(sortedNums, queries) {
+  let count = 0;
+  for (const q of queries) {
+    if (contains(sortedNums, q)) count++;
+  }
+  return count;
+}
+'''
+go = '''
+func contains(sortedNums []int, x int) bool {
+    lo := 0
+    hi := len(sortedNums) - 1
+    for lo <= hi {
+        mid := lo + (hi-lo)/2
+        if sortedNums[mid] == x {
+            return true
+        }
+        if sortedNums[mid] < x {
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    return false
+}
+
+func countPresent(sortedNums []int, queries []int) int {
+    count := 0
+    for _, q := range queries {
+        if contains(sortedNums, q) {
+            count++
+        }
+    }
+    return count
+}
+'''
+
+[[case]]
+id = "interprocedural_row_sums_grid"
+title = "A per-row helper called for every row"
+tags = ["interprocedural", "multi-variable", "grid", "allocation"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n * m)"
+space_expr = "O(n)"
+rationale = "row_sum is O(cols); calling it for each of the rows gives rows * cols. The output holds one sum per row."
+
+[case.sources]
+python = '''
+def row_sum(grid, i):
+    total = 0
+    for x in grid[i]:
+        total += x
+    return total
+
+
+def all_row_sums(grid):
+    out = []
+    for i in range(len(grid)):
+        out.append(row_sum(grid, i))
+    return out
+'''
+cpp = '''
+int rowSum(vector<vector<int>>& grid, int i) {
+    int total = 0;
+    for (int x : grid[i]) total += x;
+    return total;
+}
+
+vector<int> allRowSums(vector<vector<int>>& grid) {
+    vector<int> out;
+    for (int i = 0; i < grid.size(); i++) {
+        out.push_back(rowSum(grid, i));
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    private int rowSum(int[][] grid, int i) {
+        int total = 0;
+        for (int x : grid[i]) total += x;
+        return total;
+    }
+
+    public List<Integer> allRowSums(int[][] grid) {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < grid.length; i++) {
+            out.add(rowSum(grid, i));
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function rowSum(grid, i) {
+  let total = 0;
+  for (const x of grid[i]) total += x;
+  return total;
+}
+
+function allRowSums(grid) {
+  const out = [];
+  for (let i = 0; i < grid.length; i++) {
+    out.push(rowSum(grid, i));
+  }
+  return out;
+}
+'''
+go = '''
+func rowSum(grid [][]int, i int) int {
+    total := 0
+    for _, x := range grid[i] {
+        total += x
+    }
+    return total
+}
+
+func allRowSums(grid [][]int) []int {
+    out := []int{}
+    for i := 0; i < len(grid); i++ {
+        out = append(out, rowSum(grid, i))
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "interprocedural_constant_helper"
+title = "A constant-time helper called once per element"
+tags = ["interprocedural", "allocation"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "The helper has no loop, so composing costs leaves n * O(1) = O(n); the output list is O(n)."
+
+[case.sources]
+python = '''
+def clamp(x, lo, hi):
+    if x < lo:
+        return lo
+    if x > hi:
+        return hi
+    return x
+
+
+def clamp_all(nums, lo, hi):
+    out = []
+    for x in nums:
+        out.append(clamp(x, lo, hi))
+    return out
+'''
+cpp = '''
+int clamp(int x, int lo, int hi) {
+    if (x < lo) return lo;
+    if (x > hi) return hi;
+    return x;
+}
+
+vector<int> clampAll(vector<int>& nums, int lo, int hi) {
+    vector<int> out;
+    for (int x : nums) {
+        out.push_back(clamp(x, lo, hi));
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    private int clamp(int x, int lo, int hi) {
+        if (x < lo) return lo;
+        if (x > hi) return hi;
+        return x;
+    }
+
+    public List<Integer> clampAll(int[] nums, int lo, int hi) {
+        List<Integer> out = new ArrayList<>();
+        for (int x : nums) {
+            out.add(clamp(x, lo, hi));
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function clamp(x, lo, hi) {
+  if (x < lo) return lo;
+  if (x > hi) return hi;
+  return x;
+}
+
+function clampAll(nums, lo, hi) {
+  const out = [];
+  for (const x of nums) {
+    out.push(clamp(x, lo, hi));
+  }
+  return out;
+}
+'''
+go = '''
+func clamp(x int, lo int, hi int) int {
+    if x < lo {
+        return lo
+    }
+    if x > hi {
+        return hi
+    }
+    return x
+}
+
+func clampAll(nums []int, lo int, hi int) []int {
+    out := []int{}
+    for _, x := range nums {
+        out = append(out, clamp(x, lo, hi))
+    }
+    return out
+}
+'''

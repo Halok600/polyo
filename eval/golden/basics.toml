@@ -1,0 +1,1990 @@
+# Golden group: basic loop nests (constant, linear, quadratic, cubic).
+# Conventions: worst-case time; space = auxiliary memory the function allocates (input excluded,
+# built output included). A bare `n` is the size of the first collection / integer parameter.
+
+[[case]]
+id = "const_arithmetic"
+title = "Add two integers"
+tags = ["constant"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "Straight-line arithmetic: no loop, no allocation."
+
+[case.sources]
+python = '''
+def add(a, b):
+    return a + b
+'''
+cpp = '''
+int add(int a, int b) {
+    return a + b;
+}
+'''
+java = '''
+class Solution {
+    public int add(int a, int b) {
+        return a + b;
+    }
+}
+'''
+javascript = '''
+function add(a, b) {
+  return a + b;
+}
+'''
+go = '''
+func add(a int, b int) int {
+    return a + b
+}
+'''
+c = '''
+int add(int a, int b) {
+    return a + b;
+}
+'''
+
+[[case]]
+id = "const_first_element"
+title = "Read the first element"
+tags = ["constant", "indexing"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "One index access behind an emptiness guard; array indexing is O(1)."
+
+[case.sources]
+python = '''
+def first(nums):
+    if not nums:
+        return -1
+    return nums[0]
+'''
+cpp = '''
+int first(vector<int>& nums) {
+    if (nums.empty()) return -1;
+    return nums[0];
+}
+'''
+java = '''
+class Solution {
+    public int first(int[] nums) {
+        if (nums.length == 0) return -1;
+        return nums[0];
+    }
+}
+'''
+javascript = '''
+function first(nums) {
+  if (nums.length === 0) return -1;
+  return nums[0];
+}
+'''
+go = '''
+func first(nums []int) int {
+    if len(nums) == 0 {
+        return -1
+    }
+    return nums[0]
+}
+'''
+c = '''
+int first(int* nums, int n) {
+    if (n == 0) return -1;
+    return nums[0];
+}
+'''
+
+[[case]]
+id = "const_fixed_alphabet_loop"
+title = "Sum a 26-entry counter table"
+tags = ["constant", "literal-bound"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "The loop bound is the literal 26, independent of any input size, so the loop is constant."
+
+[case.sources]
+python = '''
+def alphabet_total(counts):
+    total = 0
+    for i in range(26):
+        total += counts[i]
+    return total
+'''
+cpp = '''
+int alphabetTotal(vector<int>& counts) {
+    int total = 0;
+    for (int i = 0; i < 26; i++) {
+        total += counts[i];
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int alphabetTotal(int[] counts) {
+        int total = 0;
+        for (int i = 0; i < 26; i++) {
+            total += counts[i];
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function alphabetTotal(counts) {
+  let total = 0;
+  for (let i = 0; i < 26; i++) {
+    total += counts[i];
+  }
+  return total;
+}
+'''
+go = '''
+func alphabetTotal(counts []int) int {
+    total := 0
+    for i := 0; i < 26; i++ {
+        total += counts[i]
+    }
+    return total
+}
+'''
+c = '''
+int alphabetTotal(int* counts) {
+    int total = 0;
+    for (int i = 0; i < 26; i++) {
+        total += counts[i];
+    }
+    return total;
+}
+'''
+
+[[case]]
+id = "const_four_neighbors"
+title = "Count open cells among the four neighbours"
+tags = ["constant", "literal-iterable", "grid"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "The loop walks a literal list of four direction offsets; the grid is only indexed, never traversed."
+
+[case.sources]
+python = '''
+def count_open_neighbors(grid, r, c):
+    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    total = 0
+    for dr, dc in dirs:
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < len(grid) and 0 <= nc < len(grid[0]) and grid[nr][nc] == 0:
+            total += 1
+    return total
+'''
+cpp = '''
+int countOpenNeighbors(vector<vector<int>>& grid, int r, int c) {
+    int dr[4] = {1, -1, 0, 0};
+    int dc[4] = {0, 0, 1, -1};
+    int total = 0;
+    for (int d = 0; d < 4; d++) {
+        int nr = r + dr[d];
+        int nc = c + dc[d];
+        if (nr >= 0 && nr < grid.size() && nc >= 0 && nc < grid[0].size() && grid[nr][nc] == 0) {
+            total++;
+        }
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int countOpenNeighbors(int[][] grid, int r, int c) {
+        int[] dr = {1, -1, 0, 0};
+        int[] dc = {0, 0, 1, -1};
+        int total = 0;
+        for (int d = 0; d < 4; d++) {
+            int nr = r + dr[d];
+            int nc = c + dc[d];
+            if (nr >= 0 && nr < grid.length && nc >= 0 && nc < grid[0].length && grid[nr][nc] == 0) {
+                total++;
+            }
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function countOpenNeighbors(grid, r, c) {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  let total = 0;
+  for (const [dr, dc] of dirs) {
+    const nr = r + dr;
+    const nc = c + dc;
+    if (nr >= 0 && nr < grid.length && nc >= 0 && nc < grid[0].length && grid[nr][nc] === 0) {
+      total++;
+    }
+  }
+  return total;
+}
+'''
+go = '''
+func countOpenNeighbors(grid [][]int, r int, c int) int {
+    dirs := [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    total := 0
+    for _, d := range dirs {
+        nr := r + d[0]
+        nc := c + d[1]
+        if nr >= 0 && nr < len(grid) && nc >= 0 && nc < len(grid[0]) && grid[nr][nc] == 0 {
+            total++
+        }
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "linear_sum"
+title = "Sum of an array"
+tags = ["single-loop", "for-each"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "One pass over the input with an O(1) accumulator."
+
+[case.sources]
+python = '''
+def total(nums):
+    s = 0
+    for x in nums:
+        s += x
+    return s
+'''
+cpp = '''
+int total(vector<int>& nums) {
+    int s = 0;
+    for (int x : nums) {
+        s += x;
+    }
+    return s;
+}
+'''
+java = '''
+class Solution {
+    public int total(int[] nums) {
+        int s = 0;
+        for (int x : nums) {
+            s += x;
+        }
+        return s;
+    }
+}
+'''
+javascript = '''
+function total(nums) {
+  let s = 0;
+  for (const x of nums) {
+    s += x;
+  }
+  return s;
+}
+'''
+go = '''
+func total(nums []int) int {
+    s := 0
+    for _, x := range nums {
+        s += x
+    }
+    return s
+}
+'''
+c = '''
+int total(int* nums, int n) {
+    int s = 0;
+    for (int i = 0; i < n; i++) {
+        s += nums[i];
+    }
+    return s;
+}
+'''
+
+[[case]]
+id = "linear_max_element"
+title = "Maximum element by index loop"
+tags = ["single-loop", "index-loop"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "Index loop from 1 to n-1 comparing against a running maximum."
+
+[case.sources]
+python = '''
+def find_max(nums):
+    best = nums[0]
+    for i in range(1, len(nums)):
+        if nums[i] > best:
+            best = nums[i]
+    return best
+'''
+cpp = '''
+int findMax(vector<int>& nums) {
+    int best = nums[0];
+    for (int i = 1; i < nums.size(); i++) {
+        if (nums[i] > best) best = nums[i];
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int findMax(int[] nums) {
+        int best = nums[0];
+        for (int i = 1; i < nums.length; i++) {
+            if (nums[i] > best) best = nums[i];
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function findMax(nums) {
+  let best = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] > best) best = nums[i];
+  }
+  return best;
+}
+'''
+go = '''
+func findMax(nums []int) int {
+    best := nums[0]
+    for i := 1; i < len(nums); i++ {
+        if nums[i] > best {
+            best = nums[i]
+        }
+    }
+    return best
+}
+'''
+c = '''
+int findMax(int* nums, int n) {
+    int best = nums[0];
+    for (int i = 1; i < n; i++) {
+        if (nums[i] > best) best = nums[i];
+    }
+    return best;
+}
+'''
+
+[[case]]
+id = "linear_count_matches"
+title = "Count elements equal to a target"
+tags = ["single-loop", "extra-parameter"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "The scalar target is compared, never used as a bound, so the only size is the array."
+
+[case.sources]
+python = '''
+def count_equal(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] == target:
+            count += 1
+    return count
+'''
+cpp = '''
+int countEqual(vector<int>& nums, int target) {
+    int count = 0;
+    for (int i = 0; i < nums.size(); i++) {
+        if (nums[i] == target) count++;
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countEqual(int[] nums, int target) {
+        int count = 0;
+        for (int i = 0; i < nums.length; i++) {
+            if (nums[i] == target) count++;
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countEqual(nums, target) {
+  let count = 0;
+  for (let i = 0; i < nums.length; i++) {
+    if (nums[i] === target) count++;
+  }
+  return count;
+}
+'''
+go = '''
+func countEqual(nums []int, target int) int {
+    count := 0
+    for i := 0; i < len(nums); i++ {
+        if nums[i] == target {
+            count++
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countEqual(int* nums, int n, int target) {
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        if (nums[i] == target) count++;
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "linear_while_index"
+title = "First even number via a while loop"
+tags = ["single-loop", "while", "early-exit"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "While loop with a +1 index step bounded by the length; the early return does not lower the worst case."
+
+[case.sources]
+python = '''
+def find_first_even(nums):
+    i = 0
+    while i < len(nums):
+        if nums[i] % 2 == 0:
+            return i
+        i += 1
+    return -1
+'''
+cpp = '''
+int findFirstEven(vector<int>& nums) {
+    int i = 0;
+    while (i < nums.size()) {
+        if (nums[i] % 2 == 0) return i;
+        i++;
+    }
+    return -1;
+}
+'''
+java = '''
+class Solution {
+    public int findFirstEven(int[] nums) {
+        int i = 0;
+        while (i < nums.length) {
+            if (nums[i] % 2 == 0) return i;
+            i++;
+        }
+        return -1;
+    }
+}
+'''
+javascript = '''
+function findFirstEven(nums) {
+  let i = 0;
+  while (i < nums.length) {
+    if (nums[i] % 2 === 0) return i;
+    i++;
+  }
+  return -1;
+}
+'''
+go = '''
+func findFirstEven(nums []int) int {
+    i := 0
+    for i < len(nums) {
+        if nums[i]%2 == 0 {
+            return i
+        }
+        i++
+    }
+    return -1
+}
+'''
+c = '''
+int findFirstEven(int* nums, int n) {
+    int i = 0;
+    while (i < n) {
+        if (nums[i] % 2 == 0) return i;
+        i++;
+    }
+    return -1;
+}
+'''
+
+[[case]]
+id = "linear_two_pointer_reverse"
+title = "Reverse an array in place with two pointers"
+tags = ["single-loop", "two-pointers", "while"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "Each iteration moves both pointers toward each other, so there are about n/2 iterations; the swap is O(1) and in place."
+
+[case.sources]
+python = '''
+def reverse(nums):
+    i, j = 0, len(nums) - 1
+    while i < j:
+        nums[i], nums[j] = nums[j], nums[i]
+        i += 1
+        j -= 1
+    return nums
+'''
+cpp = '''
+void reverseInPlace(vector<int>& nums) {
+    int i = 0;
+    int j = nums.size() - 1;
+    while (i < j) {
+        int tmp = nums[i];
+        nums[i] = nums[j];
+        nums[j] = tmp;
+        i++;
+        j--;
+    }
+}
+'''
+java = '''
+class Solution {
+    public void reverseInPlace(int[] nums) {
+        int i = 0;
+        int j = nums.length - 1;
+        while (i < j) {
+            int tmp = nums[i];
+            nums[i] = nums[j];
+            nums[j] = tmp;
+            i++;
+            j--;
+        }
+    }
+}
+'''
+javascript = '''
+function reverseInPlace(nums) {
+  let i = 0;
+  let j = nums.length - 1;
+  while (i < j) {
+    const tmp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = tmp;
+    i++;
+    j--;
+  }
+}
+'''
+go = '''
+func reverseInPlace(nums []int) {
+    i := 0
+    j := len(nums) - 1
+    for i < j {
+        nums[i], nums[j] = nums[j], nums[i]
+        i++
+        j--
+    }
+}
+'''
+c = '''
+void reverseInPlace(int* nums, int n) {
+    int i = 0;
+    int j = n - 1;
+    while (i < j) {
+        int tmp = nums[i];
+        nums[i] = nums[j];
+        nums[j] = tmp;
+        i++;
+        j--;
+    }
+}
+'''
+
+[[case]]
+id = "linear_step_two"
+title = "Sum every second element"
+tags = ["single-loop", "constant-stride"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "A constant stride of 2 halves the trip count but not its order: n/2 is still O(n)."
+
+[case.sources]
+python = '''
+def sum_even_positions(nums):
+    s = 0
+    for i in range(0, len(nums), 2):
+        s += nums[i]
+    return s
+'''
+cpp = '''
+int sumEvenPositions(vector<int>& nums) {
+    int s = 0;
+    for (int i = 0; i < nums.size(); i += 2) {
+        s += nums[i];
+    }
+    return s;
+}
+'''
+java = '''
+class Solution {
+    public int sumEvenPositions(int[] nums) {
+        int s = 0;
+        for (int i = 0; i < nums.length; i += 2) {
+            s += nums[i];
+        }
+        return s;
+    }
+}
+'''
+javascript = '''
+function sumEvenPositions(nums) {
+  let s = 0;
+  for (let i = 0; i < nums.length; i += 2) {
+    s += nums[i];
+  }
+  return s;
+}
+'''
+go = '''
+func sumEvenPositions(nums []int) int {
+    s := 0
+    for i := 0; i < len(nums); i += 2 {
+        s += nums[i]
+    }
+    return s
+}
+'''
+c = '''
+int sumEvenPositions(int* nums, int n) {
+    int s = 0;
+    for (int i = 0; i < n; i += 2) {
+        s += nums[i];
+    }
+    return s;
+}
+'''
+
+[[case]]
+id = "linear_countdown"
+title = "Sum from the back with a decreasing index"
+tags = ["single-loop", "descending"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "A descending index from n-1 down to 0 runs n times."
+
+[case.sources]
+python = '''
+def sum_backwards(nums):
+    s = 0
+    for i in range(len(nums) - 1, -1, -1):
+        s += nums[i]
+    return s
+'''
+cpp = '''
+int sumBackwards(vector<int>& nums) {
+    int s = 0;
+    for (int i = (int)nums.size() - 1; i >= 0; i--) {
+        s += nums[i];
+    }
+    return s;
+}
+'''
+java = '''
+class Solution {
+    public int sumBackwards(int[] nums) {
+        int s = 0;
+        for (int i = nums.length - 1; i >= 0; i--) {
+            s += nums[i];
+        }
+        return s;
+    }
+}
+'''
+javascript = '''
+function sumBackwards(nums) {
+  let s = 0;
+  for (let i = nums.length - 1; i >= 0; i--) {
+    s += nums[i];
+  }
+  return s;
+}
+'''
+go = '''
+func sumBackwards(nums []int) int {
+    s := 0
+    for i := len(nums) - 1; i >= 0; i-- {
+        s += nums[i]
+    }
+    return s
+}
+'''
+c = '''
+int sumBackwards(int* nums, int n) {
+    int s = 0;
+    for (int i = n - 1; i >= 0; i--) {
+        s += nums[i];
+    }
+    return s;
+}
+'''
+
+[[case]]
+id = "linear_string_scan"
+title = "Count vowels in a string"
+tags = ["single-loop", "string", "literal-lookup"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "One pass over the string; the membership test is against the five-character literal, which is constant work."
+
+[case.sources]
+python = '''
+def count_vowels(s):
+    count = 0
+    for ch in s:
+        if ch in "aeiou":
+            count += 1
+    return count
+'''
+cpp = '''
+int countVowels(string& s) {
+    int count = 0;
+    for (char ch : s) {
+        if (ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u') count++;
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countVowels(String s) {
+        int count = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u') count++;
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countVowels(s) {
+  let count = 0;
+  for (const ch of s) {
+    if ("aeiou".includes(ch)) count++;
+  }
+  return count;
+}
+'''
+go = '''
+func countVowels(s string) int {
+    count := 0
+    for _, ch := range s {
+        if ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u' {
+            count++
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countVowels(char* s) {
+    int count = 0;
+    for (int i = 0; s[i] != '\0'; i++) {
+        char ch = s[i];
+        if (ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u') count++;
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "quad_nested_pairs"
+title = "Count pairs with a given sum"
+tags = ["nested-loop", "triangular"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Inner loop starts at i+1, giving n(n-1)/2 pair checks: triangular, still Theta(n^2)."
+
+[case.sources]
+python = '''
+def count_pairs(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                count += 1
+    return count
+'''
+cpp = '''
+int countPairs(vector<int>& nums, int target) {
+    int count = 0;
+    for (int i = 0; i < nums.size(); i++) {
+        for (int j = i + 1; j < nums.size(); j++) {
+            if (nums[i] + nums[j] == target) count++;
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countPairs(int[] nums, int target) {
+        int count = 0;
+        for (int i = 0; i < nums.length; i++) {
+            for (int j = i + 1; j < nums.length; j++) {
+                if (nums[i] + nums[j] == target) count++;
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countPairs(nums, target) {
+  let count = 0;
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = i + 1; j < nums.length; j++) {
+      if (nums[i] + nums[j] === target) count++;
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countPairs(nums []int, target int) int {
+    count := 0
+    for i := 0; i < len(nums); i++ {
+        for j := i + 1; j < len(nums); j++ {
+            if nums[i]+nums[j] == target {
+                count++
+            }
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countPairs(int* nums, int n, int target) {
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (nums[i] + nums[j] == target) count++;
+        }
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "quad_two_sum_bruteforce"
+title = "Two Sum by checking every pair"
+tags = ["nested-loop", "early-exit", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "The canonical report: the early return only helps when a pair exists; the worst case (no pair) is n(n-1)/2 checks. Output is a constant-size pair."
+
+[case.sources]
+python = '''
+def twoSum(nums, target):
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] + nums[j] == target:
+                return [i, j]
+    return []
+'''
+cpp = '''
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        int n = nums.size();
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (nums[i] + nums[j] == target) return {i, j};
+            }
+        }
+        return {};
+    }
+};
+'''
+java = '''
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (nums[i] + nums[j] == target) return new int[]{i, j};
+            }
+        }
+        return new int[]{};
+    }
+}
+'''
+javascript = '''
+var twoSum = function(nums, target) {
+  const n = nums.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (nums[i] + nums[j] === target) return [i, j];
+    }
+  }
+  return [];
+};
+'''
+go = '''
+func twoSum(nums []int, target int) []int {
+    n := len(nums)
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            if nums[i]+nums[j] == target {
+                return []int{i, j}
+            }
+        }
+    }
+    return []int{}
+}
+'''
+
+[[case]]
+id = "quad_bubble_sort"
+title = "Bubble sort"
+tags = ["nested-loop", "sorting"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Two nested passes with an in-place adjacent swap; the inner bound n-1-i is triangular."
+
+[case.sources]
+python = '''
+def bubble_sort(nums):
+    n = len(nums)
+    for i in range(n):
+        for j in range(n - 1 - i):
+            if nums[j] > nums[j + 1]:
+                nums[j], nums[j + 1] = nums[j + 1], nums[j]
+    return nums
+'''
+cpp = '''
+void bubbleSort(vector<int>& nums) {
+    int n = nums.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            if (nums[j] > nums[j + 1]) {
+                int tmp = nums[j];
+                nums[j] = nums[j + 1];
+                nums[j + 1] = tmp;
+            }
+        }
+    }
+}
+'''
+java = '''
+class Solution {
+    public void bubbleSort(int[] nums) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (nums[j] > nums[j + 1]) {
+                    int tmp = nums[j];
+                    nums[j] = nums[j + 1];
+                    nums[j + 1] = tmp;
+                }
+            }
+        }
+    }
+}
+'''
+javascript = '''
+function bubbleSort(nums) {
+  const n = nums.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n - 1 - i; j++) {
+      if (nums[j] > nums[j + 1]) {
+        const tmp = nums[j];
+        nums[j] = nums[j + 1];
+        nums[j + 1] = tmp;
+      }
+    }
+  }
+}
+'''
+go = '''
+func bubbleSort(nums []int) {
+    n := len(nums)
+    for i := 0; i < n; i++ {
+        for j := 0; j < n-1-i; j++ {
+            if nums[j] > nums[j+1] {
+                nums[j], nums[j+1] = nums[j+1], nums[j]
+            }
+        }
+    }
+}
+'''
+c = '''
+void bubbleSort(int* nums, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            if (nums[j] > nums[j + 1]) {
+                int tmp = nums[j];
+                nums[j] = nums[j + 1];
+                nums[j + 1] = tmp;
+            }
+        }
+    }
+}
+'''
+
+[[case]]
+id = "quad_selection_sort"
+title = "Selection sort"
+tags = ["nested-loop", "sorting"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "For each position, scan the unsorted suffix for the minimum: n(n-1)/2 comparisons regardless of input order."
+
+[case.sources]
+python = '''
+def selection_sort(nums):
+    n = len(nums)
+    for i in range(n):
+        smallest = i
+        for j in range(i + 1, n):
+            if nums[j] < nums[smallest]:
+                smallest = j
+        nums[i], nums[smallest] = nums[smallest], nums[i]
+    return nums
+'''
+cpp = '''
+void selectionSort(vector<int>& nums) {
+    int n = nums.size();
+    for (int i = 0; i < n; i++) {
+        int smallest = i;
+        for (int j = i + 1; j < n; j++) {
+            if (nums[j] < nums[smallest]) smallest = j;
+        }
+        int tmp = nums[i];
+        nums[i] = nums[smallest];
+        nums[smallest] = tmp;
+    }
+}
+'''
+java = '''
+class Solution {
+    public void selectionSort(int[] nums) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            int smallest = i;
+            for (int j = i + 1; j < n; j++) {
+                if (nums[j] < nums[smallest]) smallest = j;
+            }
+            int tmp = nums[i];
+            nums[i] = nums[smallest];
+            nums[smallest] = tmp;
+        }
+    }
+}
+'''
+javascript = '''
+function selectionSort(nums) {
+  const n = nums.length;
+  for (let i = 0; i < n; i++) {
+    let smallest = i;
+    for (let j = i + 1; j < n; j++) {
+      if (nums[j] < nums[smallest]) smallest = j;
+    }
+    const tmp = nums[i];
+    nums[i] = nums[smallest];
+    nums[smallest] = tmp;
+  }
+}
+'''
+go = '''
+func selectionSort(nums []int) {
+    n := len(nums)
+    for i := 0; i < n; i++ {
+        smallest := i
+        for j := i + 1; j < n; j++ {
+            if nums[j] < nums[smallest] {
+                smallest = j
+            }
+        }
+        nums[i], nums[smallest] = nums[smallest], nums[i]
+    }
+}
+'''
+c = '''
+void selectionSort(int* nums, int n) {
+    for (int i = 0; i < n; i++) {
+        int smallest = i;
+        for (int j = i + 1; j < n; j++) {
+            if (nums[j] < nums[smallest]) smallest = j;
+        }
+        int tmp = nums[i];
+        nums[i] = nums[smallest];
+        nums[smallest] = tmp;
+    }
+}
+'''
+
+[[case]]
+id = "quad_insertion_sort"
+title = "Insertion sort"
+tags = ["nested-loop", "sorting", "while"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Worst case (reverse-sorted input): the inner while shifts i elements for each i, which is n(n-1)/2 shifts. The inner loop is bounded by j decreasing to 0."
+
+[case.sources]
+python = '''
+def insertion_sort(nums):
+    for i in range(1, len(nums)):
+        key = nums[i]
+        j = i - 1
+        while j >= 0 and nums[j] > key:
+            nums[j + 1] = nums[j]
+            j -= 1
+        nums[j + 1] = key
+    return nums
+'''
+cpp = '''
+void insertionSort(vector<int>& nums) {
+    for (int i = 1; i < nums.size(); i++) {
+        int key = nums[i];
+        int j = i - 1;
+        while (j >= 0 && nums[j] > key) {
+            nums[j + 1] = nums[j];
+            j--;
+        }
+        nums[j + 1] = key;
+    }
+}
+'''
+java = '''
+class Solution {
+    public void insertionSort(int[] nums) {
+        for (int i = 1; i < nums.length; i++) {
+            int key = nums[i];
+            int j = i - 1;
+            while (j >= 0 && nums[j] > key) {
+                nums[j + 1] = nums[j];
+                j--;
+            }
+            nums[j + 1] = key;
+        }
+    }
+}
+'''
+javascript = '''
+function insertionSort(nums) {
+  for (let i = 1; i < nums.length; i++) {
+    const key = nums[i];
+    let j = i - 1;
+    while (j >= 0 && nums[j] > key) {
+      nums[j + 1] = nums[j];
+      j--;
+    }
+    nums[j + 1] = key;
+  }
+}
+'''
+go = '''
+func insertionSort(nums []int) {
+    for i := 1; i < len(nums); i++ {
+        key := nums[i]
+        j := i - 1
+        for j >= 0 && nums[j] > key {
+            nums[j+1] = nums[j]
+            j--
+        }
+        nums[j+1] = key
+    }
+}
+'''
+c = '''
+void insertionSort(int* nums, int n) {
+    for (int i = 1; i < n; i++) {
+        int key = nums[i];
+        int j = i - 1;
+        while (j >= 0 && nums[j] > key) {
+            nums[j + 1] = nums[j];
+            j--;
+        }
+        nums[j + 1] = key;
+    }
+}
+'''
+
+[[case]]
+id = "quad_square_matrix_sum"
+title = "Sum every cell of an n x n matrix"
+tags = ["nested-loop", "grid", "square"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Both loops are bounded by the same n = number of rows, so the cell count is n*n."
+
+[case.sources]
+python = '''
+def matrix_sum(grid):
+    n = len(grid)
+    total = 0
+    for i in range(n):
+        for j in range(n):
+            total += grid[i][j]
+    return total
+'''
+cpp = '''
+int matrixSum(vector<vector<int>>& grid) {
+    int n = grid.size();
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            total += grid[i][j];
+        }
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int matrixSum(int[][] grid) {
+        int n = grid.length;
+        int total = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                total += grid[i][j];
+            }
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function matrixSum(grid) {
+  const n = grid.length;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      total += grid[i][j];
+    }
+  }
+  return total;
+}
+'''
+go = '''
+func matrixSum(grid [][]int) int {
+    n := len(grid)
+    total := 0
+    for i := 0; i < n; i++ {
+        for j := 0; j < n; j++ {
+            total += grid[i][j]
+        }
+    }
+    return total
+}
+'''
+c = '''
+int matrixSum(int** grid, int n) {
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            total += grid[i][j];
+        }
+    }
+    return total;
+}
+'''
+
+[[case]]
+id = "quad_triangular_loops"
+title = "Inner loop bounded by the outer index"
+tags = ["nested-loop", "triangular"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Inner trip count is i, so the total is 0+1+...+(n-1) = n(n-1)/2, which is Theta(n^2)."
+
+[case.sources]
+python = '''
+def count_smaller_before(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                count += 1
+    return count
+'''
+cpp = '''
+int countSmallerBefore(vector<int>& nums) {
+    int count = 0;
+    for (int i = 0; i < nums.size(); i++) {
+        for (int j = 0; j < i; j++) {
+            if (nums[j] < nums[i]) count++;
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countSmallerBefore(int[] nums) {
+        int count = 0;
+        for (int i = 0; i < nums.length; i++) {
+            for (int j = 0; j < i; j++) {
+                if (nums[j] < nums[i]) count++;
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countSmallerBefore(nums) {
+  let count = 0;
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (nums[j] < nums[i]) count++;
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countSmallerBefore(nums []int) int {
+    count := 0
+    for i := 0; i < len(nums); i++ {
+        for j := 0; j < i; j++ {
+            if nums[j] < nums[i] {
+                count++
+            }
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countSmallerBefore(int* nums, int n) {
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < i; j++) {
+            if (nums[j] < nums[i]) count++;
+        }
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "quad_max_distance_all_pairs"
+title = "Largest absolute difference over all ordered pairs"
+tags = ["nested-loop", "full-product"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Both loops run the full range, n*n iterations."
+
+[case.sources]
+python = '''
+def max_gap(nums):
+    best = 0
+    for a in nums:
+        for b in nums:
+            if abs(a - b) > best:
+                best = abs(a - b)
+    return best
+'''
+cpp = '''
+int maxGap(vector<int>& nums) {
+    int best = 0;
+    for (int a : nums) {
+        for (int b : nums) {
+            if (abs(a - b) > best) best = abs(a - b);
+        }
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int maxGap(int[] nums) {
+        int best = 0;
+        for (int a : nums) {
+            for (int b : nums) {
+                if (Math.abs(a - b) > best) best = Math.abs(a - b);
+            }
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function maxGap(nums) {
+  let best = 0;
+  for (const a of nums) {
+    for (const b of nums) {
+      if (Math.abs(a - b) > best) best = Math.abs(a - b);
+    }
+  }
+  return best;
+}
+'''
+go = '''
+func maxGap(nums []int) int {
+    best := 0
+    for _, a := range nums {
+        for _, b := range nums {
+            d := a - b
+            if d < 0 {
+                d = -d
+            }
+            if d > best {
+                best = d
+            }
+        }
+    }
+    return best
+}
+'''
+
+[[case]]
+id = "quad_duplicate_check_bruteforce"
+title = "Contains duplicate by comparing all pairs"
+tags = ["nested-loop", "early-exit", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Worst case (all distinct) compares every pair before returning false."
+
+[case.sources]
+python = '''
+def contains_duplicate(nums):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                return True
+    return False
+'''
+cpp = '''
+bool containsDuplicate(vector<int>& nums) {
+    for (int i = 0; i < nums.size(); i++) {
+        for (int j = i + 1; j < nums.size(); j++) {
+            if (nums[i] == nums[j]) return true;
+        }
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean containsDuplicate(int[] nums) {
+        for (int i = 0; i < nums.length; i++) {
+            for (int j = i + 1; j < nums.length; j++) {
+                if (nums[i] == nums[j]) return true;
+            }
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function containsDuplicate(nums) {
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = i + 1; j < nums.length; j++) {
+      if (nums[i] === nums[j]) return true;
+    }
+  }
+  return false;
+}
+'''
+go = '''
+func containsDuplicate(nums []int) bool {
+    for i := 0; i < len(nums); i++ {
+        for j := i + 1; j < len(nums); j++ {
+            if nums[i] == nums[j] {
+                return true
+            }
+        }
+    }
+    return false
+}
+'''
+c = '''
+int containsDuplicate(int* nums, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (nums[i] == nums[j]) return 1;
+        }
+    }
+    return 0;
+}
+'''
+
+[[case]]
+id = "cubic_triple_loop"
+title = "Count triples with a[i] + a[j] == a[k]"
+tags = ["nested-loop", "triple"]
+time_class = "O(n^3)"
+space_class = "O(1)"
+time_expr = "O(n^3)"
+space_expr = "O(1)"
+rationale = "Three independent full-range loops: n*n*n checks."
+
+[case.sources]
+python = '''
+def count_triples(nums):
+    n = len(nums)
+    count = 0
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                if nums[i] + nums[j] == nums[k]:
+                    count += 1
+    return count
+'''
+cpp = '''
+int countTriples(vector<int>& nums) {
+    int n = nums.size();
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < n; k++) {
+                if (nums[i] + nums[j] == nums[k]) count++;
+            }
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countTriples(int[] nums) {
+        int n = nums.length;
+        int count = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                for (int k = 0; k < n; k++) {
+                    if (nums[i] + nums[j] == nums[k]) count++;
+                }
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countTriples(nums) {
+  const n = nums.length;
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      for (let k = 0; k < n; k++) {
+        if (nums[i] + nums[j] === nums[k]) count++;
+      }
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countTriples(nums []int) int {
+    n := len(nums)
+    count := 0
+    for i := 0; i < n; i++ {
+        for j := 0; j < n; j++ {
+            for k := 0; k < n; k++ {
+                if nums[i]+nums[j] == nums[k] {
+                    count++
+                }
+            }
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countTriples(int* nums, int n) {
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < n; k++) {
+                if (nums[i] + nums[j] == nums[k]) count++;
+            }
+        }
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "cubic_three_sum_bruteforce"
+title = "3Sum by checking every ordered triple"
+tags = ["nested-loop", "triple", "early-exit", "leetcode"]
+time_class = "O(n^3)"
+space_class = "O(1)"
+time_expr = "O(n^3)"
+space_expr = "O(1)"
+rationale = "i<j<k triples: n(n-1)(n-2)/6 checks in the worst case (no triple sums to the target)."
+
+[case.sources]
+python = '''
+def has_three_sum(nums, target):
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == target:
+                    return True
+    return False
+'''
+cpp = '''
+bool hasThreeSum(vector<int>& nums, int target) {
+    int n = nums.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            for (int k = j + 1; k < n; k++) {
+                if (nums[i] + nums[j] + nums[k] == target) return true;
+            }
+        }
+    }
+    return false;
+}
+'''
+java = '''
+class Solution {
+    public boolean hasThreeSum(int[] nums, int target) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                for (int k = j + 1; k < n; k++) {
+                    if (nums[i] + nums[j] + nums[k] == target) return true;
+                }
+            }
+        }
+        return false;
+    }
+}
+'''
+javascript = '''
+function hasThreeSum(nums, target) {
+  const n = nums.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      for (let k = j + 1; k < n; k++) {
+        if (nums[i] + nums[j] + nums[k] === target) return true;
+      }
+    }
+  }
+  return false;
+}
+'''
+go = '''
+func hasThreeSum(nums []int, target int) bool {
+    n := len(nums)
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            for k := j + 1; k < n; k++ {
+                if nums[i]+nums[j]+nums[k] == target {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+'''
+c = '''
+int hasThreeSum(int* nums, int n, int target) {
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            for (int k = j + 1; k < n; k++) {
+                if (nums[i] + nums[j] + nums[k] == target) return 1;
+            }
+        }
+    }
+    return 0;
+}
+'''
+
+[[case]]
+id = "cubic_matrix_multiply"
+title = "Multiply two n x n matrices"
+tags = ["nested-loop", "triple", "grid", "allocation"]
+time_class = "O(n^3)"
+space_class = "O(n^2)"
+time_expr = "O(n^3)"
+space_expr = "O(n^2)"
+rationale = "Three full-range loops for time; the freshly allocated n x n result is the auxiliary space (and the output)."
+
+[case.sources]
+python = '''
+def multiply(a, b):
+    n = len(a)
+    result = [[0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                result[i][j] += a[i][k] * b[k][j]
+    return result
+'''
+cpp = '''
+vector<vector<int>> multiply(vector<vector<int>>& a, vector<vector<int>>& b) {
+    int n = a.size();
+    vector<vector<int>> result(n, vector<int>(n, 0));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < n; k++) {
+                result[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+    return result;
+}
+'''
+java = '''
+class Solution {
+    public int[][] multiply(int[][] a, int[][] b) {
+        int n = a.length;
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                for (int k = 0; k < n; k++) {
+                    result[i][j] += a[i][k] * b[k][j];
+                }
+            }
+        }
+        return result;
+    }
+}
+'''
+javascript = '''
+function multiply(a, b) {
+  const n = a.length;
+  const result = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      for (let k = 0; k < n; k++) {
+        result[i][j] += a[i][k] * b[k][j];
+      }
+    }
+  }
+  return result;
+}
+'''
+go = '''
+func multiply(a [][]int, b [][]int) [][]int {
+    n := len(a)
+    result := make([][]int, n)
+    for i := range result {
+        result[i] = make([]int, n)
+    }
+    for i := 0; i < n; i++ {
+        for j := 0; j < n; j++ {
+            for k := 0; k < n; k++ {
+                result[i][j] += a[i][k] * b[k][j]
+            }
+        }
+    }
+    return result
+}
+'''
+
+[[case]]
+id = "cubic_floyd_warshall"
+title = "Floyd-Warshall all-pairs shortest paths, in place"
+tags = ["nested-loop", "triple", "grid"]
+time_class = "O(n^3)"
+space_class = "O(1)"
+time_expr = "O(n^3)"
+space_expr = "O(1)"
+rationale = "Three nested loops over the vertex count; the distance matrix is updated in place, so there is no auxiliary allocation."
+
+[case.sources]
+python = '''
+def floyd_warshall(dist):
+    n = len(dist)
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    return dist
+'''
+cpp = '''
+void floydWarshall(vector<vector<int>>& dist) {
+    int n = dist.size();
+    for (int k = 0; k < n; k++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                }
+            }
+        }
+    }
+}
+'''
+java = '''
+class Solution {
+    public void floydWarshall(int[][] dist) {
+        int n = dist.length;
+        for (int k = 0; k < n; k++) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                    }
+                }
+            }
+        }
+    }
+}
+'''
+javascript = '''
+function floydWarshall(dist) {
+  const n = dist.length;
+  for (let k = 0; k < n; k++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (dist[i][k] + dist[k][j] < dist[i][j]) {
+          dist[i][j] = dist[i][k] + dist[k][j];
+        }
+      }
+    }
+  }
+}
+'''
+go = '''
+func floydWarshall(dist [][]int) {
+    n := len(dist)
+    for k := 0; k < n; k++ {
+        for i := 0; i < n; i++ {
+            for j := 0; j < n; j++ {
+                if dist[i][k]+dist[k][j] < dist[i][j] {
+                    dist[i][j] = dist[i][k] + dist[k][j]
+                }
+            }
+        }
+    }
+}
+'''
+
+[[case]]
+id = "quartic_four_loops"
+title = "Count zero-sum quadruples"
+tags = ["nested-loop", "lossy-projection"]
+time_class = "O(n^3)"
+space_class = "O(1)"
+time_expr = "O(n^4)"
+space_expr = "O(1)"
+rationale = "Four nested full-range loops are Theta(n^4). The legacy taxonomy tops out at O(n^3), so the class column is the lossy projection and the expression column carries the truth."
+
+[case.sources]
+python = '''
+def count_quadruples(nums):
+    n = len(nums)
+    count = 0
+    for a in range(n):
+        for b in range(n):
+            for c in range(n):
+                for d in range(n):
+                    if nums[a] + nums[b] + nums[c] + nums[d] == 0:
+                        count += 1
+    return count
+'''
+cpp = '''
+int countQuadruples(vector<int>& nums) {
+    int n = nums.size();
+    int count = 0;
+    for (int a = 0; a < n; a++) {
+        for (int b = 0; b < n; b++) {
+            for (int c = 0; c < n; c++) {
+                for (int d = 0; d < n; d++) {
+                    if (nums[a] + nums[b] + nums[c] + nums[d] == 0) count++;
+                }
+            }
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countQuadruples(int[] nums) {
+        int n = nums.length;
+        int count = 0;
+        for (int a = 0; a < n; a++) {
+            for (int b = 0; b < n; b++) {
+                for (int c = 0; c < n; c++) {
+                    for (int d = 0; d < n; d++) {
+                        if (nums[a] + nums[b] + nums[c] + nums[d] == 0) count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countQuadruples(nums) {
+  const n = nums.length;
+  let count = 0;
+  for (let a = 0; a < n; a++) {
+    for (let b = 0; b < n; b++) {
+      for (let c = 0; c < n; c++) {
+        for (let d = 0; d < n; d++) {
+          if (nums[a] + nums[b] + nums[c] + nums[d] === 0) count++;
+        }
+      }
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countQuadruples(nums []int) int {
+    n := len(nums)
+    count := 0
+    for a := 0; a < n; a++ {
+        for b := 0; b < n; b++ {
+            for c := 0; c < n; c++ {
+                for d := 0; d < n; d++ {
+                    if nums[a]+nums[b]+nums[c]+nums[d] == 0 {
+                        count++
+                    }
+                }
+            }
+        }
+    }
+    return count
+}
+'''

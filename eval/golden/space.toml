@@ -1,0 +1,691 @@
+# Golden group: cases chosen to pin SPACE answers.
+# The shipped model got space nearly inverted on simple code (an n x n builder came out O(1) and
+# an allocation-free two-sum came out O(n^2)), so space gets its own group. Convention: space is
+# the memory the function allocates beyond its inputs, including a returned result, at its peak.
+
+[[case]]
+id = "space_temp_array_each_iteration"
+title = "A fresh length-n scratch array on every iteration"
+tags = ["space", "allocation", "nested-loop", "peak-vs-total"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O(n^2)"
+space_expr = "O(n)"
+rationale = "TRAP: n allocations of n elements is n^2 total allocated, but each scratch array is dead before the next iteration, so the PEAK is one array: O(n). Time is n iterations each filling n slots."
+
+[case.sources]
+python = '''
+def windowed_total(nums):
+    n = len(nums)
+    total = 0
+    for i in range(n):
+        tmp = [0] * n
+        for j in range(n):
+            tmp[j] = nums[j] + i
+        total += tmp[i]
+    return total
+'''
+cpp = '''
+int windowedTotal(vector<int>& nums) {
+    int n = nums.size();
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+        vector<int> tmp(n, 0);
+        for (int j = 0; j < n; j++) {
+            tmp[j] = nums[j] + i;
+        }
+        total += tmp[i];
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int windowedTotal(int[] nums) {
+        int n = nums.length;
+        int total = 0;
+        for (int i = 0; i < n; i++) {
+            int[] tmp = new int[n];
+            for (int j = 0; j < n; j++) {
+                tmp[j] = nums[j] + i;
+            }
+            total += tmp[i];
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function windowedTotal(nums) {
+  const n = nums.length;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const tmp = new Array(n).fill(0);
+    for (let j = 0; j < n; j++) {
+      tmp[j] = nums[j] + i;
+    }
+    total += tmp[i];
+  }
+  return total;
+}
+'''
+go = '''
+func windowedTotal(nums []int) int {
+    n := len(nums)
+    total := 0
+    for i := 0; i < n; i++ {
+        tmp := make([]int, n)
+        for j := 0; j < n; j++ {
+            tmp[j] = nums[j] + i
+        }
+        total += tmp[i]
+    }
+    return total
+}
+'''
+
+[[case]]
+id = "space_square_table"
+title = "Multiplication table of size n x n"
+tags = ["space", "allocation", "nested-loop", "integer-parameter"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n^2)"
+space_expr = "O(n^2)"
+rationale = "An n x n result is allocated and filled cell by cell."
+
+[case.sources]
+python = '''
+def multiplication_table(n):
+    table = [[0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            table[i][j] = (i + 1) * (j + 1)
+    return table
+'''
+cpp = '''
+vector<vector<int>> multiplicationTable(int n) {
+    vector<vector<int>> table(n, vector<int>(n, 0));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            table[i][j] = (i + 1) * (j + 1);
+        }
+    }
+    return table;
+}
+'''
+java = '''
+class Solution {
+    public int[][] multiplicationTable(int n) {
+        int[][] table = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                table[i][j] = (i + 1) * (j + 1);
+            }
+        }
+        return table;
+    }
+}
+'''
+javascript = '''
+function multiplicationTable(n) {
+  const table = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      table[i][j] = (i + 1) * (j + 1);
+    }
+  }
+  return table;
+}
+'''
+go = '''
+func multiplicationTable(n int) [][]int {
+    table := make([][]int, n)
+    for i := range table {
+        table[i] = make([]int, n)
+    }
+    for i := 0; i < n; i++ {
+        for j := 0; j < n; j++ {
+            table[i][j] = (i + 1) * (j + 1)
+        }
+    }
+    return table
+}
+'''
+
+[[case]]
+id = "space_dp_array_climb_stairs"
+title = "Climbing stairs with a DP array"
+tags = ["space", "allocation", "dp", "integer-parameter", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "A length n+1 table filled in one pass."
+
+[case.sources]
+python = '''
+def climb_stairs(n):
+    if n <= 2:
+        return n
+    dp = [0] * (n + 1)
+    dp[1] = 1
+    dp[2] = 2
+    for i in range(3, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+    return dp[n]
+'''
+cpp = '''
+int climbStairs(int n) {
+    if (n <= 2) return n;
+    vector<int> dp(n + 1, 0);
+    dp[1] = 1;
+    dp[2] = 2;
+    for (int i = 3; i <= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];
+    }
+    return dp[n];
+}
+'''
+java = '''
+class Solution {
+    public int climbStairs(int n) {
+        if (n <= 2) return n;
+        int[] dp = new int[n + 1];
+        dp[1] = 1;
+        dp[2] = 2;
+        for (int i = 3; i <= n; i++) {
+            dp[i] = dp[i - 1] + dp[i - 2];
+        }
+        return dp[n];
+    }
+}
+'''
+javascript = '''
+function climbStairs(n) {
+  if (n <= 2) return n;
+  const dp = new Array(n + 1).fill(0);
+  dp[1] = 1;
+  dp[2] = 2;
+  for (let i = 3; i <= n; i++) {
+    dp[i] = dp[i - 1] + dp[i - 2];
+  }
+  return dp[n];
+}
+'''
+go = '''
+func climbStairs(n int) int {
+    if n <= 2 {
+        return n
+    }
+    dp := make([]int, n+1)
+    dp[1] = 1
+    dp[2] = 2
+    for i := 3; i <= n; i++ {
+        dp[i] = dp[i-1] + dp[i-2]
+    }
+    return dp[n]
+}
+'''
+c = '''
+int climbStairs(int n) {
+    if (n <= 2) return n;
+    int* dp = calloc(n + 1, sizeof(int));
+    dp[1] = 1;
+    dp[2] = 2;
+    for (int i = 3; i <= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];
+    }
+    int result = dp[n];
+    free(dp);
+    return result;
+}
+'''
+
+[[case]]
+id = "space_filtered_copy"
+title = "Collect the even numbers into a new list"
+tags = ["space", "allocation", "single-loop"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Worst case every element is even, so the output holds n elements."
+
+[case.sources]
+python = '''
+def evens(nums):
+    out = []
+    for x in nums:
+        if x % 2 == 0:
+            out.append(x)
+    return out
+'''
+cpp = '''
+vector<int> evens(vector<int>& nums) {
+    vector<int> out;
+    for (int x : nums) {
+        if (x % 2 == 0) out.push_back(x);
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> evens(int[] nums) {
+        List<Integer> out = new ArrayList<>();
+        for (int x : nums) {
+            if (x % 2 == 0) out.add(x);
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function evens(nums) {
+  const out = [];
+  for (const x of nums) {
+    if (x % 2 === 0) out.push(x);
+  }
+  return out;
+}
+'''
+go = '''
+func evens(nums []int) []int {
+    out := []int{}
+    for _, x := range nums {
+        if x%2 == 0 {
+            out = append(out, x)
+        }
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "space_rotate_matrix_in_place"
+title = "Rotate an n x n matrix 90 degrees in place"
+tags = ["space", "in-place", "nested-loop", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(1)"
+time_expr = "O(n^2)"
+space_expr = "O(1)"
+rationale = "Transpose then mirror each row, both with explicit n-bounded loops and in-place swaps: n^2 time, no allocation."
+
+[case.sources]
+python = '''
+def rotate(matrix):
+    n = len(matrix)
+    for i in range(n):
+        for j in range(i + 1, n):
+            matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+    for i in range(n):
+        for j in range(n // 2):
+            matrix[i][j], matrix[i][n - 1 - j] = matrix[i][n - 1 - j], matrix[i][j]
+'''
+cpp = '''
+void rotate(vector<vector<int>>& matrix) {
+    int n = matrix.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            swap(matrix[i][j], matrix[j][i]);
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n / 2; j++) {
+            swap(matrix[i][j], matrix[i][n - 1 - j]);
+        }
+    }
+}
+'''
+java = '''
+class Solution {
+    public void rotate(int[][] matrix) {
+        int n = matrix.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int t = matrix[i][j];
+                matrix[i][j] = matrix[j][i];
+                matrix[j][i] = t;
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n / 2; j++) {
+                int t = matrix[i][j];
+                matrix[i][j] = matrix[i][n - 1 - j];
+                matrix[i][n - 1 - j] = t;
+            }
+        }
+    }
+}
+'''
+javascript = '''
+function rotate(matrix) {
+  const n = matrix.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      [matrix[i][j], matrix[j][i]] = [matrix[j][i], matrix[i][j]];
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < Math.floor(n / 2); j++) {
+      [matrix[i][j], matrix[i][n - 1 - j]] = [matrix[i][n - 1 - j], matrix[i][j]];
+    }
+  }
+}
+'''
+go = '''
+func rotate(matrix [][]int) {
+    n := len(matrix)
+    for i := 0; i < n; i++ {
+        for j := i + 1; j < n; j++ {
+            matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+        }
+    }
+    for i := 0; i < n; i++ {
+        for j := 0; j < n/2; j++ {
+            matrix[i][j], matrix[i][n-1-j] = matrix[i][n-1-j], matrix[i][j]
+        }
+    }
+}
+'''
+
+[[case]]
+id = "space_product_except_self"
+title = "Product of array except self with prefix and suffix arrays"
+tags = ["space", "allocation", "single-loop", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Three sequential O(n) passes; the left array, right array and the output are all length n: O(n) space (counting the output)."
+
+[case.sources]
+python = '''
+def product_except_self(nums):
+    n = len(nums)
+    left = [1] * n
+    right = [1] * n
+    for i in range(1, n):
+        left[i] = left[i - 1] * nums[i - 1]
+    for i in range(n - 2, -1, -1):
+        right[i] = right[i + 1] * nums[i + 1]
+    return [left[i] * right[i] for i in range(n)]
+'''
+cpp = '''
+vector<int> productExceptSelf(vector<int>& nums) {
+    int n = nums.size();
+    vector<int> left(n, 1);
+    vector<int> right(n, 1);
+    for (int i = 1; i < n; i++) left[i] = left[i - 1] * nums[i - 1];
+    for (int i = n - 2; i >= 0; i--) right[i] = right[i + 1] * nums[i + 1];
+    vector<int> out(n);
+    for (int i = 0; i < n; i++) out[i] = left[i] * right[i];
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public int[] productExceptSelf(int[] nums) {
+        int n = nums.length;
+        int[] left = new int[n];
+        int[] right = new int[n];
+        Arrays.fill(left, 1);
+        Arrays.fill(right, 1);
+        for (int i = 1; i < n; i++) left[i] = left[i - 1] * nums[i - 1];
+        for (int i = n - 2; i >= 0; i--) right[i] = right[i + 1] * nums[i + 1];
+        int[] out = new int[n];
+        for (int i = 0; i < n; i++) out[i] = left[i] * right[i];
+        return out;
+    }
+}
+'''
+javascript = '''
+function productExceptSelf(nums) {
+  const n = nums.length;
+  const left = new Array(n).fill(1);
+  const right = new Array(n).fill(1);
+  for (let i = 1; i < n; i++) left[i] = left[i - 1] * nums[i - 1];
+  for (let i = n - 2; i >= 0; i--) right[i] = right[i + 1] * nums[i + 1];
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = left[i] * right[i];
+  return out;
+}
+'''
+go = '''
+func productExceptSelf(nums []int) []int {
+    n := len(nums)
+    left := make([]int, n)
+    right := make([]int, n)
+    for i := range left {
+        left[i] = 1
+        right[i] = 1
+    }
+    for i := 1; i < n; i++ {
+        left[i] = left[i-1] * nums[i-1]
+    }
+    for i := n - 2; i >= 0; i-- {
+        right[i] = right[i+1] * nums[i+1]
+    }
+    out := make([]int, n)
+    for i := 0; i < n; i++ {
+        out[i] = left[i] * right[i]
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "space_remove_duplicates_in_place"
+title = "Remove duplicates from a sorted array in place"
+tags = ["space", "in-place", "two-pointers", "single-loop", "leetcode"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(n)"
+space_expr = "O(1)"
+rationale = "A read pointer scans once and a write pointer compacts; no allocation."
+
+[case.sources]
+python = '''
+def remove_duplicates(nums):
+    if not nums:
+        return 0
+    write = 1
+    for read in range(1, len(nums)):
+        if nums[read] != nums[write - 1]:
+            nums[write] = nums[read]
+            write += 1
+    return write
+'''
+cpp = '''
+int removeDuplicates(vector<int>& nums) {
+    if (nums.empty()) return 0;
+    int write = 1;
+    for (int read = 1; read < nums.size(); read++) {
+        if (nums[read] != nums[write - 1]) {
+            nums[write] = nums[read];
+            write++;
+        }
+    }
+    return write;
+}
+'''
+java = '''
+class Solution {
+    public int removeDuplicates(int[] nums) {
+        if (nums.length == 0) return 0;
+        int write = 1;
+        for (int read = 1; read < nums.length; read++) {
+            if (nums[read] != nums[write - 1]) {
+                nums[write] = nums[read];
+                write++;
+            }
+        }
+        return write;
+    }
+}
+'''
+javascript = '''
+function removeDuplicates(nums) {
+  if (nums.length === 0) return 0;
+  let write = 1;
+  for (let read = 1; read < nums.length; read++) {
+    if (nums[read] !== nums[write - 1]) {
+      nums[write] = nums[read];
+      write++;
+    }
+  }
+  return write;
+}
+'''
+go = '''
+func removeDuplicates(nums []int) int {
+    if len(nums) == 0 {
+        return 0
+    }
+    write := 1
+    for read := 1; read < len(nums); read++ {
+        if nums[read] != nums[write-1] {
+            nums[write] = nums[read]
+            write++
+        }
+    }
+    return write
+}
+'''
+c = '''
+int removeDuplicates(int* nums, int n) {
+    if (n == 0) return 0;
+    int write = 1;
+    for (int read = 1; read < n; read++) {
+        if (nums[read] != nums[write - 1]) {
+            nums[write] = nums[read];
+            write++;
+        }
+    }
+    return write;
+}
+'''
+
+[[case]]
+id = "space_split_words"
+title = "Count long words after splitting a sentence"
+tags = ["space", "allocation", "library-call", "string"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Splitting materialises all the words, whose total length is about the input length: O(n) time and space."
+
+[case.sources]
+python = '''
+def count_long_words(s):
+    words = s.split()
+    count = 0
+    for w in words:
+        if len(w) > 3:
+            count += 1
+    return count
+'''
+cpp = '''
+int countLongWords(string& s) {
+    vector<string> words;
+    string cur;
+    for (char ch : s) {
+        if (ch == ' ') {
+            if (!cur.empty()) words.push_back(cur);
+            cur.clear();
+        } else {
+            cur += ch;
+        }
+    }
+    if (!cur.empty()) words.push_back(cur);
+    int count = 0;
+    for (string& w : words) {
+        if (w.size() > 3) count++;
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countLongWords(String s) {
+        String[] words = s.split(" ");
+        int count = 0;
+        for (String w : words) {
+            if (w.length() > 3) count++;
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countLongWords(s) {
+  const words = s.split(" ");
+  let count = 0;
+  for (const w of words) {
+    if (w.length > 3) count++;
+  }
+  return count;
+}
+'''
+go = '''
+func countLongWords(s string) int {
+    words := strings.Fields(s)
+    count := 0
+    for _, w := range words {
+        if len(w) > 3 {
+            count++
+        }
+    }
+    return count
+}
+'''
+
+[[case]]
+id = "space_grid_deep_copy"
+title = "Deep-copy a grid"
+tags = ["space", "allocation", "multi-variable", "grid"]
+time_class = "O(n^2)"
+space_class = "O(n^2)"
+time_expr = "O(n * m)"
+space_expr = "O(n * m)"
+rationale = "Every cell is copied into a new rows x cols structure."
+
+[case.sources]
+python = '''
+def deep_copy(grid):
+    return [row[:] for row in grid]
+'''
+cpp = '''
+vector<vector<int>> deepCopy(vector<vector<int>>& grid) {
+    vector<vector<int>> copy = grid;
+    return copy;
+}
+'''
+java = '''
+class Solution {
+    public int[][] deepCopy(int[][] grid) {
+        int[][] copy = new int[grid.length][];
+        for (int i = 0; i < grid.length; i++) {
+            copy[i] = grid[i].clone();
+        }
+        return copy;
+    }
+}
+'''
+javascript = '''
+function deepCopy(grid) {
+  return grid.map((row) => [...row]);
+}
+'''
+go = '''
+func deepCopy(grid [][]int) [][]int {
+    copyGrid := make([][]int, len(grid))
+    for i := range grid {
+        copyGrid[i] = make([]int, len(grid[i]))
+        copy(copyGrid[i], grid[i])
+    }
+    return copyGrid
+}
+'''

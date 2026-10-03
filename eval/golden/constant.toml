@@ -1,0 +1,173 @@
+# Golden group: more constant-time cases, so the O(1) class is not defined by trivial arithmetic
+# alone. These are the cases most prone to being over-predicted when a model reads code size.
+
+[[case]]
+id = "const_swap_two_elements"
+title = "Swap two array elements by index"
+tags = ["constant", "indexing", "in-place"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "Two reads and two writes at known indices; no loop, no allocation. Long-looking but constant."
+
+[case.sources]
+python = '''
+def swap_elements(nums, i, j):
+    tmp = nums[i]
+    nums[i] = nums[j]
+    nums[j] = tmp
+    return nums
+'''
+cpp = '''
+void swapElements(vector<int>& nums, int i, int j) {
+    int tmp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = tmp;
+}
+'''
+java = '''
+class Solution {
+    public void swapElements(int[] nums, int i, int j) {
+        int tmp = nums[i];
+        nums[i] = nums[j];
+        nums[j] = tmp;
+    }
+}
+'''
+javascript = '''
+function swapElements(nums, i, j) {
+  const tmp = nums[i];
+  nums[i] = nums[j];
+  nums[j] = tmp;
+  return nums;
+}
+'''
+go = '''
+func swapElements(nums []int, i int, j int) {
+    tmp := nums[i]
+    nums[i] = nums[j]
+    nums[j] = tmp
+}
+'''
+c = '''
+void swapElements(int* nums, int i, int j) {
+    int tmp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = tmp;
+}
+'''
+
+[[case]]
+id = "const_is_power_of_two"
+title = "Power-of-two test with a bit trick"
+tags = ["constant", "bit-trick", "integer-parameter"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "n & (n - 1) clears the lowest set bit in one operation; there is no loop over the bits."
+
+[case.sources]
+python = '''
+def is_power_of_two(n):
+    return n > 0 and (n & (n - 1)) == 0
+'''
+cpp = '''
+bool isPowerOfTwo(int n) {
+    return n > 0 && (n & (n - 1)) == 0;
+}
+'''
+java = '''
+class Solution {
+    public boolean isPowerOfTwo(int n) {
+        return n > 0 && (n & (n - 1)) == 0;
+    }
+}
+'''
+javascript = '''
+function isPowerOfTwo(n) {
+  return n > 0 && (n & (n - 1)) === 0;
+}
+'''
+go = '''
+func isPowerOfTwo(n int) bool {
+    return n > 0 && (n&(n-1)) == 0
+}
+'''
+c = '''
+int isPowerOfTwo(int n) {
+    return n > 0 && (n & (n - 1)) == 0;
+}
+'''
+
+[[case]]
+id = "const_median_of_three"
+title = "Median of three values with comparisons"
+tags = ["constant", "branching"]
+time_class = "O(1)"
+space_class = "O(1)"
+time_expr = "O(1)"
+space_expr = "O(1)"
+rationale = "A fixed number of comparisons whatever the values are: many branches, no loop."
+
+[case.sources]
+python = '''
+def median_of_three(a, b, c):
+    if a > b:
+        a, b = b, a
+    if b > c:
+        b, c = c, b
+    if a > b:
+        a, b = b, a
+    return b
+'''
+cpp = '''
+int medianOfThree(int a, int b, int c) {
+    if (a > b) swap(a, b);
+    if (b > c) swap(b, c);
+    if (a > b) swap(a, b);
+    return b;
+}
+'''
+java = '''
+class Solution {
+    public int medianOfThree(int a, int b, int c) {
+        if (a > b) { int t = a; a = b; b = t; }
+        if (b > c) { int t = b; b = c; c = t; }
+        if (a > b) { int t = a; a = b; b = t; }
+        return b;
+    }
+}
+'''
+javascript = '''
+function medianOfThree(a, b, c) {
+  if (a > b) [a, b] = [b, a];
+  if (b > c) [b, c] = [c, b];
+  if (a > b) [a, b] = [b, a];
+  return b;
+}
+'''
+go = '''
+func medianOfThree(a int, b int, c int) int {
+    if a > b {
+        a, b = b, a
+    }
+    if b > c {
+        b, c = c, b
+    }
+    if a > b {
+        a, b = b, a
+    }
+    return b
+}
+'''
+c = '''
+int medianOfThree(int a, int b, int c) {
+    int t;
+    if (a > b) { t = a; a = b; b = t; }
+    if (b > c) { t = b; b = c; c = t; }
+    if (a > b) { t = a; a = b; b = t; }
+    return b;
+}
+'''

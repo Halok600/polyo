@@ -1,0 +1,353 @@
+# Golden group: KNOWN-HARD cases. Every case here carries the `known-limitation` tag.
+# They are correctly labelled, and they need reasoning a static engine cannot always do (an
+# invariant that makes an inner loop amortised, a heap whose pops are bounded by pushes). They are
+# reported in the scorecard SEPARATELY and are never counted in a phase gate: a failure here is a
+# documented limit, not a regression. If the engine learns to solve one, the tag stays (the case
+# stays in this group) but the scorecard shows it passing, which is the improvement we want to see.
+
+[[case]]
+id = "kl_longest_consecutive_sequence"
+title = "Longest consecutive sequence with a start-of-run guard"
+tags = ["known-limitation", "amortized", "hash-set", "while", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "The inner while only starts when num-1 is NOT in the set, i.e. at the beginning of a run, and then walks that run once. Every element is walked at most once overall, so O(n). Proving that needs the guard's meaning, which a loop-bound analysis does not see: a naive analysis reports O(n^2)."
+
+[case.sources]
+python = '''
+def longest_consecutive(nums):
+    values = set(nums)
+    best = 0
+    for num in values:
+        if num - 1 not in values:
+            cur = num
+            length = 1
+            while cur + 1 in values:
+                cur += 1
+                length += 1
+            best = max(best, length)
+    return best
+'''
+cpp = '''
+int longestConsecutive(vector<int>& nums) {
+    unordered_set<int> values(nums.begin(), nums.end());
+    int best = 0;
+    for (int num : values) {
+        if (!values.count(num - 1)) {
+            int cur = num;
+            int length = 1;
+            while (values.count(cur + 1)) {
+                cur++;
+                length++;
+            }
+            best = max(best, length);
+        }
+    }
+    return best;
+}
+'''
+java = '''
+class Solution {
+    public int longestConsecutive(int[] nums) {
+        Set<Integer> values = new HashSet<>();
+        for (int x : nums) values.add(x);
+        int best = 0;
+        for (int num : values) {
+            if (!values.contains(num - 1)) {
+                int cur = num;
+                int length = 1;
+                while (values.contains(cur + 1)) {
+                    cur++;
+                    length++;
+                }
+                best = Math.max(best, length);
+            }
+        }
+        return best;
+    }
+}
+'''
+javascript = '''
+function longestConsecutive(nums) {
+  const values = new Set(nums);
+  let best = 0;
+  for (const num of values) {
+    if (!values.has(num - 1)) {
+      let cur = num;
+      let length = 1;
+      while (values.has(cur + 1)) {
+        cur++;
+        length++;
+      }
+      best = Math.max(best, length);
+    }
+  }
+  return best;
+}
+'''
+go = '''
+func longestConsecutive(nums []int) int {
+    values := make(map[int]bool)
+    for _, x := range nums {
+        values[x] = true
+    }
+    best := 0
+    for num := range values {
+        if !values[num-1] {
+            cur := num
+            length := 1
+            for values[cur+1] {
+                cur++
+                length++
+            }
+            if length > best {
+                best = length
+            }
+        }
+    }
+    return best
+}
+'''
+
+[[case]]
+id = "kl_inorder_iterative_stack"
+title = "Iterative inorder traversal with an explicit stack"
+tags = ["known-limitation", "amortized", "tree", "stack", "while", "leetcode"]
+time_class = "O(n)"
+space_class = "O(n)"
+time_expr = "O(n)"
+space_expr = "O(n)"
+rationale = "Each node is pushed once while walking left and popped once, so O(n) time; the stack and the output hold up to n nodes. The nested while loops chase tree pointers and drain a stack at the same time, which a loop-bound analysis cannot bound without modelling the tree and the stack together."
+
+[case.sources]
+python = '''
+def inorder(root):
+    out = []
+    stack = []
+    cur = root
+    while cur or stack:
+        while cur:
+            stack.append(cur)
+            cur = cur.left
+        cur = stack.pop()
+        out.append(cur.val)
+        cur = cur.right
+    return out
+'''
+cpp = '''
+vector<int> inorder(TreeNode* root) {
+    vector<int> out;
+    stack<TreeNode*> st;
+    TreeNode* cur = root;
+    while (cur || !st.empty()) {
+        while (cur) {
+            st.push(cur);
+            cur = cur->left;
+        }
+        cur = st.top();
+        st.pop();
+        out.push_back(cur->val);
+        cur = cur->right;
+    }
+    return out;
+}
+'''
+java = '''
+class Solution {
+    public List<Integer> inorder(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> stack = new ArrayDeque<>();
+        TreeNode cur = root;
+        while (cur != null || !stack.isEmpty()) {
+            while (cur != null) {
+                stack.push(cur);
+                cur = cur.left;
+            }
+            cur = stack.pop();
+            out.add(cur.val);
+            cur = cur.right;
+        }
+        return out;
+    }
+}
+'''
+javascript = '''
+function inorder(root) {
+  const out = [];
+  const stack = [];
+  let cur = root;
+  while (cur || stack.length > 0) {
+    while (cur) {
+      stack.push(cur);
+      cur = cur.left;
+    }
+    cur = stack.pop();
+    out.push(cur.val);
+    cur = cur.right;
+  }
+  return out;
+}
+'''
+go = '''
+func inorder(root *TreeNode) []int {
+    out := []int{}
+    stack := []*TreeNode{}
+    cur := root
+    for cur != nil || len(stack) > 0 {
+        for cur != nil {
+            stack = append(stack, cur)
+            cur = cur.Left
+        }
+        cur = stack[len(stack)-1]
+        stack = stack[:len(stack)-1]
+        out = append(out, cur.Val)
+        cur = cur.Right
+    }
+    return out
+}
+'''
+
+[[case]]
+id = "kl_dijkstra_heap"
+title = "Dijkstra's algorithm with a binary heap"
+tags = ["known-limitation", "multi-variable", "graph", "heap", "amortized", "leetcode"]
+time_class = "O(n^2)"
+space_class = "O(n)"
+time_expr = "O((n + m) * log n)"
+space_expr = "O(n + m)"
+rationale = "Each edge relaxation pushes at most one heap entry, so there are at most m pushes and pops, each O(log n), plus n nodes: (n + m) log n. This needs the push count bounded by the number of relaxations AND stale pops skipped; legacy class collapses (n + m) log n to O(n^2) when m is taken as n^2. The heap can hold up to n + m entries."
+
+[case.sources]
+python = '''
+import heapq
+
+
+def dijkstra(graph, source):
+    dist = [float("inf")] * len(graph)
+    dist[source] = 0
+    heap = [(0, source)]
+    while heap:
+        d, u = heapq.heappop(heap)
+        if d > dist[u]:
+            continue
+        for v, w in graph[u]:
+            if d + w < dist[v]:
+                dist[v] = d + w
+                heapq.heappush(heap, (dist[v], v))
+    return dist
+'''
+cpp = '''
+vector<int> dijkstra(vector<vector<pair<int, int>>>& graph, int source) {
+    vector<int> dist(graph.size(), INT_MAX);
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> heap;
+    dist[source] = 0;
+    heap.push({0, source});
+    while (!heap.empty()) {
+        pair<int, int> top = heap.top();
+        heap.pop();
+        int d = top.first;
+        int u = top.second;
+        if (d > dist[u]) continue;
+        for (auto& edge : graph[u]) {
+            int v = edge.first;
+            int w = edge.second;
+            if (d + w < dist[v]) {
+                dist[v] = d + w;
+                heap.push({dist[v], v});
+            }
+        }
+    }
+    return dist;
+}
+'''
+java = '''
+class Solution {
+    public int[] dijkstra(List<List<int[]>> graph, int source) {
+        int[] dist = new int[graph.size()];
+        Arrays.fill(dist, Integer.MAX_VALUE);
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+        dist[source] = 0;
+        heap.add(new int[]{0, source});
+        while (!heap.isEmpty()) {
+            int[] top = heap.poll();
+            int d = top[0];
+            int u = top[1];
+            if (d > dist[u]) continue;
+            for (int[] edge : graph.get(u)) {
+                int v = edge[0];
+                int w = edge[1];
+                if (d + w < dist[v]) {
+                    dist[v] = d + w;
+                    heap.add(new int[]{dist[v], v});
+                }
+            }
+        }
+        return dist;
+    }
+}
+'''
+javascript = '''
+function dijkstra(graph, source) {
+  const dist = new Array(graph.length).fill(Infinity);
+  const heap = new MinPriorityQueue((entry) => entry[0]);
+  dist[source] = 0;
+  heap.enqueue([0, source]);
+  while (!heap.isEmpty()) {
+    const [d, u] = heap.dequeue();
+    if (d > dist[u]) continue;
+    for (const [v, w] of graph[u]) {
+      if (d + w < dist[v]) {
+        dist[v] = d + w;
+        heap.enqueue([dist[v], v]);
+      }
+    }
+  }
+  return dist;
+}
+'''
+go = '''
+type Item struct {
+    dist int
+    node int
+}
+
+type PQ []Item
+
+func (p PQ) Len() int            { return len(p) }
+func (p PQ) Less(i, j int) bool  { return p[i].dist < p[j].dist }
+func (p PQ) Swap(i, j int)       { p[i], p[j] = p[j], p[i] }
+func (p *PQ) Push(x any)         { *p = append(*p, x.(Item)) }
+func (p *PQ) Pop() any {
+    old := *p
+    n := len(old)
+    x := old[n-1]
+    *p = old[:n-1]
+    return x
+}
+
+func dijkstra(graph [][][2]int, source int) []int {
+    dist := make([]int, len(graph))
+    for i := range dist {
+        dist[i] = math.MaxInt
+    }
+    dist[source] = 0
+    pq := &PQ{}
+    heap.Push(pq, Item{0, source})
+    for pq.Len() > 0 {
+        top := heap.Pop(pq).(Item)
+        if top.dist > dist[top.node] {
+            continue
+        }
+        for _, edge := range graph[top.node] {
+            v, w := edge[0], edge[1]
+            if top.dist+w < dist[v] {
+                dist[v] = top.dist + w
+                heap.Push(pq, Item{dist[v], v})
+            }
+        }
+    }
+    return dist
+}
+'''

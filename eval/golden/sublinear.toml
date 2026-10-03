@@ -1,0 +1,1198 @@
+# Golden group: logarithmic and square-root running times.
+# The shipped IR never emits LOOP_HALVING, so none of these were reachable before PolyO v2.
+# Legacy class projection rounds UP to the next legacy class (O(sqrt n) -> O(n)); the expression
+# column carries the exact answer.
+
+[[case]]
+id = "log_binary_search_iter"
+title = "Iterative binary search"
+tags = ["logarithmic", "binary-search", "shrinking-interval", "leetcode"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "The interval [lo, hi] halves every iteration (lo = mid+1 or hi = mid-1), so at most log2(n)+1 iterations."
+
+[case.sources]
+python = '''
+def search(nums, target):
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        if nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+'''
+cpp = '''
+int search(vector<int>& nums, int target) {
+    int lo = 0;
+    int hi = nums.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[mid] < target) {
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return -1;
+}
+'''
+java = '''
+class Solution {
+    public int search(int[] nums, int target) {
+        int lo = 0;
+        int hi = nums.length - 1;
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (nums[mid] == target) return mid;
+            if (nums[mid] < target) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return -1;
+    }
+}
+'''
+javascript = '''
+function search(nums, target) {
+  let lo = 0;
+  let hi = nums.length - 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (nums[mid] === target) return mid;
+    if (nums[mid] < target) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return -1;
+}
+'''
+go = '''
+func search(nums []int, target int) int {
+    lo := 0
+    hi := len(nums) - 1
+    for lo <= hi {
+        mid := lo + (hi-lo)/2
+        if nums[mid] == target {
+            return mid
+        }
+        if nums[mid] < target {
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    return -1
+}
+'''
+c = '''
+int search(int* nums, int n, int target) {
+    int lo = 0;
+    int hi = n - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[mid] < target) {
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return -1;
+}
+'''
+
+[[case]]
+id = "log_binary_search_lower_bound"
+title = "Lower bound with a half-open interval"
+tags = ["logarithmic", "binary-search", "shrinking-interval"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "while lo < hi with hi = mid or lo = mid+1: the interval size strictly halves each pass."
+
+[case.sources]
+python = '''
+def lower_bound(nums, target):
+    lo, hi = 0, len(nums)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
+'''
+cpp = '''
+int lowerBound(vector<int>& nums, int target) {
+    int lo = 0;
+    int hi = nums.size();
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] < target) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+'''
+java = '''
+class Solution {
+    public int lowerBound(int[] nums, int target) {
+        int lo = 0;
+        int hi = nums.length;
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (nums[mid] < target) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return lo;
+    }
+}
+'''
+javascript = '''
+function lowerBound(nums, target) {
+  let lo = 0;
+  let hi = nums.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (nums[mid] < target) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+'''
+go = '''
+func lowerBound(nums []int, target int) int {
+    lo := 0
+    hi := len(nums)
+    for lo < hi {
+        mid := lo + (hi-lo)/2
+        if nums[mid] < target {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+    return lo
+}
+'''
+c = '''
+int lowerBound(int* nums, int n, int target) {
+    int lo = 0;
+    int hi = n;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] < target) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+'''
+
+[[case]]
+id = "log_peak_element"
+title = "Find a peak by binary search on the slope"
+tags = ["logarithmic", "binary-search", "shrinking-interval", "leetcode"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "Each step keeps the half that must contain a peak, so the interval halves."
+
+[case.sources]
+python = '''
+def find_peak(nums):
+    lo, hi = 0, len(nums) - 1
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if nums[mid] < nums[mid + 1]:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
+'''
+cpp = '''
+int findPeak(vector<int>& nums) {
+    int lo = 0;
+    int hi = nums.size() - 1;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] < nums[mid + 1]) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+'''
+java = '''
+class Solution {
+    public int findPeak(int[] nums) {
+        int lo = 0;
+        int hi = nums.length - 1;
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (nums[mid] < nums[mid + 1]) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return lo;
+    }
+}
+'''
+javascript = '''
+function findPeak(nums) {
+  let lo = 0;
+  let hi = nums.length - 1;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (nums[mid] < nums[mid + 1]) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+'''
+go = '''
+func findPeak(nums []int) int {
+    lo := 0
+    hi := len(nums) - 1
+    for lo < hi {
+        mid := lo + (hi-lo)/2
+        if nums[mid] < nums[mid+1] {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+    return lo
+}
+'''
+c = '''
+int findPeak(int* nums, int n) {
+    int lo = 0;
+    int hi = n - 1;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] < nums[mid + 1]) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+'''
+
+[[case]]
+id = "log_binary_search_recursive"
+title = "Recursive binary search through a wrapper"
+tags = ["logarithmic", "binary-search", "recursion", "interprocedural"]
+time_class = "O(log n)"
+space_class = "O(log n)"
+time_expr = "O(log n)"
+space_expr = "O(log n)"
+rationale = "Each call halves the index range [lo, hi] and makes one recursive call, so depth and time are log n. The wrapper passes hi = len-1, tying the range to the array length."
+
+[case.sources]
+python = '''
+def bsearch(nums, target, lo, hi):
+    if lo > hi:
+        return -1
+    mid = (lo + hi) // 2
+    if nums[mid] == target:
+        return mid
+    if nums[mid] < target:
+        return bsearch(nums, target, mid + 1, hi)
+    return bsearch(nums, target, lo, mid - 1)
+
+
+def search(nums, target):
+    return bsearch(nums, target, 0, len(nums) - 1)
+'''
+cpp = '''
+int bsearch(vector<int>& nums, int target, int lo, int hi) {
+    if (lo > hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (nums[mid] == target) return mid;
+    if (nums[mid] < target) return bsearch(nums, target, mid + 1, hi);
+    return bsearch(nums, target, lo, mid - 1);
+}
+
+int search(vector<int>& nums, int target) {
+    return bsearch(nums, target, 0, nums.size() - 1);
+}
+'''
+java = '''
+class Solution {
+    public int search(int[] nums, int target) {
+        return bsearch(nums, target, 0, nums.length - 1);
+    }
+
+    private int bsearch(int[] nums, int target, int lo, int hi) {
+        if (lo > hi) return -1;
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[mid] < target) return bsearch(nums, target, mid + 1, hi);
+        return bsearch(nums, target, lo, mid - 1);
+    }
+}
+'''
+javascript = '''
+function bsearch(nums, target, lo, hi) {
+  if (lo > hi) return -1;
+  const mid = Math.floor((lo + hi) / 2);
+  if (nums[mid] === target) return mid;
+  if (nums[mid] < target) return bsearch(nums, target, mid + 1, hi);
+  return bsearch(nums, target, lo, mid - 1);
+}
+
+function search(nums, target) {
+  return bsearch(nums, target, 0, nums.length - 1);
+}
+'''
+go = '''
+func bsearch(nums []int, target int, lo int, hi int) int {
+    if lo > hi {
+        return -1
+    }
+    mid := lo + (hi-lo)/2
+    if nums[mid] == target {
+        return mid
+    }
+    if nums[mid] < target {
+        return bsearch(nums, target, mid+1, hi)
+    }
+    return bsearch(nums, target, lo, mid-1)
+}
+
+func search(nums []int, target int) int {
+    return bsearch(nums, target, 0, len(nums)-1)
+}
+'''
+c = '''
+int bsearch(int* nums, int target, int lo, int hi) {
+    if (lo > hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (nums[mid] == target) return mid;
+    if (nums[mid] < target) return bsearch(nums, target, mid + 1, hi);
+    return bsearch(nums, target, lo, mid - 1);
+}
+
+int search(int* nums, int n, int target) {
+    return bsearch(nums, target, 0, n - 1);
+}
+'''
+
+[[case]]
+id = "log_halving_while"
+title = "Count how many times n can be halved"
+tags = ["logarithmic", "halving", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "n is divided by 2 each iteration until it reaches 1: floor(log2 n) iterations. The size here is the VALUE of the integer parameter."
+
+[case.sources]
+python = '''
+def count_halvings(n):
+    steps = 0
+    while n > 1:
+        n //= 2
+        steps += 1
+    return steps
+'''
+cpp = '''
+int countHalvings(int n) {
+    int steps = 0;
+    while (n > 1) {
+        n /= 2;
+        steps++;
+    }
+    return steps;
+}
+'''
+java = '''
+class Solution {
+    public int countHalvings(int n) {
+        int steps = 0;
+        while (n > 1) {
+            n /= 2;
+            steps++;
+        }
+        return steps;
+    }
+}
+'''
+javascript = '''
+function countHalvings(n) {
+  let steps = 0;
+  while (n > 1) {
+    n = Math.floor(n / 2);
+    steps++;
+  }
+  return steps;
+}
+'''
+go = '''
+func countHalvings(n int) int {
+    steps := 0
+    for n > 1 {
+        n /= 2
+        steps++
+    }
+    return steps
+}
+'''
+c = '''
+int countHalvings(int n) {
+    int steps = 0;
+    while (n > 1) {
+        n /= 2;
+        steps++;
+    }
+    return steps;
+}
+'''
+
+[[case]]
+id = "log_doubling_loop"
+title = "Smallest power of two at least n"
+tags = ["logarithmic", "doubling", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "p doubles each iteration until it reaches n: ceil(log2 n) iterations."
+
+[case.sources]
+python = '''
+def smallest_power_of_two(n):
+    p = 1
+    while p < n:
+        p *= 2
+    return p
+'''
+cpp = '''
+int smallestPowerOfTwo(int n) {
+    int p = 1;
+    while (p < n) {
+        p *= 2;
+    }
+    return p;
+}
+'''
+java = '''
+class Solution {
+    public int smallestPowerOfTwo(int n) {
+        int p = 1;
+        while (p < n) {
+            p *= 2;
+        }
+        return p;
+    }
+}
+'''
+javascript = '''
+function smallestPowerOfTwo(n) {
+  let p = 1;
+  while (p < n) {
+    p *= 2;
+  }
+  return p;
+}
+'''
+go = '''
+func smallestPowerOfTwo(n int) int {
+    p := 1
+    for p < n {
+        p *= 2
+    }
+    return p
+}
+'''
+c = '''
+int smallestPowerOfTwo(int n) {
+    int p = 1;
+    for (; p < n; p *= 2) {
+    }
+    return p;
+}
+'''
+
+[[case]]
+id = "log_digit_sum"
+title = "Sum of decimal digits"
+tags = ["logarithmic", "division", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "n is divided by 10 each iteration: log10(n) digits."
+
+[case.sources]
+python = '''
+def digit_sum(n):
+    total = 0
+    while n > 0:
+        total += n % 10
+        n //= 10
+    return total
+'''
+cpp = '''
+int digitSum(int n) {
+    int total = 0;
+    while (n > 0) {
+        total += n % 10;
+        n /= 10;
+    }
+    return total;
+}
+'''
+java = '''
+class Solution {
+    public int digitSum(int n) {
+        int total = 0;
+        while (n > 0) {
+            total += n % 10;
+            n /= 10;
+        }
+        return total;
+    }
+}
+'''
+javascript = '''
+function digitSum(n) {
+  let total = 0;
+  while (n > 0) {
+    total += n % 10;
+    n = Math.floor(n / 10);
+  }
+  return total;
+}
+'''
+go = '''
+func digitSum(n int) int {
+    total := 0
+    for n > 0 {
+        total += n % 10
+        n /= 10
+    }
+    return total
+}
+'''
+c = '''
+int digitSum(int n) {
+    int total = 0;
+    while (n > 0) {
+        total += n % 10;
+        n /= 10;
+    }
+    return total;
+}
+'''
+
+[[case]]
+id = "log_gcd_euclid"
+title = "Euclid's algorithm"
+tags = ["logarithmic", "modulo", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "Replacing (a, b) by (b, a mod b) at least halves the larger value every two steps, so O(log(min(a, b)))."
+
+[case.sources]
+python = '''
+def gcd(a, b):
+    while b != 0:
+        a, b = b, a % b
+    return a
+'''
+cpp = '''
+int gcd(int a, int b) {
+    while (b != 0) {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+'''
+java = '''
+class Solution {
+    public int gcd(int a, int b) {
+        while (b != 0) {
+            int t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+'''
+javascript = '''
+function gcd(a, b) {
+  while (b !== 0) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
+}
+'''
+go = '''
+func gcd(a int, b int) int {
+    for b != 0 {
+        a, b = b, a%b
+    }
+    return a
+}
+'''
+c = '''
+int gcd(int a, int b) {
+    while (b != 0) {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+'''
+
+[[case]]
+id = "log_power_by_squaring_iter"
+title = "Fast exponentiation, iterative"
+tags = ["logarithmic", "halving", "bit-shift", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "The exponent is shifted right every iteration, so log2(exp) iterations; n is the exponent's value."
+
+[case.sources]
+python = '''
+def power(base, exp):
+    result = 1
+    while exp > 0:
+        if exp & 1:
+            result *= base
+        base *= base
+        exp >>= 1
+    return result
+'''
+cpp = '''
+long long power(long long base, int exp) {
+    long long result = 1;
+    while (exp > 0) {
+        if (exp & 1) result *= base;
+        base *= base;
+        exp >>= 1;
+    }
+    return result;
+}
+'''
+java = '''
+class Solution {
+    public long power(long base, int exp) {
+        long result = 1;
+        while (exp > 0) {
+            if ((exp & 1) == 1) result *= base;
+            base *= base;
+            exp >>= 1;
+        }
+        return result;
+    }
+}
+'''
+javascript = '''
+function power(base, exp) {
+  let result = 1;
+  while (exp > 0) {
+    if (exp & 1) result *= base;
+    base *= base;
+    exp >>= 1;
+  }
+  return result;
+}
+'''
+go = '''
+func power(base int, exp int) int {
+    result := 1
+    for exp > 0 {
+        if exp&1 == 1 {
+            result *= base
+        }
+        base *= base
+        exp >>= 1
+    }
+    return result
+}
+'''
+c = '''
+long long power(long long base, int exp) {
+    long long result = 1;
+    while (exp > 0) {
+        if (exp & 1) result *= base;
+        base *= base;
+        exp >>= 1;
+    }
+    return result;
+}
+'''
+
+[[case]]
+id = "log_power_by_squaring_recursive"
+title = "Fast exponentiation, recursive"
+tags = ["logarithmic", "recursion", "halving", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(log n)"
+time_expr = "O(log n)"
+space_expr = "O(log n)"
+rationale = "T(n) = T(n/2) + O(1) gives log n time; the recursion depth is log n, so the stack is log n."
+
+[case.sources]
+python = '''
+def power(x, n):
+    if n == 0:
+        return 1
+    half = power(x, n // 2)
+    if n % 2 == 0:
+        return half * half
+    return half * half * x
+'''
+cpp = '''
+long long power(long long x, int n) {
+    if (n == 0) return 1;
+    long long half = power(x, n / 2);
+    if (n % 2 == 0) return half * half;
+    return half * half * x;
+}
+'''
+java = '''
+class Solution {
+    public long power(long x, int n) {
+        if (n == 0) return 1;
+        long half = power(x, n / 2);
+        if (n % 2 == 0) return half * half;
+        return half * half * x;
+    }
+}
+'''
+javascript = '''
+function power(x, n) {
+  if (n === 0) return 1;
+  const half = power(x, Math.floor(n / 2));
+  if (n % 2 === 0) return half * half;
+  return half * half * x;
+}
+'''
+go = '''
+func power(x int, n int) int {
+    if n == 0 {
+        return 1
+    }
+    half := power(x, n/2)
+    if n%2 == 0 {
+        return half * half
+    }
+    return half * half * x
+}
+'''
+c = '''
+long long power(long long x, int n) {
+    if (n == 0) return 1;
+    long long half = power(x, n / 2);
+    if (n % 2 == 0) return half * half;
+    return half * half * x;
+}
+'''
+
+[[case]]
+id = "log_popcount_shift"
+title = "Count set bits by shifting"
+tags = ["logarithmic", "bit-shift", "truthiness-loop", "integer-parameter"]
+time_class = "O(log n)"
+space_class = "O(1)"
+time_expr = "O(log n)"
+space_expr = "O(1)"
+rationale = "while n: ... n >>= 1 runs once per bit of n, which is log2 n iterations."
+
+[case.sources]
+python = '''
+def count_bits(n):
+    count = 0
+    while n:
+        count += n & 1
+        n >>= 1
+    return count
+'''
+cpp = '''
+int countBits(unsigned int n) {
+    int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countBits(int n) {
+        int count = 0;
+        while (n != 0) {
+            count += n & 1;
+            n >>>= 1;
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countBits(n) {
+  let count = 0;
+  while (n) {
+    count += n & 1;
+    n >>>= 1;
+  }
+  return count;
+}
+'''
+go = '''
+func countBits(n uint) int {
+    count := 0
+    for n != 0 {
+        count += int(n & 1)
+        n >>= 1
+    }
+    return count
+}
+'''
+c = '''
+int countBits(unsigned int n) {
+    int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "sqrt_is_prime_trial_division"
+title = "Primality by trial division up to sqrt(n)"
+tags = ["sqrt", "squared-condition", "integer-parameter", "early-exit"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(sqrt n)"
+space_expr = "O(1)"
+rationale = "i*i <= n stops at i = sqrt(n). Exact time is O(sqrt n); the legacy class column rounds up to O(n), the next legacy class above it. n is the VALUE."
+
+[case.sources]
+python = '''
+def is_prime(n):
+    if n < 2:
+        return False
+    i = 2
+    while i * i <= n:
+        if n % i == 0:
+            return False
+        i += 1
+    return True
+'''
+cpp = '''
+bool isPrime(int n) {
+    if (n < 2) return false;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0) return false;
+    }
+    return true;
+}
+'''
+java = '''
+class Solution {
+    public boolean isPrime(int n) {
+        if (n < 2) return false;
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0) return false;
+        }
+        return true;
+    }
+}
+'''
+javascript = '''
+function isPrime(n) {
+  if (n < 2) return false;
+  for (let i = 2; i * i <= n; i++) {
+    if (n % i === 0) return false;
+  }
+  return true;
+}
+'''
+go = '''
+func isPrime(n int) bool {
+    if n < 2 {
+        return false
+    }
+    for i := 2; i*i <= n; i++ {
+        if n%i == 0 {
+            return false
+        }
+    }
+    return true
+}
+'''
+c = '''
+int isPrime(int n) {
+    if (n < 2) return 0;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0) return 0;
+    }
+    return 1;
+}
+'''
+
+[[case]]
+id = "sqrt_is_prime_math_call"
+title = "Primality bounded by a sqrt() call"
+tags = ["sqrt", "library-call", "integer-parameter", "early-exit"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(sqrt n)"
+space_expr = "O(1)"
+rationale = "The loop bound is sqrt(n) written as a library call rather than i*i <= n; same Theta(sqrt n)."
+
+[case.sources]
+python = '''
+import math
+
+
+def is_prime(n):
+    if n < 2:
+        return False
+    for i in range(2, int(math.sqrt(n)) + 1):
+        if n % i == 0:
+            return False
+    return True
+'''
+cpp = '''
+#include <cmath>
+
+bool isPrime(int n) {
+    if (n < 2) return false;
+    for (int i = 2; i <= sqrt(n); i++) {
+        if (n % i == 0) return false;
+    }
+    return true;
+}
+'''
+java = '''
+class Solution {
+    public boolean isPrime(int n) {
+        if (n < 2) return false;
+        for (int i = 2; i <= (int) Math.sqrt(n); i++) {
+            if (n % i == 0) return false;
+        }
+        return true;
+    }
+}
+'''
+javascript = '''
+function isPrime(n) {
+  if (n < 2) return false;
+  for (let i = 2; i <= Math.floor(Math.sqrt(n)); i++) {
+    if (n % i === 0) return false;
+  }
+  return true;
+}
+'''
+go = '''
+func isPrime(n int) bool {
+    if n < 2 {
+        return false
+    }
+    limit := int(math.Sqrt(float64(n)))
+    for i := 2; i <= limit; i++ {
+        if n%i == 0 {
+            return false
+        }
+    }
+    return true
+}
+'''
+
+[[case]]
+id = "sqrt_count_divisors"
+title = "Count divisors in pairs up to sqrt(n)"
+tags = ["sqrt", "squared-condition", "integer-parameter"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(sqrt n)"
+space_expr = "O(1)"
+rationale = "Divisors come in pairs (i, n/i), so scanning i up to sqrt(n) suffices."
+
+[case.sources]
+python = '''
+def count_divisors(n):
+    count = 0
+    i = 1
+    while i * i <= n:
+        if n % i == 0:
+            count += 1
+            if i != n // i:
+                count += 1
+        i += 1
+    return count
+'''
+cpp = '''
+int countDivisors(int n) {
+    int count = 0;
+    for (int i = 1; i * i <= n; i++) {
+        if (n % i == 0) {
+            count++;
+            if (i != n / i) count++;
+        }
+    }
+    return count;
+}
+'''
+java = '''
+class Solution {
+    public int countDivisors(int n) {
+        int count = 0;
+        for (int i = 1; i * i <= n; i++) {
+            if (n % i == 0) {
+                count++;
+                if (i != n / i) count++;
+            }
+        }
+        return count;
+    }
+}
+'''
+javascript = '''
+function countDivisors(n) {
+  let count = 0;
+  for (let i = 1; i * i <= n; i++) {
+    if (n % i === 0) {
+      count++;
+      if (i !== n / i) count++;
+    }
+  }
+  return count;
+}
+'''
+go = '''
+func countDivisors(n int) int {
+    count := 0
+    for i := 1; i*i <= n; i++ {
+        if n%i == 0 {
+            count++
+            if i != n/i {
+                count++
+            }
+        }
+    }
+    return count
+}
+'''
+c = '''
+int countDivisors(int n) {
+    int count = 0;
+    for (int i = 1; i * i <= n; i++) {
+        if (n % i == 0) {
+            count++;
+            if (i != n / i) count++;
+        }
+    }
+    return count;
+}
+'''
+
+[[case]]
+id = "sqrt_integer_root_scan"
+title = "Floor square root by incrementing"
+tags = ["sqrt", "squared-condition", "integer-parameter"]
+time_class = "O(n)"
+space_class = "O(1)"
+time_expr = "O(sqrt n)"
+space_expr = "O(1)"
+rationale = "(r+1)^2 <= n holds for r up to sqrt(n), so the scan makes about sqrt(n) steps."
+
+[case.sources]
+python = '''
+def floor_sqrt(n):
+    r = 0
+    while (r + 1) * (r + 1) <= n:
+        r += 1
+    return r
+'''
+cpp = '''
+int floorSqrt(int n) {
+    int r = 0;
+    while ((long long)(r + 1) * (r + 1) <= n) {
+        r++;
+    }
+    return r;
+}
+'''
+java = '''
+class Solution {
+    public int floorSqrt(int n) {
+        int r = 0;
+        while ((long) (r + 1) * (r + 1) <= n) {
+            r++;
+        }
+        return r;
+    }
+}
+'''
+javascript = '''
+function floorSqrt(n) {
+  let r = 0;
+  while ((r + 1) * (r + 1) <= n) {
+    r++;
+  }
+  return r;
+}
+'''
+go = '''
+func floorSqrt(n int) int {
+    r := 0
+    for (r+1)*(r+1) <= n {
+        r++
+    }
+    return r
+}
+'''
