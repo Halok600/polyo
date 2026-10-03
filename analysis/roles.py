@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from analysis.nodes import (
+    Assign,
     Attribute,
     Call,
     Comp,
@@ -70,6 +71,10 @@ CONTAINER_CONSUMERS = frozenset(
 )  # fmt: skip
 
 _ITERABLE_CONSTRUCTORS = frozenset({"Set", "Map", "WeakSet", "WeakMap"})
+_DICT_METHODS = frozenset({"get", "setdefault", "items", "keys", "values", "update", "popitem"})
+_SET_METHODS = frozenset(
+    {"add", "discard", "union", "intersection", "difference", "issubset", "issuperset"}
+)
 _CALLBACK_METHODS = frozenset(
     {"map", "filter", "forEach", "reduce", "reduceRight", "some", "every", "find", "findIndex",
      "findLast", "findLastIndex", "flatMap", "anyMatch", "allMatch", "noneMatch", "removeIf"}
@@ -157,7 +162,7 @@ TREESET_TYPES = frozenset({"set", "TreeSet", "multiset", "SortedSet"})
 class RoleInfo:
     role: str  # container | node | int
     depth: int = 1  # container nesting depth (a grid is 2)
-    kind: str = "list"  # list | str
+    kind: str = "list"  # list | str | dict | set
 
 
 # --------------------------------------------------------------------------------- inference
@@ -189,6 +194,10 @@ def infer_roles(
     node_evidence: set[str] = set()
     container_depth: dict[str, int] = {}
     string_evidence: set[str] = set()
+    dict_evidence: set[str] = set()
+    set_evidence: set[str] = set()
+    membership: set[str] = set()  # containers tested with `in`
+    keyed_stores: set[str] = set()  # containers assigned through a subscript
     aliases: dict[str, tuple[str, int]] = {}
 
     def container(root: tuple[str, int] | None, extra: int = 1) -> None:
@@ -223,7 +232,7 @@ def infer_roles(
     for node in walk(func):
         if isinstance(node, Attribute):
             root = _root_of(node.obj, aliases)
-            if root is not None and root[0] in names and node.attr in NODE_ATTRS:
+            if root is not None and root[0] in names and node.attr.lower() in NODE_ATTRS:
                 node_evidence.add(root[0])
             elif root is not None and node.attr in ("length", "size"):
                 container(root)
@@ -241,6 +250,9 @@ def infer_roles(
                 container(_root_of(generator.iter, aliases))
         elif isinstance(node, Compare) and node.op in ("in", "not in"):
             container(_root_of(node.right, aliases))
+            member = _root_of(node.right, aliases)
+            if member is not None and member[1] == 0:
+                membership.add(member[0])
             if isinstance(node.right, Name | Subscript) and isinstance(node.left, Str):
                 root = _root_of(node.right, aliases)
                 if root is not None:
@@ -255,6 +267,10 @@ def infer_roles(
                         container(root)
                     elif func_expr.attr in CONTAINER_METHODS:
                         container(root)
+                        if func_expr.attr in _DICT_METHODS and root[1] == 0:
+                            dict_evidence.add(root[0])
+                        elif func_expr.attr in _SET_METHODS and root[1] == 0:
+                            set_evidence.add(root[0])
                 elif (
                     isinstance(func_expr.obj, Name)
                     and func_expr.obj.id not in names
@@ -269,6 +285,12 @@ def infer_roles(
                     continue  # `max(a, b)` compares two values; only `max(xs)` iterates
                 for arg in node.args:
                     container(_root_of(arg, aliases))
+        if isinstance(node, Assign):
+            for target in node.targets:
+                if isinstance(target, Subscript):
+                    stored = _root_of(target.obj, aliases)
+                    if stored is not None and stored[1] == 0:
+                        keyed_stores.add(stored[0])
         if isinstance(node, Compare) and node.op in ("==", "!="):
             for side, other in ((node.left, node.right), (node.right, node.left)):
                 if isinstance(other, Str) and isinstance(side, Subscript):
@@ -284,7 +306,14 @@ def infer_roles(
         if name in node_evidence:
             infos[name] = RoleInfo("node")
         elif name in container_depth:
-            kind = "str" if name in string_evidence else "list"
+            if name in string_evidence:
+                kind = "str"
+            elif name in dict_evidence or name in membership & keyed_stores:
+                kind = "dict"  # `n in memo` and `memo[n] = ...`: a table keyed by value
+            elif name in set_evidence:
+                kind = "set"
+            else:
+                kind = "list"
             infos[name] = RoleInfo("container", max(1, container_depth[name]), kind)
         else:
             infos[name] = RoleInfo("int")
@@ -359,15 +388,28 @@ def _element_value(args: tuple[TypeRef, ...], index: int, name: str) -> Value:
     return inner if isinstance(inner, ContV | NodeV) else SCALAR
 
 
+def _is_user_struct(base: str) -> bool:
+    return (
+        base not in INT_TYPES
+        and base not in SCALAR_TYPES
+        and base not in STRING_TYPES
+        and base != "char"
+        and _container_kind(base) is None
+    )
+
+
 def value_for_type(t: TypeRef, name: str) -> Value:
     """The abstract value of a parameter of declared type `t`, with fresh size variables."""
     base = t.name
+    if t.ptr and t.dims == t.ptr == 1 and _is_user_struct(base):
+        return NodeV(Poly.var(new_var(name, "len")))  # `TreeNode* root`: one node, not an array
     if t.dims > 0:
         if base == "char" and t.dims == 1:
             return make_container("str", Poly.var(new_var(name, "len")))
         inner: Value = SCALAR
         if t.dims > 1:
-            inner = value_for_type(TypeRef(base, t.args, t.dims - 1), f"{name}[]")
+            below = TypeRef(base, t.args, t.dims - 1, (), False, max(t.ptr - 1, 0))
+            inner = value_for_type(below, f"{name}[]")
         elif base not in INT_TYPES and base not in SCALAR_TYPES and base[:1].isupper():
             inner = NodeV(Poly.var(new_var(f"{name}[]", "len")))
         return make_container(

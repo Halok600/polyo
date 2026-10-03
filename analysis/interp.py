@@ -25,7 +25,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
-from analysis.bundle import Bundle, Cost, RecCall
+from analysis.bundle import Bundle, Cond, Cost, RecCall
 from analysis.env import Env
 from analysis.nodes import (
     Assign,
@@ -103,6 +103,9 @@ _HOF_METHODS = frozenset(
      "anyMatch", "allMatch", "noneMatch", "peek", "removeIf", "takeWhile", "dropWhile"}
 )  # fmt: skip
 _HOF_FOLDS = frozenset({"reduce", "reduceRight"})
+_NEGATED = {"<": ">=", "<=": ">", ">": "<=", ">=": "<", "==": "!=", "!=": "=="}
+_SIZE_OPS = frozenset(_NEGATED)
+_EMPTY_TESTS = frozenset({"empty", "isEmpty", "is_empty", "isempty"})
 _HOF_RECEIVER, _HOF_ITEM, _HOF_ACC = "<hof receiver>", "<hof item>", "<hof acc>"
 
 
@@ -120,6 +123,7 @@ class IterInfo:
     kind: str  # arith | geom
     upper: Poly  # upper limit of the values the variable takes
     domain: int | None = None  # uid of the container whose indices (all of them) it ranges over
+    lower: Poly | None = None  # first value it takes (None: 0)
 
 
 @dataclass
@@ -141,6 +145,14 @@ class FuncSummary:
     rec: list[tuple[RecCall, ...]] = field(default_factory=lambda: [()])
     recursive: bool = False
     solved: bool = True
+    # calls this function makes to a function that is still being analysed further out (mutual
+    # recursion): the caller adopts them as its own recursive calls
+    outer_rec: list[tuple[RecCall, ...]] = field(default_factory=list)
+    # cost shared by every call of this function through one container, by parameter name: a
+    # visited array or memo table is filled once however many calls reach it
+    shared: dict[str, Poly] = field(default_factory=dict)
+    closure: Env | None = None  # where a nested function finds the variables it captured
+    shared_free: dict[int, Poly] = field(default_factory=dict)  # the same, by captured container
 
 
 class Interp:
@@ -170,8 +182,13 @@ class Interp:
         self.row_owner: dict[int, int] = {}  # row uid -> uid of the container whose rows they are
         self.ragged_uids: set[int] = set()  # containers a traversal proves to be adjacency lists
         self._loop_stack: list[LoopFrame] = []
+        self._conds: list[tuple[Expr, bool]] = []  # tests known true / false on this path
+        self._guessed: dict[Var, str] = {}  # argument sizes bind_args had to assume
+        self.kids_vars: dict[Var, Var] = {}  # node size variable -> children of one node
+        self._rec_returns: dict[int, tuple[dict[str, Value], Value | None]] = {}
+        self._shared_pool: dict[int, Poly] = {}  # container uid -> cost shared through it
         self._returns: list[Value] = []
-        self._summaries: dict[int, FuncSummary] = {}
+        self._summaries: dict[tuple[int, int], FuncSummary] = {}
         self._active: list[FuncDef] = []
         self._cur_func: FuncDef | None = None
         self._last_value: Value = UNKNOWN
@@ -205,6 +222,16 @@ class Interp:
         cur.time, cur.grows, cur.allocs = merged.time, merged.grows, merged.allocs
         cur.retained, cur.created, cur.rec = merged.retained, merged.created, merged.rec
 
+    def kids_var(self, size: Poly) -> Var:
+        """How many children one node has. Summed over every node of a tree it is size - 1, which
+        is what makes a recursion over node.children linear in the nodes."""
+        key = _single_var(size)
+        if key is None:
+            return new_var("children", "rowlen")
+        if key not in self.kids_vars:
+            self.kids_vars[key] = new_var("children", "rowlen")
+        return self.kids_vars[key]
+
     def rowlen_var(self, uid: int) -> Var:
         if uid not in self.rowlen_vars:
             self.rowlen_vars[uid] = new_var("row length", "rowlen")
@@ -233,27 +260,79 @@ class Interp:
                 return candidate
         return candidates[0]
 
-    def summary_for(self, fdef: FuncDef) -> FuncSummary:
-        key = id(fdef)
+    def summary_for(self, fdef: FuncDef, closure: Env | None = None) -> FuncSummary:
+        key = (id(fdef), id(closure))
         if key in self._summaries:
             return self._summaries[key]
+        summary = self._summarise(fdef, closure)
+        if (
+            not summary.outer_rec
+        ):  # one that leans on a function still being analysed is not reusable
+            self._summaries[key] = summary
+        return summary
+
+    def _summarise(self, fdef: FuncDef, closure: Env | None) -> FuncSummary:
         self._active.append(fdef)
-        saved = (self._cur, self._returns, self._loop_stack, self._cur_func, self.default_size)
-        self._cur, self._returns, self._loop_stack, self._cur_func = Bundle(), [], [], fdef
+        saved = (
+            self._cur,
+            self._returns,
+            self._loop_stack,
+            self._conds,
+            self._cur_func,
+            self.default_size,
+        )
+        self._cur_func = fdef
+        notes_before = len(self.notes)
         try:
-            params = params_to_values(fdef, self.lang, self._callee_table)
-            self.default_size = self._first_size(params)
-            env = Env(dict(params))
-            body = self.exec_block(fdef.body, env)
-            # entries pushed into the rows of a container built here add up to its total
-            body.created |= {v for v in body.grows if v.kind == "total"}
-            body = self.finalize_caps(body, body.created)
-            summary = self._make_summary(fdef, params, body)
+            params, body, ret = self._run_body(fdef, closure)
+            if self._calls_itself(fdef, body) and id(fdef) not in self._rec_returns:
+                # second pass: a recursive call returns what the first pass learned the function
+                # returns, so `len(merge_sort(left))` is a length and not an unknown
+                self._rec_returns[id(fdef)] = (params, ret)
+                del self.notes[notes_before:]
+                self._shared_pool.clear()
+                params, body, ret = self._run_body(fdef, closure)
+            summary = self._make_summary(fdef, params, body, ret, closure)
         finally:
             self._active.pop()
-            self._cur, self._returns, self._loop_stack, self._cur_func, self.default_size = saved
-        self._summaries[key] = summary
+            self._rec_returns.pop(id(fdef), None)
+            (
+                self._cur,
+                self._returns,
+                self._loop_stack,
+                self._conds,
+                self._cur_func,
+                self.default_size,
+            ) = saved
         return summary
+
+    def _run_body(
+        self, fdef: FuncDef, closure: Env | None = None
+    ) -> tuple[dict[str, Value], Bundle, Value | None]:
+        self._cur, self._returns, self._loop_stack, self._conds = Bundle(), [], [], []
+        params = params_to_values(fdef, self.lang, self._callee_table)
+        self.default_size = self._first_size(params)
+        env = Env(dict(params), closure)
+        body = self.exec_block(fdef.body, env)
+        # entries pushed into the rows of a container built here add up to its total
+        body.created |= {v for v in body.grows if v.kind == "total"}
+        retired = self.resolve_caps(body, body.created) if body.created else {}
+        body = self.finalize_caps(body, body.created)
+        if retired:  # sizes of containers built here are now known: resolve what is pooled on them
+            self._shared_pool = {u: p.substitute(retired) for u, p in self._shared_pool.items()}
+        ret: Value | None = None
+        for value in self._returns:
+            ret = join(ret, value) if ret is not None else value
+        if ret is not None and retired:
+            fixed = substitute(ret, retired)
+            if isinstance(fixed, ContV) and fixed.cap in retired:
+                fixed = replace(fixed, cap=None)
+            ret = fixed
+        return params, body, ret
+
+    @staticmethod
+    def _calls_itself(fdef: FuncDef, body: Bundle) -> bool:
+        return any(c.callee == fdef.name for alt in body.rec for c in alt)
 
     def _first_size(self, params: dict[str, Value]) -> Poly:
         for value in params.values():
@@ -265,11 +344,20 @@ class Interp:
                 return value.size
         return self.input_size
 
-    def _make_summary(self, fdef: FuncDef, params: dict[str, Value], body: Bundle) -> FuncSummary:
-        ret: Value | None = None
-        for value in self._returns:
-            ret = join(ret, value) if ret is not None else value
-        recursive = any(alt for alt in body.rec)
+    def _make_summary(
+        self,
+        fdef: FuncDef,
+        params: dict[str, Value],
+        body: Bundle,
+        ret: Value | None,
+        closure: Env | None = None,
+    ) -> FuncSummary:
+        recursive = self._calls_itself(fdef, body)
+        outer = (
+            []
+            if recursive
+            else [alt for alt in body.rec if alt and all(c.callee != fdef.name for c in alt)]
+        )
         time = body.time.total()
         space = (body.allocs + body.retained.total()).order()
         summary = FuncSummary(
@@ -281,7 +369,10 @@ class Interp:
             rec=body.rec,
             recursive=recursive,
             solved=not recursive,
+            outer_rec=outer,
+            closure=closure,
         )
+        self._settle_shared(summary)
         if recursive:
             from analysis.recurrence import solve_recurrence
 
@@ -290,6 +381,7 @@ class Interp:
 
     def bind_args(self, params: dict[str, Value], args: list[Value]) -> dict[Var, Poly]:
         mapping: dict[Var, Poly] = {}
+        self._guessed.clear()
         for (_, formal), actual in zip(params.items(), args, strict=False):
             self._match(formal, actual, mapping)
         return mapping
@@ -304,9 +396,12 @@ class Interp:
                     mapping[var] = actual.length
                 else:
                     mapping[var] = self.default_size
-                    self.note("assumed", f"size of argument for {var.name} unknown")
+                    self._guessed[var] = f"size of argument for {var.name} unknown"
         elif isinstance(formal, ContV):
             var = _single_var(formal.length)
+            if isinstance(actual, ContV) and isinstance(formal.elem, ContV):
+                # the table total of the caller stands in for the table total of the callee
+                mapping[self.total_var(formal.uid)] = Poly.var(self.total_var(actual.uid))
             if var is not None:
                 if isinstance(actual, ContV):
                     mapping[var] = actual.length
@@ -316,7 +411,7 @@ class Interp:
                     mapping[var] = actual.mag
                 else:
                     mapping[var] = self.default_size
-                    self.note("assumed", f"size of argument for {var.name} unknown")
+                    self._guessed[var] = f"size of argument for {var.name} unknown"
             if formal.elem is not None:
                 nested = actual.elem if isinstance(actual, ContV) else None
                 if nested is not None:
@@ -334,12 +429,24 @@ class Interp:
                     mapping[var] = ONE
                 else:
                     mapping[var] = self.default_size
-                    self.note("assumed", "size of a linked-structure argument unknown")
+                    self._guessed[var] = "size of a linked-structure argument unknown"
 
     # ================================================================== statements
     def exec_block(self, stmts: tuple[Stmt, ...] | list[Stmt], env: Env) -> Bundle:
         total = Bundle()
-        for stmt in stmts:
+        for index, stmt in enumerate(stmts):
+            if isinstance(stmt, If):
+                dead_then, dead_else = self.always_exits(stmt.body), self.always_exits(stmt.orelse)
+                if dead_then != dead_else:
+                    # a guard clause (`if n <= 1: return 1`): what follows runs only on the other
+                    # path, so a call after it is an alternative to the one inside, not an addition
+                    head, dead, live = self.exec_if_split(stmt, env)
+                    self._conds.append((stmt.test, dead_else))
+                    try:
+                        rest = self.exec_block(stmts[index + 1 :], env)
+                    finally:
+                        self._conds.pop()
+                    return total.then(head.then(dead.either(live.then(rest))))
             total = total.then(self.exec_stmt(stmt, env))
         return total
 
@@ -384,20 +491,45 @@ class Interp:
         return False
 
     def exec_if(self, st: If, env: Env, b: Bundle) -> Bundle:
-        self.evaluate(st.test, env)
+        head, then_b, else_b = self.exec_if_split(st, env)
+        return b.then(head).then(then_b.either(else_b))
+
+    def exec_if_split(self, st: If, env: Env) -> tuple[Bundle, Bundle, Bundle]:
+        """Interpret an `if`: the cost of its test, of the branch that exits (or the then branch),
+        and of the other one. The environment afterwards is that of the branch that can fall
+        through (or the merge of both)."""
+        head = Bundle()
+        saved = self._cur
+        self._cur = head
+        try:
+            head.charge(ONE)
+            self.evaluate(st.test, env)
+        finally:
+            self._cur = saved
         env_then, env_else = env.copy(), env.copy()
-        then_b = self.exec_block(st.body, env_then)
-        else_b = self.exec_block(st.orelse, env_else)
+        self._conds.append((st.test, True))
+        try:
+            then_b = self.exec_block(st.body, env_then)
+        finally:
+            self._conds.pop()
+        self._conds.append((st.test, False))
+        try:
+            else_b = self.exec_block(st.orelse, env_else)
+        finally:
+            self._conds.pop()
         dead_then, dead_else = self.always_exits(st.body), self.always_exits(st.orelse)
         if dead_then and not dead_else:
             merged = env_else
+            parts = (head, then_b, else_b)
         elif dead_else and not dead_then:
             merged = env_then
+            parts = (head, else_b, then_b)
         else:
             merged = env_then.merge(env_else)
+            parts = (head, then_b, else_b)
         env.vars.clear()
         env.vars.update(merged.vars)
-        return b.then(then_b.either(else_b))
+        return parts
 
     def exec_switch(self, st: Switch, env: Env, b: Bundle) -> Bundle:
         self.evaluate(st.subject, env)
@@ -721,7 +853,9 @@ class Interp:
     def fold_loop(self, inner: Bundle, plan, loop_id: int) -> Bundle:  # noqa: ANN001
         if plan.amortize_into is not None and plan.amortized_total is not None:
             return self._amortize(inner, plan)
-        return inner.fold(loop_id, lambda p: self.repeat_poly(p, plan), plan.iters)
+        return inner.fold(
+            loop_id, lambda p: self.repeat_poly(p, plan), plan.iters, plan.exact_iters
+        )
 
     def _amortize(self, inner: Bundle, plan) -> Bundle:  # noqa: ANN001
         """The loop runs `amortized_total` times IN TOTAL across the enclosing loop, not per
@@ -961,11 +1095,32 @@ class Interp:
             self._cur.charge(left.length)
             return make_container(left.kind, left.length, left.elem, owned=True)
         if op in ("+", "-") and isinstance(left, ContV) and isinstance(right, IntV):
-            # iterator / pointer arithmetic: `nums.begin() + i`, `arr + i` -- a view onto the
-            # same storage, whose length stays an upper bound
-            return make_container(left.kind, left.length, left.elem, view=True)
+            # iterator / pointer arithmetic: begin() + i, end() - k. An iterator is the number of
+            # elements from it to the end, so moving forward removes that many
+            step = right.mag
+            if step is None:
+                length = left.length
+            elif op == "+":
+                length = left.length - step
+            else:
+                length = left.length + step
+            if not any(coef > 0 for _, coef in length.terms):
+                length = ZERO
+            return make_container(left.kind, length, left.elem, view=True)
         if op == "+" and isinstance(left, IntV) and isinstance(right, ContV):
-            return make_container(right.kind, right.length, right.elem, view=True)
+            step = left.mag
+            length = right.length - step if step is not None else right.length
+            if not any(coef > 0 for _, coef in length.terms):
+                length = ZERO
+            return make_container(right.kind, length, right.elem, view=True)
+        if (
+            op == "-"
+            and isinstance(left, ContV)
+            and isinstance(right, ContV)
+            and left.view
+            and right.view
+        ):
+            return IntV(right.length - left.length)  # last - first: the elements between them
         if op == "*":
             container, count = (left, right) if isinstance(left, ContV) else (right, left)
             if isinstance(container, ContV) and isinstance(count, IntV):
@@ -1030,8 +1185,8 @@ class Interp:
             return UNKNOWN
         if isinstance(obj, NodeV):
             if attr in ("children",):
-                return make_container("list", obj.size, obj, view=True)
-            if attr in NODE_ATTRS:
+                return make_container("list", Poly.var(self.kids_var(obj.size)), obj, view=True)
+            if attr.lower() in NODE_ATTRS:
                 return NodeV(obj.size)
             return SCALAR
         if isinstance(obj, TupleV):
@@ -1041,7 +1196,7 @@ class Interp:
                 return obj.items[1]
         if isinstance(obj, NoneV):
             return UNKNOWN
-        if attr in NODE_ATTRS:
+        if attr.lower() in NODE_ATTRS:
             return UNKNOWN
         return UNKNOWN
 
@@ -1117,12 +1272,19 @@ class Interp:
         length = obj.length
         lo = magnitude(lower) if lower is not None else ZERO
         hi = magnitude(upper) if upper is not None else None
+        # a negative constant counts from the end: s[1:-1] is s without its first and last
+        if lo is not None and (lo_const := lo.const_value()) is not None and lo_const < 0:
+            lo = obj.length + lo
+        if hi is not None and (hi_const := hi.const_value()) is not None and hi_const < 0:
+            hi = obj.length + hi
         if e.step is None and lo is not None:
             span = (hi if hi is not None else obj.length) - lo
             if span.is_zero():
                 length = ZERO  # x[:0] and x[i:i] are empty slices
             else:
-                length = span.order() if any(c > 0 for _, c in span.terms) else ONE
+                # kept exact (L - 1, L / 2): a recursion on a slice is measured by how much it
+                # shrinks, and charges are ordered when they are made anyway
+                length = span if any(c > 0 for _, c in span.terms) else ONE
         if self.lang == "go" and obj.kind in ("list", "array", "str"):
             self._cur.charge(ONE)
             return make_container(obj.kind, length, obj.elem, view=True)
@@ -1176,7 +1338,12 @@ class Interp:
         first = args[0] if args else None
         fill = args[1] if len(args) > 1 else None
         elem: Value | None = None
-        if isinstance(first, ContV):
+        if isinstance(first, ContV) and isinstance(fill, ContV) and first.view and fill.view:
+            length = first.length - fill.length  # vector<int>(first, last): what lies between
+            if not any(coef > 0 for _, coef in length.terms):
+                length = first.length
+            self._cur.charge(length)
+        elif isinstance(first, ContV):
             length = first.length
             self._cur.charge(length)
         elif isinstance(first, IntV) and first.mag is not None:
@@ -1274,7 +1441,7 @@ class Interp:
             args = [self.evaluate(a, env) for a in call.args]
             for _, kwarg in call.kwargs:
                 self.evaluate(kwarg, env)
-            return self.call_user(target, args)
+            return self.call_user(target, args, env, tuple(call.args))
         receiver: Value | None = None
         qualifier: str | None = None
         name: str
@@ -1293,7 +1460,7 @@ class Interp:
             callee = self.evaluate(func, env)
             args = [self.evaluate(a, env) for a in call.args]
             if isinstance(callee, FuncV):
-                return self.call_user(callee, args)
+                return self.call_user(callee, args, env, tuple(call.args))
             return UNKNOWN
         if (
             name in _HOF_METHODS
@@ -1453,74 +1620,186 @@ class Interp:
                 return self.lookup_function(func.attr)
         return None
 
-    def call_user(self, target: FuncDef | FuncV, args: list[Value]) -> Value:
+    def call_user(
+        self,
+        target: FuncDef | FuncV,
+        args: list[Value],
+        env: Env | None = None,
+        arg_exprs: tuple[Expr, ...] = (),
+    ) -> Value:
+        closure: Env | None = None
         if isinstance(target, FuncV):
-            if target.closure is None and isinstance(target.func, FuncDef):
-                return self.call_user(target.func, args)
-            return self._call_closure(target, args)
-        if any(target is active for active in self._active):
-            self._cur.add_rec(RecCall(target.name, tuple(args), ONE, False, target.line))
-            return UNKNOWN
+            if isinstance(target.func, Lambda):
+                return self._call_lambda(target, args)
+            closure = target.closure if isinstance(target.closure, Env) else None
+            func = target.func
+        else:
+            func = target
+        assert isinstance(func, FuncDef)
+        if any(func is active for active in self._active):
+            self._cur.add_rec(self._rec_call(func, args, env, arg_exprs))
+            return self._recursive_result(func, args)
         if self._depth >= MAX_CALL_DEPTH:
             self.note("unknown", "call chain too deep to analyse")
             return UNKNOWN
         self._depth += 1
         try:
-            summary = self.summary_for(target)
+            summary = self.summary_for(func, closure)
         finally:
             self._depth -= 1
         mapping = self.bind_args(summary.params, args)
+        costs = (summary.time, summary.space, *summary.shared.values())
+        for var, reason in self._guessed.items():  # only a guess the callee actually depends on
+            if any(cost.mentions(var) for cost in costs):
+                self.note("assumed", reason)
         self._cur.charge(summary.time.substitute(mapping))
         self._cur.alloc(summary.space.substitute(mapping))
+        self._adopt_outer_calls(summary, mapping, env)
+        self._share(summary, args, mapping)
         if summary.recursive and not summary.solved:
-            self.note("unknown", f"recursion in {target.name}() could not be solved")
+            self.note("unknown", f"recursion in {func.name}() could not be solved")
         return substitute(summary.ret, mapping) or UNKNOWN
 
-    def _call_closure(self, target: FuncV, args: list[Value]) -> Value:
+    def _call_lambda(self, target: FuncV, args: list[Value]) -> Value:
         func = target.func
+        assert isinstance(func, Lambda)
         closure = target.closure if isinstance(target.closure, Env) else None
-        if isinstance(func, Lambda):
-            env = Env({}, closure)
-            for lambda_param, actual in zip(func.params, args, strict=False):
-                env.set(lambda_param, actual)
-            if isinstance(func.body, tuple):
-                saved_returns = self._returns
-                self._returns = []
-                self.absorb(self.exec_block(func.body, env))
-                result = self._returns[0] if self._returns else UNKNOWN
-                self._returns = saved_returns
-                return result
-            return self.evaluate(func.body, env)
-        assert isinstance(func, FuncDef)
-        if any(func is active for active in self._active):
-            self._cur.add_rec(RecCall(func.name, tuple(args), ONE, False, func.line))
-            return UNKNOWN
-        if self._depth >= MAX_CALL_DEPTH:
-            self.note("unknown", "call chain too deep to analyse")
-            return UNKNOWN
         env = Env({}, closure)
-        for param, actual in zip(func.params, args, strict=False):
-            env.set(param.name, actual)
-        self._active.append(func)
-        saved = (self._returns, self._loop_stack)
-        self._returns, self._loop_stack = [], []
-        self._depth += 1
-        try:
-            body = self.exec_block(func.body, env)
-            body = self.finalize_caps(body, body.created)
-            ret: Value | None = None
-            for value in self._returns:
-                ret = join(ret, value) if ret is not None else value
-        finally:
-            self._depth -= 1
-            self._active.pop()
-            self._returns, self._loop_stack = saved
-        if any(alt for alt in body.rec):
-            from analysis.recurrence import solve_nested
+        for lambda_param, actual in zip(func.params, args, strict=False):
+            env.set(lambda_param, actual)
+        if isinstance(func.body, tuple):
+            saved_returns = self._returns
+            self._returns = []
+            self.absorb(self.exec_block(func.body, env))
+            result = self._returns[0] if self._returns else UNKNOWN
+            self._returns = saved_returns
+            return result
+        return self.evaluate(func.body, env)
 
-            return solve_nested(self, func, args, body, ret)
-        self.absorb(body)
-        return ret if ret is not None else UNKNOWN
+    # ------------------------------------------------------------------ recursion bookkeeping
+    def _rec_call(
+        self, func: FuncDef, args: list[Value], env: Env | None, arg_exprs: tuple[Expr, ...]
+    ) -> RecCall:
+        return RecCall(
+            func.name, tuple(args), ONE, False, func.line, self.path_conds(env), arg_exprs
+        )
+
+    def path_conds(self, env: Env | None) -> tuple[Cond, ...]:
+        """The size comparisons known to hold on the path being interpreted."""
+        if env is None:
+            return ()
+        conds: list[Cond] = []
+        for test, polarity in self._conds:
+            conds.extend(self.cond_atoms(test, polarity, env))
+        return tuple(conds)
+
+    def _recursive_result(self, func: FuncDef, args: list[Value]) -> Value:
+        """What a recursive call returns: the first pass idea of the function result, with the
+        arguments of this call substituted in (unknown on the first pass)."""
+        known = self._rec_returns.get(id(func))
+        if known is None or known[1] is None:
+            return UNKNOWN
+        params, ret = known
+        return substitute(ret, self.bind_args(params, args)) or UNKNOWN
+
+    def cond_atoms(self, test: Expr, polarity: bool, env: Env) -> list[Cond]:
+        """The comparisons over sizes that `test` being `polarity` tells us (empty if none)."""
+        if isinstance(test, UnOp) and test.op == "not":
+            return self.cond_atoms(test.operand, not polarity, env)
+        if isinstance(test, BoolOp):
+            if (test.op == "and") == polarity:  # a conjunction: every part holds
+                return [c for part in test.values for c in self.cond_atoms(part, polarity, env)]
+            return []  # a disjunction says nothing about either part
+        if isinstance(test, Compare):
+            op = test.op if polarity else _NEGATED.get(test.op)
+            if op is None or op not in _SIZE_OPS:
+                return []
+            left = magnitude(self.pure(test.left, env))
+            right = magnitude(self.pure(test.right, env))
+            if left is None or right is None:
+                return []
+            return [(op, left, right)]
+        if (
+            isinstance(test, Call)
+            and isinstance(test.func, Attribute)
+            and test.func.attr in _EMPTY_TESTS
+            and not test.args
+        ):  # nums.empty(), nums.isEmpty(): the length is zero
+            holder = self.pure(test.func.obj, env)
+            if isinstance(holder, ContV):
+                return [("==" if polarity else ">", holder.length, ZERO)]
+            return []
+        if isinstance(test, Name | Attribute | Call | Subscript):
+            value = self.pure(test, env)
+            if isinstance(value, ContV):
+                return [(">" if polarity else "==", value.length, ZERO)]
+            if isinstance(value, IntV) and value.mag is not None:
+                return [(">" if polarity else "==", value.mag, ZERO)]
+        return []
+
+    def _adopt_outer_calls(
+        self, summary: FuncSummary, mapping: dict[Var, Poly], env: Env | None
+    ) -> None:
+        """Mutual recursion: the callee calls a function that is still being analysed further out.
+        Those calls become the recursive calls of the function being analysed here (arguments
+        rewritten from the callee parameters to ours), so the cycle is one recurrence."""
+        if not summary.outer_rec:
+            return
+        here = self.path_conds(env)
+        alternatives: list[tuple[RecCall, ...]] = []
+        for alt in summary.outer_rec:
+            adopted = []
+            for call in alt:
+                conds = tuple(
+                    (op, left.substitute(mapping), right.substitute(mapping))
+                    for op, left, right in call.conds
+                )
+                adopted.append(
+                    replace(
+                        call,
+                        args=tuple(substitute(a, mapping) for a in call.args),  # type: ignore[arg-type]
+                        mult=call.mult.substitute(mapping),
+                        conds=(*here, *conds),
+                    )
+                )
+            alternatives.append(tuple(adopted))
+        self.absorb(Bundle(rec=alternatives))
+
+    def _share(self, summary: FuncSummary, args: list[Value], mapping: dict[Var, Poly]) -> None:
+        """Cost a callee shares through one container (a visited array, a memo table) is paid once
+        however often the container is reused: pool it by the container of the caller."""
+        for uid, poly in summary.shared_free.items():
+            pooled = poly.substitute(mapping)
+            current = self._shared_pool.get(uid)
+            self._shared_pool[uid] = pooled if current is None else current.max(pooled)
+        names = list(summary.params)
+        for name, poly in summary.shared.items():
+            index = names.index(name)
+            actual = args[index] if index < len(args) else None
+            pooled = poly.substitute(mapping)
+            if not isinstance(actual, ContV):
+                self._cur.charge(pooled)  # not a container we can follow
+                continue
+            current = self._shared_pool.get(actual.uid)
+            self._shared_pool[actual.uid] = pooled if current is None else current.max(pooled)
+
+    def _settle_shared(self, summary: FuncSummary) -> None:
+        """Close the shared pool of a function: cost through one of its parameter containers stays
+        shared with its callers; cost through a container built here is simply its own time."""
+        by_uid = {
+            value.uid: name for name, value in summary.params.items() if isinstance(value, ContV)
+        }
+        extra = ZERO
+        for uid, poly in self._shared_pool.items():
+            if uid in by_uid:
+                name = by_uid[uid]
+                previous = summary.shared.get(name)
+                summary.shared[name] = poly if previous is None else previous.max(poly)
+            else:
+                extra = extra + poly
+        self._shared_pool.clear()
+        if not extra.is_zero():
+            summary.time = (summary.time + extra).order()
 
 
 # =================================================================================== helpers

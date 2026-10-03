@@ -171,14 +171,20 @@ class _CLike(TSBase):
         dims = base.dims if base else 0
         sizes = list(base.sizes) if base else []
         is_ref = False
+        pointers = 0
         current = node
         while current is not None:
             kind = current.type
             if kind in ("identifier", "field_identifier"):
-                typ = TypeRef(base.name, base.args, dims, tuple(sizes), is_ref) if base else None
+                typ = (
+                    TypeRef(base.name, base.args, dims, tuple(sizes), is_ref, pointers)
+                    if base
+                    else None
+                )
                 return Name(self.text(current)), typ
             if kind == "pointer_declarator":
                 dims += 1
+                pointers += 1
                 current = self.field(current, "declarator") or self.first_named(current)
             elif kind in ("reference_declarator", "parenthesized_declarator"):
                 is_ref = is_ref or kind == "reference_declarator"

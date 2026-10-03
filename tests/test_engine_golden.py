@@ -65,3 +65,33 @@ def test_the_engine_never_crashes_on_a_golden_source(non_recursive_summary) -> N
 def test_phase2_gate_perturbation_invariance() -> None:
     report = invariance_report(get_predictor("symbolic"), _NON_RECURSIVE)
     assert report.overall_rate == 1.0, report.flips[:10]
+
+
+# ------------------------------------------------------------------- phase 3: the recursive subset
+_RECURSIVE = [c for c in _CASES if c.group == "recursion" or "recursion" in c.tags]
+
+
+@pytest.fixture(scope="module")
+def recursive_summary():  # noqa: ANN201 -- eval.scorecard.Summary
+    results = score_predictor(get_predictor("symbolic"), _RECURSIVE)
+    return summarize(results, _RECURSIVE)
+
+
+@pytest.mark.parametrize("language", ALL_LANGUAGES)
+def test_phase3_gate_recursive_time_accuracy_per_language(recursive_summary, language: str) -> None:  # noqa: ANN001
+    assert recursive_summary.per_language[language].time_accuracy >= 0.90
+
+
+@pytest.mark.parametrize("language", ALL_LANGUAGES)
+def test_phase4_gate_space_accuracy_per_language(recursive_summary, language: str) -> None:  # noqa: ANN001
+    assert recursive_summary.per_language[language].space_accuracy >= 0.90
+
+
+def test_whole_suite_is_cross_language_consistent() -> None:
+    results = score_predictor(get_predictor("symbolic"), _CASES)
+    assert summarize(results, _CASES).cross_language_consistency == 1.0
+
+
+def test_phase3_gate_recursive_perturbation_invariance() -> None:
+    report = invariance_report(get_predictor("symbolic"), _RECURSIVE)
+    assert report.overall_rate == 1.0, report.flips[:10]

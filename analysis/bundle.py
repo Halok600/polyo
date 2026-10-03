@@ -16,7 +16,7 @@ lump exactly once. Loops between the lump's origin and its target do not multipl
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from analysis.poly import Poly, Var
 
@@ -75,18 +75,26 @@ class Cost:
 
 
 # ----------------------------------------------------------------------------------- Bundle
+# A path condition: (operator, left, right) over the function's own parameter variables.
+Cond = tuple[str, Poly, Poly]
+
+
 @dataclass(frozen=True)
 class RecCall:
     """A recursive call made by the function being analysed, recorded instead of costed.
 
     `args` are the abstract values passed (polynomials in the function's OWN parameter
-    variables), `mult` how many times it runs per invocation (enclosing loop counts)."""
+    variables), `mult` how many times it runs per invocation (enclosing loop counts), `conds` the
+    comparisons that held on the path to the call (it is only made while they do: they are the
+    loop test of the recursion), `arg_exprs` the argument expressions as written."""
 
     callee: str
     args: tuple[object, ...]
     mult: Poly
     in_loop: bool = False
     line: int = 0
+    conds: tuple[Cond, ...] = ()
+    arg_exprs: tuple[object, ...] = ()
 
 
 @dataclass
@@ -182,14 +190,25 @@ class Bundle:
             resets=self.resets & other.resets,
         )
 
-    def fold(self, loop_id: int, repeat: Callable[[Poly], Poly], multiplicity: Poly) -> Bundle:
+    def fold(
+        self,
+        loop_id: int,
+        repeat: Callable[[Poly], Poly],
+        multiplicity: Poly,
+        exact: Poly | None = None,
+    ) -> Bundle:
         """Close a loop: repeat per-iteration time, growth and retained memory; temporaries
         (`allocs`) are reused each iteration; recursive calls inside run `multiplicity` times."""
         rec: list[tuple[RecCall, ...]] = []
         for alt in self.rec:
             rec.append(
                 tuple(
-                    RecCall(c.callee, c.args, _ordered(c.mult * multiplicity), True, c.line)
+                    # the trip count stays exact (len - start): it is the measure of a recursion
+                    replace(
+                        c,
+                        mult=c.mult * (exact if exact is not None else multiplicity),
+                        in_loop=True,
+                    )
                     for c in alt
                 )
             )

@@ -281,3 +281,59 @@ def test_rows_of_a_parameter_named_like_a_list_of_pairs_have_constant_length() -
     assert intervals.elem.length.const_value() == 2
     assert isinstance(grid, ContV) and isinstance(grid.elem, ContV)
     assert grid.elem.length.const_value() is None
+
+
+def test_a_container_with_membership_tests_and_keyed_stores_is_a_dict() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    source = "def f(n, memo):\n    if n in memo:\n        return memo[n]\n    memo[n] = n\n    return n\n"
+    info = infer_roles(lower_source(source, "python").functions[0])["memo"]
+    assert (info.role, info.kind) == ("container", "dict")
+
+
+def test_a_container_given_dict_methods_is_a_dict() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    func = lower_source("def f(counts, k):\n    return counts.get(k, 0)\n", "python").functions[0]
+    assert infer_roles(func)["counts"].kind == "dict"
+
+
+def test_a_container_given_set_methods_is_a_set() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    func = lower_source("def f(seen, k):\n    seen.add(k)\n", "python").functions[0]
+    assert infer_roles(func)["seen"].kind == "set"
+
+
+def test_a_container_that_is_only_indexed_stays_a_list() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    func = lower_source("def f(visited, k):\n    visited[k] = True\n", "python").functions[0]
+    assert infer_roles(func)["visited"].kind == "list"
+
+
+def test_a_pointer_to_a_user_struct_is_a_node() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import params_to_values
+    from analysis.values import ContV, NodeV
+
+    func = lower_source(
+        "int f(TreeNode* root, int* a, TreeNode** all) { return 0; }", "cpp"
+    ).functions[0]
+    values = params_to_values(func, "cpp")
+    assert isinstance(values["root"], NodeV)
+    assert isinstance(values["a"], ContV)
+    assert isinstance(values["all"], ContV) and isinstance(values["all"].elem, NodeV)
+
+
+def test_capitalised_field_names_still_walk_a_linked_structure() -> None:
+    from analysis.lower import lower_source
+    from analysis.roles import infer_roles
+
+    source = "def f(root):\n    return f(root.Left) + f(root.Right)\n"
+    func = lower_source(source, "python").functions[0]
+    assert infer_roles(func)["root"].role == "node"

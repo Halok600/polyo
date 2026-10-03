@@ -91,6 +91,7 @@ INDEXING_METHODS = frozenset(
 @dataclass
 class LoopPlan:
     iters: Poly
+    exact_iters: Poly | None = None  # the trip count before ordering (len - start), if known
     atoms: list[tuple[Var, IterInfo]] = field(default_factory=list)
     bind: dict[str, Value] = field(default_factory=dict)
     post: dict[str, Value] = field(default_factory=dict)
@@ -115,6 +116,7 @@ class IterSpace:
     atoms: list[tuple[Var, IterInfo]] = field(default_factory=list)
     ragged_uid: int | None = None
     notes: list[str] = field(default_factory=list)
+    exact: Poly | None = None  # the count before ordering (len - start)
 
 
 # ================================================================================== entry
@@ -137,6 +139,7 @@ def _plan_for_each(it: Interp, loop: Loop, env: Env) -> LoopPlan:
     space = iteration_space(it, loop.iter, env)
     plan = LoopPlan(
         iters=space.count,
+        exact_iters=space.exact,
         atoms=space.atoms,
         ragged_uid=space.ragged_uid,
         notes=space.notes,
@@ -252,12 +255,18 @@ def _range_space(it: Interp, call: Call, env: Env) -> IterSpace:
         count = span * step.power(Fraction(-1))
     else:
         count = span
+    exact = count
     count = _ordered(count)
     upper = _ordered(low if descending else high)
     domain = values[0].of if len(values) == 1 and isinstance(values[0], IntV) else None
     atom = new_var("i", "iter")
+    first = None if descending else low
     return IterSpace(
-        count, IntV(Poly.var(atom)), [(atom, IterInfo("arith", upper, domain))], notes=notes
+        count,
+        IntV(Poly.var(atom)),
+        [(atom, IterInfo("arith", upper, domain, first))],
+        notes=notes,
+        exact=exact,
     )
 
 
@@ -993,8 +1002,9 @@ def _single_variable_plan(
                 return None
             span = start - bound
         plan.iters = _ordered(span / step)
+        plan.exact_iters = span / step
         upper = _ordered(bound if up else start if start is not None else bound)
-        _attach_atom(plan, name, atom, "arith", upper)
+        _attach_atom(plan, name, atom, "arith", upper, start if up else None)
         plan.phi = span
         plan.phi_atoms = {name: atom}
         plan.phi_step = step
@@ -1045,9 +1055,16 @@ def _symbolic_stride_plan(
     return plan
 
 
-def _attach_atom(plan: LoopPlan, name: str, _trace_atom: Var, kind: str, upper: Poly) -> None:
+def _attach_atom(
+    plan: LoopPlan,
+    name: str,
+    _trace_atom: Var,
+    kind: str,
+    upper: Poly,
+    lower: Poly | None = None,
+) -> None:
     atom = new_var(name, "iter")
-    plan.atoms.append((atom, IterInfo(kind, upper)))
+    plan.atoms.append((atom, IterInfo(kind, upper, None, lower)))
     plan.bind[name] = IntV(Poly.var(atom))
 
 

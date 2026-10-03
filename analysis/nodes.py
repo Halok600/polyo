@@ -45,6 +45,7 @@ class TypeRef:
     dims: int = 0
     sizes: tuple[Expr | None, ...] = ()  # declared array sizes: C `int a[26]`, Go `[26]int`
     ref: bool = False  # a C++ reference declarator (`vector<int>& v`): binds, does not copy
+    ptr: int = 0  # how many of `dims` are C/C++ pointer levels (`TreeNode* root` has ptr 1)
 
     def render(self) -> str:
         text = self.name

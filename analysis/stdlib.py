@@ -40,6 +40,7 @@ from analysis.values import (
 )
 
 ONE = Poly.const(1)
+ZERO = Poly.zero()
 
 SEQ = frozenset({"list", "array"})
 STR = frozenset({"str"})
@@ -285,6 +286,11 @@ def _insert_cost(c: LibCall) -> LibResult | None:
     amount = ONE  # one slot: a stored container is a reference (counted where it was built)
     front = c.name in ("push_front", "appendleft", "addFirst", "offerFirst", "unshift")
     indexed = c.name in ("insert", "add") and len(rest) >= 2 and isinstance(rest[0], IntV)
+    position = rest[0] if c.name == "insert" and len(rest) >= 2 else None
+    if isinstance(position, ContV) and position.view and kind in SEQ:
+        # v.insert(it, x) shifts everything after the iterator: begin() is O(n), end() is O(1)
+        shifted = position.length.order() if not position.length.is_zero() else ONE
+        return LibResult(SCALAR, shifted, grow=amount)
     if kind in HEAP:
         return LibResult(SCALAR, c.length().log(), grow=amount)
     if kind in TREE:
@@ -394,13 +400,19 @@ def _peek(c: LibCall) -> LibResult | None:
     return LibResult(_scalar_or_elem(c), ONE)
 
 
-@lib("begin", "end", "rbegin", "rend", "cbegin", "cend", "iterator", "listIterator",
+_END_ITERATORS = frozenset({"end", "cend", "rend", "crend"})
+
+
+@lib("begin", "end", "rbegin", "rend", "cbegin", "cend", "crend", "iterator", "listIterator",
      "descendingIterator", "stream", "values", "keySet", "entrySet", "keys", "items",
-     "entries", "subList", "asList", "boxed", "mapToInt", "chars", "iter", "lazy")  # fmt: skip
+     "entries", "asList", "boxed", "mapToInt", "chars", "iter", "lazy")  # fmt: skip
 def _view(c: LibCall) -> LibResult | None:
     subject = c.subject()
     if subject is None:
         return None
+    if c.name in _END_ITERATORS and not c.args:
+        # an iterator is the number of elements from it to the end: end() has none left
+        return LibResult(make_container(subject.kind, ZERO, subject.elem, view=True), ONE)
     if c.qualifier == "Object" and c.lang == "javascript":
         return LibResult(
             _fresh("list", subject.length, subject.elem), subject.length, alloc=subject.length
@@ -411,7 +423,7 @@ def _view(c: LibCall) -> LibResult | None:
 
 
 # -------------------------------------------------------------------------------- copying
-@lib("copy", "clone", "toArray", "toList", "copyOf", "copyOfRange", "Array.from", "from",
+@lib("copy", "clone", "toArray", "toList", "copyOf", "Array.from", "from",
      "deepcopy", "list", "tuple", "set", "frozenset", "dict", "deque", "Counter", "OrderedDict",
      "defaultdict", "sorted_copy", "toCharArray", "split_chars", "of", "values_copy",
      "ToSlice", "Collect", "collect")  # fmt: skip
@@ -666,22 +678,41 @@ def _string_transform(c: LibCall) -> LibResult | None:
     return LibResult(_fresh("str", subject.length), subject.length, alloc=subject.length)
 
 
-@lib("substring", "substr", "slice", "Substring", "subSequence", "copyOfRange_str")
+@lib("substring", "substr", "slice", "Substring", "subSequence", "copyOfRange", "subList",
+     "subarray", "sliceRange")  # fmt: skip
 def _substring(c: LibCall) -> LibResult | None:
+    """A sub-range of a string or array: s.substring(i, j), a.slice(1), Arrays.copyOfRange(a, i,
+    j), list.subList(i, j). The length is kept exact (j - i, n - 1) because a recursion on a
+    sub-range is measured by how much the range shrinks. A subList is a view: nothing is copied."""
     subject = c.subject()
     if subject is None:
+        return None
+    if subject.kind not in ("str", "list", "array", "deque"):
         return None
     rest = c.rest()
     low = rest[0].mag if rest and isinstance(rest[0], IntV) else None
     high = rest[1].mag if len(rest) > 1 and isinstance(rest[1], IntV) else None
-    if low is not None and high is not None:
-        length = (high - low).order()
-    elif low is not None:
-        length = subject.length
-    else:
-        length = subject.length
-    if subject.kind == "str" or c.name == "slice":
-        return LibResult(_fresh(subject.kind, length, subject.elem), length, alloc=length)
+    length = subject.length
+    if c.name == "substr" and low is not None and high is not None:
+        length = high  # substr(start, length)
+    elif low is not None and high is not None:
+        length = high - low
+    elif low is not None and len(rest) == 1:
+        start = low.const_value()
+        length = -low if start is not None and start < 0 else subject.length - low  # slice(-k)
+    if not any(coef > 0 for _, coef in length.terms):
+        length = ONE
+    if c.name == "subList":
+        return LibResult(make_container(subject.kind, length, subject.elem, view=True), ONE)
+    return LibResult(_fresh(subject.kind, length, subject.elem), length, alloc=length)
+
+
+@lib("distance")
+def _distance(c: LibCall) -> LibResult | None:
+    """std::distance(first, last): the elements between two iterators."""
+    views = [a for a in c.args if isinstance(a, ContV)]
+    if len(views) >= 2:
+        return LibResult(IntV(views[0].length - views[1].length), ONE)
     return None
 
 

@@ -154,14 +154,15 @@ def substitute(value: Value | None, mapping: Mapping[Var, Poly]) -> Value | None
     """Rewrite the size variables inside a value (used to instantiate a callee's result)."""
     if value is None or not mapping:
         return value
+    # sizes stay exact (n - 2, not n): a recursion is measured by how much its argument shrinks
     if isinstance(value, IntV):
-        mag = value.mag.substitute(mapping).order() if value.mag is not None else None
+        mag = value.mag.substitute(mapping) if value.mag is not None else None
         return IntV(mag, value.of)
     if isinstance(value, ContV):
         elem = substitute(value.elem, mapping)
-        return replace(value, length=value.length.substitute(mapping).order(), elem=elem)
+        return replace(value, length=value.length.substitute(mapping), elem=elem)
     if isinstance(value, NodeV):
-        return NodeV(value.size.substitute(mapping).order())
+        return NodeV(value.size.substitute(mapping))
     if isinstance(value, TupleV):
         return TupleV(tuple(substitute(i, mapping) or UNKNOWN for i in value.items))
     return value

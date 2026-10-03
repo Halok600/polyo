@@ -92,11 +92,51 @@ def select_entries(module: Module) -> list[FuncDef]:
     if not candidates:
         return []
     names = {f.name for f in candidates}
-    called: set[str] = set()
-    for func in candidates:
-        called |= _callees(func, names) - {func.name}
+    graph = {f.name: _callees(f, names) - {f.name} for f in candidates}
+    called: set[str] = set().union(*graph.values()) if graph else set()
     roots = [f for f in candidates if f.name not in called]
-    return roots or candidates
+    # functions no root can reach call each other in a cycle: one of each group is an entry too
+    reachable: set[str] = set()
+    stack = [f.name for f in roots]
+    while stack:
+        current = stack.pop()
+        if current not in reachable:
+            reachable.add(current)
+            stack.extend(graph.get(current, ()))
+    leftovers = [f for f in candidates if f.name not in reachable]
+    if not leftovers:
+        return roots
+    inner = {f.name: graph[f.name] & {g.name for g in leftovers} for f in leftovers}
+    return [*roots, *_cycle_representatives(leftovers, inner)]
+
+
+def _cycle_representatives(candidates: list[FuncDef], graph: dict[str, set[str]]) -> list[FuncDef]:
+    """Every function is called by another: mutual recursion. One function per group of functions
+    that call each other is enough (the rest are part of its recurrence), and only groups nothing
+    outside them calls count."""
+    reach: dict[str, set[str]] = {}
+    for name in graph:
+        seen: set[str] = set()
+        stack = list(graph[name])
+        while stack:
+            current = stack.pop()
+            if current not in seen:
+                seen.add(current)
+                stack.extend(graph.get(current, ()))
+        reach[name] = seen
+    entries: list[FuncDef] = []
+    covered: set[str] = set()
+    for func in candidates:
+        if func.name in covered:
+            continue
+        group = {
+            n for n in graph if n == func.name or (n in reach[func.name] and func.name in reach[n])
+        }
+        outside_callers = {n for n in graph if n not in group and graph[n] & group}
+        covered |= group
+        if not outside_callers:
+            entries.append(func)
+    return entries or candidates[:1]
 
 
 def _is_program(module: Module) -> bool:
@@ -151,6 +191,15 @@ def _display_names(params: dict[str, Value], polys: list[Poly], it: Interp) -> d
     return {var: _LETTERS[i] if i < len(_LETTERS) else var.name for i, var in enumerate(ordered)}
 
 
+def _entry_time(summary: FuncSummary) -> Poly:
+    """The time of a function called from outside: cost it shares through its parameter
+    containers (a visited array, a memo table) is paid here, once."""
+    total = summary.time
+    for shared in summary.shared.values():
+        total = total + shared
+    return total.order() if not total.is_zero() else ONE
+
+
 # ---------------------------------------------------------------------------------- analyze
 def _summarise_program(it: Interp, module: Module) -> FuncSummary:
     pseudo = FuncDef(name="<program>", params=(), body=module.toplevel)
@@ -179,10 +228,10 @@ def analyze(source: str, language: str) -> Analysis:
         empty = Result(ONE, "O(1)", "O(1)", False)
         return Analysis(empty, empty, "unknown", it.notes, entry_name)
 
-    time = summaries[0].time
+    time = _entry_time(summaries[0])
     space = summaries[0].space
     for summary in summaries[1:]:
-        time, space = time.max(summary.time), space.max(summary.space)
+        time, space = time.max(_entry_time(summary)), space.max(summary.space)
     for summary in summaries:
         if summary.recursive and not summary.solved:
             it.note("unknown", f"recursion in {summary.func.name}() could not be solved")
