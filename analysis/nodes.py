@@ -44,6 +44,7 @@ class TypeRef:
     args: tuple[TypeRef, ...] = ()
     dims: int = 0
     sizes: tuple[Expr | None, ...] = ()  # declared array sizes: C `int a[26]`, Go `[26]int`
+    ref: bool = False  # a C++ reference declarator (`vector<int>& v`): binds, does not copy
 
     def render(self) -> str:
         text = self.name

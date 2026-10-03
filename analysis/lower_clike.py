@@ -60,10 +60,25 @@ from analysis.nodes import (
     Unknown,
     UnOp,
 )
+from analysis.roles import (
+    DEQUE_TYPES,
+    DICT_TYPES,
+    HEAP_TYPES,
+    LIST_TYPES,
+    SET_TYPES,
+    STACK_TYPES,
+    TREEMAP_TYPES,
+    TREESET_TYPES,
+)
 from analysis.tsbase import TSBase
 from parsing.parse import parse_source
 
 _BLOCK_TYPES = frozenset({"compound_statement", "block", "statement_block"})
+# templates that can be written as a constructor call: `vector<int>(m, 0)`
+_CONSTRUCTIBLE = (
+    LIST_TYPES | DEQUE_TYPES | STACK_TYPES | HEAP_TYPES | DICT_TYPES | SET_TYPES
+    | TREEMAP_TYPES | TREESET_TYPES
+)  # fmt: skip
 _PRIMITIVE_TYPES = frozenset(
     {"int", "long", "short", "char", "byte", "float", "double", "bool", "boolean", "unsigned",
      "signed", "size_t", "auto", "string", "String", "var", "void"}
@@ -76,6 +91,11 @@ _DECLARATION_TYPES = frozenset(
 )
 _FUNCTION_VALUE_TYPES = frozenset({"function_expression", "function", "arrow_function"})
 _CHAR_ESCAPES = {"0": 0, "n": 10, "t": 9, "r": 13, "\\": 92, "'": 39, '"': 34, "a": 7, "b": 8}
+
+
+def _constructs_object(typ: TypeRef) -> bool:
+    """`T x(args)` calls a constructor unless T is a primitive (`int x(5)` is just `int x = 5`)."""
+    return typ.dims == 0 and (typ.name not in _PRIMITIVE_TYPES or typ.name in ("string", "String"))
 
 
 def _clean_number(text: str) -> int | float | None:
@@ -102,7 +122,7 @@ class _CLike(TSBase):
         if node is None:
             return None
         kind = node.type
-        if kind in ("template_type", "generic_type"):
+        if kind in ("template_type", "generic_type", "template_function"):
             name_node = self.field(node, "name") or self.first_named(node)
             args_node = self.field(node, "arguments") or next(
                 (
@@ -150,16 +170,18 @@ class _CLike(TSBase):
         function prototype."""
         dims = base.dims if base else 0
         sizes = list(base.sizes) if base else []
+        is_ref = False
         current = node
         while current is not None:
             kind = current.type
             if kind in ("identifier", "field_identifier"):
-                typ = TypeRef(base.name, base.args, dims, tuple(sizes)) if base else None
+                typ = TypeRef(base.name, base.args, dims, tuple(sizes), is_ref) if base else None
                 return Name(self.text(current)), typ
             if kind == "pointer_declarator":
                 dims += 1
                 current = self.field(current, "declarator") or self.first_named(current)
             elif kind in ("reference_declarator", "parenthesized_declarator"):
+                is_ref = is_ref or kind == "reference_declarator"
                 current = self.first_named(current)
             elif kind == "array_declarator":
                 dims += 1
@@ -200,7 +222,7 @@ class _CLike(TSBase):
                 for child in self.named(body):
                     self.top_level(child, functions, toplevel)
         elif kind == "declaration":
-            toplevel.extend(self.s_declaration(node))
+            toplevel.extend(self.s_declaration(node, local=False))
         elif kind in (
             "class_declaration",
             "interface_declaration",
@@ -494,15 +516,40 @@ class _CLike(TSBase):
         return Assign((target,), Num(1), op=op, line=line)
 
     # -- declarations
-    def s_declaration(self, node: Node) -> list[Stmt]:
+    def s_declaration(self, node: Node, local: bool = True) -> list[Stmt]:
         base = self.type_ref(self.field(node, "type"))
         line = self.line(node)
         out: list[Stmt] = []
         for declarator in self.fields(node, "declarator"):
-            out.extend(self.wrap(partial(self.declare_cpp, base, declarator, line)))
+            out.extend(self.wrap(partial(self.declare_cpp, base, declarator, line, local)))
         return out
 
-    def declare_cpp(self, base: TypeRef | None, declarator: Node, line: int) -> list[Stmt]:
+    def vexing_arguments(self, declarator: Node) -> tuple[Name, tuple[Expr, ...]] | None:
+        """`vector<int> a(n);` and `vector<int> b(x, y);` read as FUNCTION declarators (the "most
+        vexing parse"): a parameter list whose entries are bare type names. Inside a function body
+        that is a constructor call, and the bare names are its arguments."""
+        name = self.field(declarator, "declarator")
+        params = self.field(declarator, "parameters")
+        if name is None or name.type != "identifier" or params is None:
+            return None
+        args: list[Expr] = []
+        for param in self.named(params):
+            if param.type != "parameter_declaration" or self.field(param, "declarator") is not None:
+                return None
+            inner = self.named(param)
+            if len(inner) != 1 or inner[0].type not in ("type_identifier", "identifier"):
+                return None
+            args.append(Name(self.text(inner[0])))
+        return Name(self.text(name)), tuple(args)
+
+    def declare_cpp(
+        self, base: TypeRef | None, declarator: Node, line: int, local: bool = True
+    ) -> list[Stmt]:
+        if declarator.type == "function_declarator" and local and base is not None:
+            found = self.vexing_arguments(declarator)
+            if found is not None and _constructs_object(base):
+                target, args = found
+                return [Assign((target,), New(base, args), decl=base, line=line)]
         if declarator.type == "init_declarator":
             inner = self.field(declarator, "declarator")
             name, typ = self.unwrap_declarator(inner, base)
@@ -520,7 +567,7 @@ class _CLike(TSBase):
             return None
         if node.type == "argument_list":
             args = tuple(self.expr(a) for a in self.named(node))
-            if typ is not None and typ.name not in _PRIMITIVE_TYPES and typ.dims == 0:
+            if typ is not None and _constructs_object(typ):
                 return New(typ, args)
             return args[0] if args else Num(0)
         return self.expr(node)
@@ -950,6 +997,11 @@ class _CLike(TSBase):
         if function is not None and function.type in ("template_type", "qualified_identifier"):
             typ = self.type_ref(function)
             if typ is not None and typ.args:
+                return New(typ, args)
+        if function is not None and function.type == "template_function":
+            # `vector<int>(m, 0)` builds a container; `max<int>(a, b)` is an ordinary call
+            typ = self.type_ref(function)
+            if typ is not None and typ.name in _CONSTRUCTIBLE:
                 return New(typ, args)
         return Call(self.expr(function), args)
 

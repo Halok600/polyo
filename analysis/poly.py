@@ -102,8 +102,16 @@ def _mul_mono(a: Mono, b: Mono) -> Mono:
     )
 
 
+_MAY_BE_ZERO = frozenset({"rowlen"})
+
+
 def _dominates(a: Mono, b: Mono) -> bool:
-    """True if `a` grows at least as fast as `b` in every variable (so `b` can be dropped)."""
+    """True if `a` grows at least as fast as `b` in every variable (so `b` can be dropped).
+
+    A per-row length can be 0, so it never dominates a constant: summed over the rows of an
+    adjacency list `1 + row` is `V + E`, and dropping the 1 early would lose the V."""
+    if not b.vars() and a.vars() and all(v.kind in _MAY_BE_ZERO for v in a.vars()):
+        return False
     return all(a.growth(v) >= b.growth(v) for v in a.vars() | b.vars())
 
 
@@ -210,6 +218,43 @@ class Poly:
 
     def mentions(self, v: Var) -> bool:
         return v in self.vars()
+
+    def extract_power(self, v: Var) -> list[tuple[Fraction, Poly]]:
+        """Group the terms by the power of `v` they contain: [(power, rest)], where `rest` is the
+        sum of those terms with `v` divided out (power 0 collects the terms without `v`)."""
+        groups: dict[Fraction, Poly] = {}
+        for mono, coef in self.terms:
+            power = Fraction(0)
+            rest_pows = []
+            for var, p, lg in mono.pows:
+                if var == v:
+                    power = p
+                else:
+                    rest_pows.append((var, p, lg))
+            rest = Poly._make({Mono(tuple(rest_pows), mono.exps, mono.facts): coef})
+            groups[power] = groups[power] + rest if power in groups else rest
+        return list(groups.items())
+
+    def affine_in(self, v: Var) -> tuple[Fraction, Poly] | None:
+        """Write this polynomial as `k * v + rest` with `rest` free of `v`; None if `v` appears
+        any other way (squared, multiplied by another variable, inside a log, ...)."""
+        slope = Fraction(0)
+        rest: dict[Mono, Fraction] = {}
+        for mono, coef in self.terms:
+            if v not in mono.vars():
+                rest[mono] = rest.get(mono, Fraction(0)) + coef
+                continue
+            if mono.exps or mono.facts or len(mono.pows) != 1:
+                return None
+            _var, power, log = mono.pows[0]
+            if power != 1 or log != 0:
+                return None
+            slope += coef
+        return slope, Poly._make(rest)
+
+    def degree_in(self, v: Var) -> Fraction:
+        """The largest power of `v` among the terms (0 if `v` does not appear)."""
+        return max((p for p, _ in self.extract_power(v)), default=Fraction(0))
 
     # ---------------------------------------------------------------- order
     def order(self) -> Poly:

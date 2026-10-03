@@ -37,9 +37,11 @@ jobs:
           pytest -q tests/test_golden_suite.py tests/test_golden_integrity.py
           tests/test_golden_perturbations.py tests/test_eval_perturb.py
           tests/test_eval_predictors.py tests/test_eval_scorecard.py
-          tests/test_diagnosis_regressions.py
+          tests/test_diagnosis_regressions.py tests/test_engine_golden.py
+      - name: Golden regression ratchet
+        run: python -m eval.golden_baseline
       - name: Scorecard
-        run: python -m eval.scorecard --predictors rule,gnn --out scorecard.md
+        run: python -m eval.scorecard --predictors rule,gnn,symbolic --out scorecard.md
       - name: Publish the scorecard to the run summary
         run: cat scorecard.md >> "$GITHUB_STEP_SUMMARY"
 

@@ -4,6 +4,7 @@ A cost is a polynomial-with-logs over input-size variables: exact arithmetic wit
 coefficients (so `range(n - 5, n)` cancels to the constant 5), reduction to an asymptotic ORDER
 (dominated terms dropped), closed-form loop sums, substitution for interprocedural calls, and a
 projection onto the legacy taxonomy. These are the properties the whole engine rests on."""
+
 from __future__ import annotations
 
 from fractions import Fraction
@@ -185,9 +186,10 @@ def test_geometric_sum_of_a_constant_is_log(n: Var) -> None:
 def test_sum_over_leaves_other_variables_alone(n: Var, m: Var) -> None:
     i = new_var("i", "iter")
     body = Poly.var(i) * Poly.var(m)
-    assert order_text(body.sum_over(i, "arith", Poly.var(n)), n, m) == "O(m * n^2)" or order_text(
-        body.sum_over(i, "arith", Poly.var(n)), n, m
-    ) == "O(n^2 * m)"
+    assert (
+        order_text(body.sum_over(i, "arith", Poly.var(n)), n, m) == "O(m * n^2)"
+        or order_text(body.sum_over(i, "arith", Poly.var(n)), n, m) == "O(n^2 * m)"
+    )
 
 
 # ------------------------------------------------------------------------------ projection
@@ -256,3 +258,36 @@ def test_poly_is_hashable_and_comparable_by_value(n: Var) -> None:
     a = Poly.var(n) * 2 + 1
     b = Poly.var(n) * 2 + 1
     assert a == b and hash(a) == hash(b)
+
+
+# ------------------------------------------------------------------------- helpers for bounds
+def test_extract_power_splits_terms_by_the_power_of_a_variable(n: Var, m: Var) -> None:
+    i = Poly.var(n)
+    rows = Poly.var(m)
+    p = i * i * 3 + i * rows + rows
+    parts = dict(p.extract_power(n))
+    assert set(parts) == {Fraction(2), Fraction(1), Fraction(0)}
+    assert parts[Fraction(2)] == Poly.const(3)
+    assert parts[Fraction(1)] == rows
+    assert parts[Fraction(0)] == rows
+
+
+def test_affine_in_recovers_the_slope_and_offset(n: Var, m: Var) -> None:
+    a, b = Poly.var(n), Poly.var(m)
+    assert (a * 2 + 3).affine_in(n) == (Fraction(2), Poly.const(3))
+    assert (a / 2 - 1).affine_in(n) == (Fraction(1, 2), Poly.const(-1))
+    assert (a + b).affine_in(n) == (Fraction(1), b)
+    assert Poly.const(5).affine_in(n) == (Fraction(0), Poly.const(5))
+
+
+def test_affine_in_rejects_nonlinear_use(n: Var, m: Var) -> None:
+    a, b = Poly.var(n), Poly.var(m)
+    assert (a * a).affine_in(n) is None
+    assert (a * b).affine_in(n) is None
+
+
+def test_degree_in_reports_the_dominant_power(n: Var) -> None:
+    a = Poly.var(n)
+    assert (a * a + a).degree_in(n) == Fraction(2)
+    assert Poly.const(4).degree_in(n) == Fraction(0)
+    assert a.sqrt().degree_in(n) == Fraction(1, 2)

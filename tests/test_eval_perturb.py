@@ -242,3 +242,12 @@ def test_apply_all_returns_only_applicable_changed_variants() -> None:
 def test_every_registered_perturbation_has_a_unique_name() -> None:
     names = [p.name for p in PERTURBATIONS]
     assert len(names) == len(set(names))
+
+
+def test_rename_follows_a_javascript_spread_operand() -> None:
+    from eval.perturb import rename_identifiers
+
+    source = "function f(nums) {\n  return [...nums].reverse();\n}\n"
+    renamed = rename_identifiers(source, "javascript")
+    assert renamed is not None
+    assert "[...nums_r]" in renamed and "f(nums_r)" in renamed

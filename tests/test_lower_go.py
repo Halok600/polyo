@@ -74,7 +74,7 @@ def test_make_allocations() -> None:
         "func f(n int) {\n    seen := make(map[int]int)\n    out := make([]int, n+1)\n"
         "    var counts [26]int\n}\n"
     )
-    assert "    seen = new map<int, int>()" in text
+    assert "    seen = new HashMap<int, int>()" in text
     assert "    out = new int[](n + 1)" in text
     assert "    counts: int[]" in text
 

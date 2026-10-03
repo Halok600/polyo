@@ -91,7 +91,30 @@ def _product(source: str, language: str) -> Prediction:
     return _from_api("product", source, language)
 
 
-_REGISTRY: dict[str, Predictor] = {"rule": _rule, "gnn": _gnn, "product": _product}
+def _symbolic(source: str, language: str) -> Prediction:
+    """The v2 symbolic engine on its own: no model, no fallback."""
+    try:
+        from analysis.engine import analyze
+
+        result = analyze(source, language)
+        return Prediction(
+            time_class=result.time.cls,
+            space_class=result.space.cls,
+            time_expr=result.time.text,
+            space_expr=result.space.text,
+            certainty=result.certainty,
+            engine="symbolic",
+        )
+    except Exception as error:  # noqa: BLE001 -- the contract is "never raises"
+        return _failed("symbolic", error)
+
+
+_REGISTRY: dict[str, Predictor] = {
+    "rule": _rule,
+    "gnn": _gnn,
+    "product": _product,
+    "symbolic": _symbolic,
+}
 
 
 def register_predictor(name: str, predictor: Predictor) -> None:

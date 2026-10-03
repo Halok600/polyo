@@ -198,13 +198,13 @@ def rename_identifiers(source: str, language: str) -> str | None:
     tokens = [m for m in _IDENT.finditer(source) if not _in_spans(starts, spans, m.start())]
 
     def is_member(m: re.Match[str]) -> bool:
-        before = source[max(0, m.start() - 2) : m.start()]
+        before = source[max(0, m.start() - 3) : m.start()]
+        if before.endswith("..."):  # JS spread / rest: `...nums` names a variable, not a member
+            return False
         return before.endswith(".") or before.endswith("->") or before.endswith("::")
 
     called_as_function = {
-        m.group()
-        for m in tokens
-        if not is_member(m) and source[m.end() : m.end() + 1] == "("
+        m.group() for m in tokens if not is_member(m) and source[m.end() : m.end() + 1] == "("
     }
     present = {m.group() for m in tokens}
     renameable = {

@@ -83,7 +83,8 @@ class _Go(TSBase):
         if kind == "map_type":
             key = self.type_ref(self.field(node, "key"))
             value = self.type_ref(self.field(node, "value"))
-            return TypeRef("map", tuple(t for t in (key, value) if t is not None))
+            # a Go map is a hash map (the engine's "map" is C++'s ordered std::map)
+            return TypeRef("HashMap", tuple(t for t in (key, value) if t is not None))
         if kind in ("pointer_type", "parenthesized_type"):
             return self.type_ref(self.first_named(node))
         if kind == "qualified_type":
@@ -471,7 +472,15 @@ class _Go(TSBase):
         return self.expr(self.field(node, "operand") or self.first_named(node))
 
     def x_type_conversion_expression(self, node: Node) -> Expr:
-        return self.expr(self.field(node, "operand") or self.named(node)[-1])
+        operand = self.expr(self.field(node, "operand") or self.named(node)[-1])
+        target = self.field(node, "type")
+        if target is not None and target.type == "slice_type":
+            typ = self.type_ref(target) or TypeRef("?")
+            if isinstance(operand, Const) and operand.kind == "none":
+                return New(typ, ())  # `[]int(nil)`: an empty slice
+            if typ.name in ("byte", "rune", "uint8", "int32"):
+                return Call(Attribute(operand, "toCharArray"), ())  # `[]byte(s)` copies the bytes
+        return operand
 
     def x_call_expression(self, node: Node) -> Expr:
         function = self.field(node, "function")
@@ -516,7 +525,7 @@ class _Go(TSBase):
         typ_node = self.field(node, "type")
         body = self.field(node, "body")
         typ = self.type_ref(typ_node)
-        if typ is not None and typ.name == "map" and typ.dims == 0 and body is not None:
+        if typ is not None and typ.name == "HashMap" and typ.dims == 0 and body is not None:
             items: list[tuple[Expr, Expr]] = []
             for element in self.named(body):
                 kids = self.named(element)

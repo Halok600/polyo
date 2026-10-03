@@ -519,7 +519,7 @@ def render_markdown(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Score predictors on the golden suite.")
     parser.add_argument(
-        "--predictors", default="rule,gnn", help=f"comma list of {available_predictors()}"
+        "--predictors", default="rule,gnn,symbolic", help=f"comma list of {available_predictors()}"
     )
     parser.add_argument("--out", type=Path, default=None, help="write the Markdown report here")
     parser.add_argument("--no-invariance", action="store_true", help="skip the perturbation sweep")
