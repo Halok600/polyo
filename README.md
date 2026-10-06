@@ -8,7 +8,7 @@ Paste code in Python, C++, Java, JavaScript, C, or Go and get its worst-case
 not just `O(n^2)`), how sure the analyser is, and the derivation that led there
 (which loop, which call, which recursion). It only ever *reads* the code.
 
-**Live demo:** _pending deployment, see [Status](#status) below._
+**Live demo: [polyo.vercel.app](https://polyo.vercel.app)**. The API runs on a free Render instance, so the first request after a quiet spell can take up to ~40s while it wakes (a scheduled health check keeps it warm most of the time).
 
 ## What changed in v2, and why
 
@@ -127,7 +127,9 @@ Done and tested: the engine, the hybrid API, the retrained model, the evaluation
   step or an assumption points at, plus a linked step list), and the model's probability bars only when the
   model answered. It has not been through a usability review, and the layout on a phone has only been
   checked at one width (390px).
-* **No live URL yet.** What is left is account-level, not code-level: see [`DEPLOY.md`](DEPLOY.md)
-  (Render for the API, Vercel for the frontend).
+* **Deployed**: the web app on Vercel ([polyo.vercel.app](https://polyo.vercel.app)) and the API on Render's
+  free tier. After deployment it was checked end to end with a headless browser against the live site: all six
+  language examples return the expected class, with no console errors or failed requests. [`DEPLOY.md`](DEPLOY.md)
+  has the steps to reproduce it.
 * One CI test is timing-based (the Java oracle recovers a library sort's complexity from wall-clock
   measurements on a shared runner) and has failed intermittently before; it is not part of the product path.
