@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 // stored preference and the OS reports no preference either.
 const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem("polyo-theme");var t=(s==="light"||s==="dark")?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
       <head>
