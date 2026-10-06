@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
+import { SITE_TITLE } from "@/lib/siteMeta";
+
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,8 +18,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PolyO",
-  description: "Static, multi-language time & space complexity prediction.",
+  title: SITE_TITLE,
+  description: "Static, multi-language time & space complexity analysis: the exact cost expression, how it was derived, and how sure it is.",
 };
 
 // Runs before hydration so the first paint already lands on the right

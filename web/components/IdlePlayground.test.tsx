@@ -135,3 +135,71 @@ describe("IdlePlayground autoplay", () => {
     expect(toggle).toHaveTextContent("PAUSE");
   });
 });
+
+describe("IdlePlayground hand-off to the results", () => {
+  beforeEach(() => {
+    stubMotion(false);
+    vi.stubGlobal("requestAnimationFrame", () => 0);
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+  });
+
+  const root = () => screen.getByTestId("playground");
+  const items = () => [...document.querySelectorAll<HTMLElement>(".pg-lane-list > li")];
+
+  it("is idle by default: interactive, with the autoplay control", () => {
+    render(<IdlePlayground />);
+    expect(root()).toHaveAttribute("data-phase", "idle");
+    expect(root()).not.toHaveAttribute("inert");
+    expect(screen.getByRole("button", { name: /PAUSE|AUTO/ })).toBeInTheDocument();
+  });
+
+  it("scans while the request is in flight: locked, saying so, and no autoplay control", () => {
+    render(<IdlePlayground phase="scanning" />);
+    expect(root()).toHaveAttribute("data-phase", "scanning");
+    expect(root()).toHaveAttribute("inert");
+    expect(screen.getByText(/ANALYSING/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /PAUSE|AUTO/ })).toBeNull();
+    expect(screen.getByTestId("playground-footer")).toHaveTextContent(/reading your code/i);
+  });
+
+  it("keeps only the answer's lane when collapsing, and tags it as the visitor's code", () => {
+    render(<IdlePlayground phase="collapsing" answer="O(n^2)" />);
+    expect(root()).toHaveAttribute("data-phase", "collapsing");
+    const answers = items().filter((li) => li.dataset.answer === "true");
+    expect(answers).toHaveLength(1);
+    expect(within(answers[0]).getByText("O(n^2)")).toBeInTheDocument();
+    expect(within(answers[0]).getByText("YOUR CODE")).toBeInTheDocument();
+    expect(screen.getAllByText("YOUR CODE")).toHaveLength(1);
+  });
+
+  it("collapses the other lanes outward from the answer: the farther, the later", () => {
+    render(<IdlePlayground phase="collapsing" answer="O(n^2)" />);
+    const distance = (label: string) =>
+      items()
+        .find((li) => within(li).queryByText(label))!
+        .style.getPropertyValue("--dist");
+    expect(distance("O(n^2)")).toBe("0");
+    expect(distance("O(n^3)")).toBe("1");
+    expect(distance("O(n log n)")).toBe("1");
+    expect(distance("O(1)")).toBe("4");
+    expect(distance("O(2^n)")).toBe("2");
+  });
+
+  it("does not light a wrong lane for an answer that is not one of the seven classes", () => {
+    render(<IdlePlayground phase="collapsing" answer="O(sqrt n)" />);
+    expect(items().filter((li) => li.dataset.answer === "true")).toHaveLength(0);
+    expect(screen.queryByText("YOUR CODE")).toBeNull();
+  });
+
+  it("hands the animation lengths to the stylesheet so CSS and page cannot drift apart", () => {
+    render(<IdlePlayground phase="collapsing" answer="O(n)" />);
+    expect(root().closest<HTMLElement>(".bench-panel")!.style.getPropertyValue("--collapse-ms")).toBe("1000ms");
+  });
+
+  it("does not run the sweep while locked, even though motion is allowed", () => {
+    const frames = vi.fn(() => 0);
+    vi.stubGlobal("requestAnimationFrame", frames);
+    render(<IdlePlayground phase="collapsing" answer="O(n)" />);
+    expect(frames).not.toHaveBeenCalled();
+  });
+});

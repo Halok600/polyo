@@ -1043,3 +1043,157 @@ html.vt-scene::view-transition-group(run-cta) {
 .growth-chart > svg {
   margin-block: auto;
 }
+
+/* ===== Hand-off from the idle playground to the results ================================================
+   scanning:   a beam sweeps down the lanes while n whips back and forth
+   collapsing: the answer's lane stays lit, the other six close up outward from it, the panel fades
+   then the results slide in (.bench-enter). Durations come from --collapse-ms (lib/handoff.ts). */
+
+/* equal slots, so a lane can grow to fill the list when the others close */
+.pg-lane-list > li {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+}
+
+.pg-lanes {
+  overflow: hidden;
+}
+
+.pg-status {
+  display: inline-flex;
+  min-width: 108px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--signal);
+  color: var(--signal);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.pg-status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--signal);
+  animation: pg-blink 700ms steps(2, jump-none) infinite;
+}
+
+@keyframes pg-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.pg[data-phase="scanning"] .pg-lanes::after {
+  position: absolute;
+  top: -64px;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 64px;
+  border-bottom: 2px solid var(--signal);
+  background: linear-gradient(to bottom, transparent, var(--signal-fill));
+  box-shadow: 0 8px 20px var(--signal-fill);
+  content: "";
+  pointer-events: none;
+  animation: pg-beam 1100ms cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+@keyframes pg-beam {
+  from {
+    top: -64px;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+/* everything but the lanes steps out of the way */
+.pg[data-phase="collapsing"] .pg-top,
+.pg[data-phase="collapsing"] .pg-slider-wrap,
+.pg[data-phase="collapsing"] .pg-axis,
+.pg[data-phase="collapsing"] .pg-hint {
+  opacity: 0;
+  transition: opacity 260ms ease-out;
+}
+
+.pg[data-phase="collapsing"] .pg-lane-list > li {
+  transition:
+    flex-grow calc(var(--collapse-ms) * 0.65) var(--ease-settle) calc(var(--dist) * 55ms),
+    opacity calc(var(--collapse-ms) * 0.3) linear calc(var(--dist) * 55ms);
+}
+
+.pg[data-phase="collapsing"] .pg-lane-list > li:not([data-answer="true"]) {
+  min-height: 0;
+  flex-grow: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.pg-lane-list > li[data-answer="true"] .pg-lane {
+  --lane-color: var(--signal);
+  background: var(--signal-fill);
+}
+
+.pg-answer-tag {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid var(--signal);
+  color: var(--signal);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  animation: pg-tag-in 380ms var(--ease-settle) both;
+}
+
+@keyframes pg-tag-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pg[data-phase="collapsing"] .pg-footer {
+  color: var(--signal);
+  font-weight: 600;
+}
+
+/* the playground panel itself lets go just before the results replace it */
+.bench-panel:has(> .pg[data-phase="collapsing"]) {
+  animation: pg-panel-out 320ms ease-in forwards;
+  animation-delay: calc(var(--collapse-ms) - 320ms);
+}
+
+@keyframes pg-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+    filter: blur(2px);
+  }
+}
+
+/* the results come in one after another */
+@keyframes bench-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bench-enter {
+  animation: bench-enter 560ms var(--ease-settle) both;
+  animation-delay: var(--enter-delay, 0ms);
+}

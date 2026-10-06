@@ -40,6 +40,12 @@ export const COMPLEXITY_CLASSES: readonly ComplexityClass[] = [
   { label: "O(2^n)", example: "trying every subset", log10Ops: (n) => n * Math.log10(2) },
 ];
 
+/** Which of the seven lanes an answer such as "O(n^2)" belongs to, or -1 if it is none of them. */
+export function laneIndex(label: string | null | undefined): number {
+  if (!label) return -1;
+  return COMPLEXITY_CLASSES.findIndex((c) => c.label === label);
+}
+
 // --- the slider --------------------------------------------------------------------------------
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));

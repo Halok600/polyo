@@ -11,14 +11,15 @@ type BenchPanelProps = {
   channel: string;
   revealDelayMs?: number;
   style?: CSSProperties;
+  className?: string;
   children: ReactNode;
 };
 
-export function BenchPanel({ channel, revealDelayMs = 0, style, children }: BenchPanelProps) {
+export function BenchPanel({ channel, revealDelayMs = 0, style, className, children }: BenchPanelProps) {
   const mergedStyle = { ...style, "--corner-delay": `${revealDelayMs}ms` } as CSSProperties;
 
   return (
-    <div className="bench-reveal bench-panel" style={mergedStyle}>
+    <div className={`bench-reveal bench-panel${className ? ` ${className}` : ""}`} style={mergedStyle}>
       <span className="bench-corner tl" />
       <span className="bench-corner tr" />
       <span className="bench-corner br" />

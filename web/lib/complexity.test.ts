@@ -10,6 +10,7 @@ import {
   budgetFraction,
   formatDuration,
   formatOps,
+  laneIndex,
   nFromSlider,
   sliderFromN,
   summary,
@@ -208,5 +209,20 @@ describe("breakingPoint: the smallest n whose run no longer fits in a second", (
     const cubic = COMPLEXITY_CLASSES.find((c) => c.label === "O(n^3)")!;
     expect(verdict(cubic.log10Ops(1000))).toBe("ok");
     expect(verdict(cubic.log10Ops(1001))).not.toBe("ok");
+  });
+});
+
+describe("laneIndex: which lane an answer belongs to", () => {
+  it("finds a class by its label", () => {
+    expect(laneIndex("O(1)")).toBe(0);
+    expect(laneIndex("O(n^2)")).toBe(4);
+    expect(laneIndex("O(2^n)")).toBe(6);
+  });
+
+  it("is -1 for something that is not one of the seven, instead of a wrong lane", () => {
+    expect(laneIndex("O(sqrt n)")).toBe(-1);
+    expect(laneIndex("")).toBe(-1);
+    expect(laneIndex(null)).toBe(-1);
+    expect(laneIndex(undefined)).toBe(-1);
   });
 });

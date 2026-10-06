@@ -17,7 +17,9 @@ import { StatusReadout } from "@/components/StatusReadout";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Toolbar } from "@/components/Toolbar";
 import { ApiError, fetchLanguages, predict } from "@/lib/api";
+import { COLLAPSE_MS, remainingScanMs, wait } from "@/lib/handoff";
 import { usePrefersReducedMotion, withViewTransition } from "@/lib/motion";
+import { useTabStatus } from "@/lib/tabStatus";
 import { useMatchBottom } from "@/lib/useMatchBottom";
 import type { LanguageOption, PredictResponse } from "@/lib/types";
 
@@ -164,6 +166,15 @@ export default function Home() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [status, setStatus] = useState<Status>("ready");
   const [runId, setRunId] = useState(0);
+  // The idle playground plays a hand-off to the first result: it scans while the request is in
+  // flight, then collapses to the predicted class before the results replace it (lib/handoff.ts).
+  const [handoff, setHandoff] = useState<{ phase: "scanning" | "collapsing"; answer: string | null } | null>(
+    null,
+  );
+  const resultRef = useRef<PredictResponse | null>(null);
+  useEffect(() => {
+    resultRef.current = result;
+  });
   // 1-based source line the reader is pointing at, shared by the code gutter and the step list.
   const [activeLine, setActiveLine] = useState<number | null>(null);
   const [wakingUp, setWakingUp] = useState(false);
@@ -200,19 +211,31 @@ export default function Home() {
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    const startedAt = performance.now();
+    // the playground is on screen only until the first result; the hand-off is skipped for reduced motion
+    const handOff = resultRef.current === null && !reducedMotion;
     setLoading(true);
     setWakingUp(false);
     setStatus("sampling");
     setError(null);
+    if (handOff) setHandoff({ phase: "scanning", answer: null });
     try {
       const response = await predict(language, code, controller.signal);
+      if (handOff) {
+        // a fast answer still lets the scan be seen; a slow one (cold start) is never held back further
+        await wait(remainingScanMs(performance.now() - startedAt), controller.signal);
+        setHandoff({ phase: "collapsing", answer: response.time.class });
+        await wait(COLLAPSE_MS, controller.signal);
+      }
       setResult(response);
+      setHandoff(null);
       setActiveLine(null);
       setRunId((id) => id + 1);
       setStatus("done");
       window.setTimeout(() => setStatus("ready"), 1400);
     } catch (err) {
       if (controller.signal.aborted) return; // superseded by a newer request
+      setHandoff(null);
       setError(err instanceof ApiError ? err.message : "something went wrong");
       setResult(null);
       setStatus("ready");
@@ -222,12 +245,14 @@ export default function Home() {
         setWakingUp(false); // otherwise a cold-start run leaves this caption stuck on afterward
       }
     }
-  }, [language, code]);
+  }, [language, code, reducedMotion]);
 
   // Reads current values through a ref instead of listing them as effect
   // deps -- `code` changes on every keystroke, and re-subscribing a global
   // window listener that often is pure churn for no behavioural gain.
   const growthMinHeight = useMatchBottom(inputPanelRef, growthPanelRef, entered && result !== null, runId);
+  // the tab says what is happening (and the answer, once there is one) and its icon spins meanwhile
+  useTabStatus({ analysing: loading, answer: result ? (result.time.expression ?? result.time.class) : null });
 
   const shortcutStateRef = useRef({ entered, loading, code, runAnalysis });
   useEffect(() => {
@@ -341,7 +366,10 @@ export default function Home() {
           </div>
           {result ? (
             <section key={runId} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <div
+                className="bench-enter"
+                style={{ display: "flex", gap: 16, flexWrap: "wrap", "--enter-delay": "0ms" } as React.CSSProperties}
+              >
                 <ClassChip
                   channel="CH.01 — TIME"
                   label="Time"
@@ -376,7 +404,12 @@ export default function Home() {
               </div>
 
               <div ref={growthPanelRef} className="bench-match" style={{ minHeight: growthMinHeight }}>
-              <BenchPanel channel="CH.03 — GROWTH" revealDelayMs={120} style={{ flex: 1 }}>
+              <BenchPanel
+                channel="CH.03 — GROWTH"
+                revealDelayMs={120}
+                className="bench-enter"
+                style={{ flex: 1, "--enter-delay": "140ms" } as React.CSSProperties}
+              >
                 <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                   {(["time", "space"] as const).map((dim) => (
                     <button
@@ -405,7 +438,12 @@ export default function Home() {
               </div>
 
               {showDistribution ? (
-                <BenchPanel channel="CH.04 — DISTRIBUTION" revealDelayMs={180}>
+                <BenchPanel
+                  channel="CH.04 — DISTRIBUTION"
+                  revealDelayMs={180}
+                  className="bench-enter"
+                  style={{ "--enter-delay": "240ms" } as React.CSSProperties}
+                >
                   <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
                     MODEL CLASS PROBABILITY — {chartDimension.toUpperCase()}
                   </div>
@@ -417,7 +455,12 @@ export default function Home() {
                 </BenchPanel>
               ) : null}
 
-              <BenchPanel channel={showDistribution ? "CH.05 — SOURCE" : "CH.04 — SOURCE"} revealDelayMs={240}>
+              <BenchPanel
+                channel={showDistribution ? "CH.05 — SOURCE" : "CH.04 — SOURCE"}
+                revealDelayMs={240}
+                className="bench-enter"
+                style={{ "--enter-delay": "320ms" } as React.CSSProperties}
+              >
                 <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
                   {hasDerivation ? "MARKED LINES DROVE THE COST — HOVER ONE" : "DRIVING SPANS HIGHLIGHTED"}
                 </div>
@@ -439,7 +482,10 @@ export default function Home() {
               </BenchPanel>
 
               {result.warnings.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div
+                  className="bench-enter"
+                  style={{ display: "flex", flexDirection: "column", gap: 6, "--enter-delay": "400ms" } as React.CSSProperties}
+                >
                   {result.warnings.map((warning) => (
                     <div
                       key={warning}
@@ -453,7 +499,7 @@ export default function Home() {
               ) : null}
             </section>
           ) : (
-            <IdlePlayground />
+            <IdlePlayground phase={handoff?.phase ?? "idle"} answer={handoff?.answer ?? null} />
           )}
         </div>
       </div>
