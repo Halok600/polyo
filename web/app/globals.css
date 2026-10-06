@@ -284,7 +284,7 @@ button {
 
 .bench-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 32px;
   align-items: start;
 }
@@ -294,7 +294,7 @@ button {
     padding: 0 16px 48px;
   }
   .bench-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -598,4 +598,144 @@ html.vt-scene::view-transition-group(run-cta) {
 
 .code-editor-frame .cm-scroller {
   overflow: auto;
+}
+
+/* v2 result provenance: the CERTAIN / ASSUMED / MODEL badge and the secondary class chips under
+   the expression headline. Colour comes from --badge-color (set per tone in AnswerBadge); the
+   label always says the same thing in words. */
+
+.answer-badge {
+  padding: 2px 8px;
+  border: 1px solid var(--badge-color);
+  color: var(--badge-color);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: help;
+}
+
+.class-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Code gutter: line numbers, with a marker on every line the derivation talks about. */
+
+.code-gutter {
+  flex: none;
+  user-select: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.code-gutter-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  outline: none;
+}
+
+.code-gutter-number {
+  min-width: 2ch;
+  text-align: right;
+}
+
+.code-gutter-mark {
+  width: 1ch;
+  color: var(--signal);
+  font-weight: 600;
+}
+
+.code-gutter-row.has-note {
+  cursor: help;
+  color: var(--text-primary);
+}
+
+.code-gutter-row.has-note:focus-visible,
+.code-gutter-row.is-active {
+  background: var(--signal-fill);
+}
+
+/* Derivation step list under the code. */
+
+.derivation-panel {
+  margin-top: 14px;
+}
+
+.derivation-summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.derivation-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.derivation-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  border-left: 2px solid transparent;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  outline: none;
+}
+
+.derivation-row.is-linked {
+  cursor: pointer;
+}
+
+.derivation-row.is-linked:hover,
+.derivation-row.is-linked:focus-visible,
+.derivation-row.is-active {
+  background: var(--signal-fill);
+  border-left-color: var(--signal);
+  color: var(--text-primary);
+}
+
+.derivation-line {
+  flex: none;
+  min-width: 3ch;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.derivation-kind {
+  flex: none;
+  min-width: 9ch;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.derivation-assumed {
+  color: var(--signal);
+}
+
+.derivation-totals {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  color: var(--text-primary);
+}
+
+.derivation-subhead {
+  margin: 6px 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .derivation-row,
+  .code-gutter-row {
+    transition: background-color 120ms var(--ease-settle);
+  }
 }

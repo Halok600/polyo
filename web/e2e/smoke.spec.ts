@@ -66,3 +66,53 @@ test("the example gallery swaps both the language and the code", async ({ page }
   await expect(page.getByRole("button", { name: "LANG" })).toContainText("go");
   await expect(page.locator(".cm-content")).toContainText("package main");
 });
+
+// What the API returns when the static engine answers: the exact expression, who answered and how
+// sure it is, and the derivation. The probability bars describe the learned model and must not appear.
+const SYMBOLIC_RESPONSE = {
+  ...PREDICT_RESPONSE,
+  engine: "symbolic",
+  entry: "f",
+  time: {
+    ...PREDICT_RESPONSE.time,
+    class: "O(n^2)",
+    engine: "symbolic",
+    certainty: "assumed",
+    expression: "O(n * m)",
+    extended_class: "O(n^2)",
+    projection_lossy: true,
+  },
+  space: {
+    ...PREDICT_RESPONSE.space,
+    engine: "symbolic",
+    certainty: "certain",
+    expression: "O(1)",
+    extended_class: "O(1)",
+    projection_lossy: false,
+  },
+  assumptions: [{ line: 2, reason: "loop bound assumed" }],
+  derivation: [
+    { line: 2, kind: "loop", text: "loop runs O(n) times; the whole loop costs O(n * m)" },
+    { line: 0, kind: "total", text: "time: O(n * m)" },
+  ],
+};
+
+test("a static-engine answer leads with the expression, shows its derivation and hides the model's bars", async ({
+  page,
+}) => {
+  await page.route("**/v1/predict", (route) => route.fulfill({ json: SYMBOLIC_RESPONSE }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "RUN THE BENCH →" }).click();
+  await page.getByRole("button", { name: "RUN ANALYSIS" }).click();
+
+  await expect(page.getByTestId("time-headline")).toHaveText("O(n * m)");
+  // One badge per dimension, time then space.
+  await expect(page.locator(".answer-badge")).toHaveText(["ASSUMED", "CERTAIN"]);
+  await expect(page.getByText(/HOW THE COST WAS DERIVED — f/)).toBeVisible();
+  await expect(page.getByLabel("Assumptions")).toContainText("loop bound assumed");
+  await expect(page.getByRole("note", { name: /Line 2/ })).toBeVisible();
+
+  // Probability bars are the model's distribution: absent for both symbolic dimensions.
+  await expect(page.getByText("CH.04 — SOURCE")).toBeVisible();
+  await expect(page.getByText(/MODEL CLASS PROBABILITY/)).toHaveCount(0);
+});

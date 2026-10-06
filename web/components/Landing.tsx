@@ -18,22 +18,22 @@ const CAPABILITIES = [
   {
     channel: "CH.01",
     label: "Time and space, together",
-    body: "Most tools predict one. PolyO predicts both — a class and a calibrated confidence for each.",
+    body: "Most tools give one. PolyO derives both — the exact expression, like O(n * m), and the class it rounds to.",
   },
   {
     channel: "CH.02",
     label: "No LLM, no execution",
-    body: "A graph neural network reads the code once, statically. Nothing runs, nothing gets sent to a language model.",
+    body: "A static analyser reads the code once and derives its cost. Nothing runs, nothing gets sent to a language model. A small learned model only steps in when the analyser cannot bound the code.",
   },
   {
     channel: "CH.03",
     label: "Shows its work",
-    body: "The exact code spans that drove the prediction are highlighted afterward — not just a number, a reason.",
+    body: "Every loop, call and recursion that set the cost is marked on its line, and every bound it had to assume is listed — not just a number, a reason.",
   },
   {
     channel: "CH.04",
-    label: "Six languages, one model",
-    body: "Python, C++, Java, JavaScript, C, and Go all normalise into one intermediate representation first.",
+    label: "Six languages, one engine",
+    body: "Python, C++, Java, JavaScript, C, and Go are read into one shared form first, so the same algorithm gets the same answer in each.",
   },
 ];
 
@@ -55,8 +55,8 @@ export function Landing({ onEnter }: LandingProps) {
           Know the <span style={{ color: "var(--signal)" }}>Big-O</span> before you run it.
         </h1>
         <p className="landing-sub">
-          Paste code and get its predicted worst-case time and space complexity — computed by a model that only
-          ever reads the code.
+          Paste code and get its worst-case time and space complexity — derived by a static analyser that only
+          ever reads the code, and says so when it is assuming.
         </p>
       </section>
 

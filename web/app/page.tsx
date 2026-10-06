@@ -7,6 +7,7 @@ import { flushSync } from "react-dom";
 import { BenchPanel } from "@/components/BenchPanel";
 import { ClassChip } from "@/components/ClassChip";
 import { CodeWithSpans } from "@/components/CodeWithSpans";
+import { DerivationPanel } from "@/components/DerivationPanel";
 import { GrowthChart } from "@/components/GrowthChart";
 import { Landing } from "@/components/Landing";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -161,6 +162,8 @@ export default function Home() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [status, setStatus] = useState<Status>("ready");
   const [runId, setRunId] = useState(0);
+  // 1-based source line the reader is pointing at, shared by the code gutter and the step list.
+  const [activeLine, setActiveLine] = useState<number | null>(null);
   const [wakingUp, setWakingUp] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -199,6 +202,7 @@ export default function Home() {
     try {
       const response = await predict(language, code, controller.signal);
       setResult(response);
+      setActiveLine(null);
       setRunId((id) => id + 1);
       setStatus("done");
       window.setTimeout(() => setStatus("ready"), 1400);
@@ -242,6 +246,12 @@ export default function Home() {
   if (!entered) {
     return <Landing onEnter={handleEnter} />;
   }
+
+  // The probability bars describe the learned model's distribution; a static-analysis answer has
+  // none, so they appear only when the model answered the dimension being charted (and for a
+  // response from before the engine, which has no `engine` field).
+  const showDistribution = result !== null && result[chartDimension].engine !== "symbolic";
+  const hasDerivation = (result?.derivation?.length ?? 0) > 0 || (result?.assumptions?.length ?? 0) > 0;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -324,6 +334,11 @@ export default function Home() {
                   conformalSet={result.time.conformal_set}
                   conformalCoverage={result.time.conformal_coverage}
                   abstain={result.time.abstain}
+                  engine={result.time.engine}
+                  certainty={result.time.certainty}
+                  expression={result.time.expression}
+                  extendedClass={result.time.extended_class}
+                  projectionLossy={result.time.projection_lossy}
                   revealDelayMs={0}
                 />
                 <ClassChip
@@ -334,6 +349,11 @@ export default function Home() {
                   conformalSet={result.space.conformal_set}
                   conformalCoverage={result.space.conformal_coverage}
                   abstain={result.space.abstain}
+                  engine={result.space.engine}
+                  certainty={result.space.certainty}
+                  expression={result.space.expression}
+                  extendedClass={result.space.extended_class}
+                  projectionLossy={result.space.projection_lossy}
                   footnote="Auxiliary space, including recursion stack."
                   revealDelayMs={60}
                 />
@@ -366,22 +386,38 @@ export default function Home() {
                 />
               </BenchPanel>
 
-              <BenchPanel channel="CH.04 — DISTRIBUTION" revealDelayMs={180}>
-                <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
-                  CLASS PROBABILITY — {chartDimension.toUpperCase()}
-                </div>
-                <ProbabilityBars
-                  classes={chartDimension === "time" ? TIME_CLASSES : SPACE_CLASSES}
-                  distribution={result[chartDimension].distribution}
-                  predictedClass={result[chartDimension].class}
-                />
-              </BenchPanel>
+              {showDistribution ? (
+                <BenchPanel channel="CH.04 — DISTRIBUTION" revealDelayMs={180}>
+                  <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
+                    MODEL CLASS PROBABILITY — {chartDimension.toUpperCase()}
+                  </div>
+                  <ProbabilityBars
+                    classes={chartDimension === "time" ? TIME_CLASSES : SPACE_CLASSES}
+                    distribution={result[chartDimension].distribution}
+                    predictedClass={result[chartDimension].class}
+                  />
+                </BenchPanel>
+              ) : null}
 
-              <BenchPanel channel="CH.05 — SOURCE" revealDelayMs={240}>
+              <BenchPanel channel={showDistribution ? "CH.05 — SOURCE" : "CH.04 — SOURCE"} revealDelayMs={240}>
                 <div className="mono-nums field-label" style={{ marginBottom: 14 }}>
-                  DRIVING SPANS HIGHLIGHTED
+                  {hasDerivation ? "MARKED LINES DROVE THE COST — HOVER ONE" : "DRIVING SPANS HIGHLIGHTED"}
                 </div>
-                <CodeWithSpans code={code} attribution={result.attribution} />
+                <CodeWithSpans
+                  code={code}
+                  attribution={result.attribution}
+                  derivation={result.derivation}
+                  assumptions={result.assumptions}
+                  activeLine={activeLine}
+                  onActiveLineChange={setActiveLine}
+                />
+                <DerivationPanel
+                  derivation={result.derivation}
+                  assumptions={result.assumptions}
+                  entry={result.entry}
+                  activeLine={activeLine}
+                  onActiveLineChange={setActiveLine}
+                />
               </BenchPanel>
 
               {result.warnings.length > 0 ? (
@@ -403,7 +439,7 @@ export default function Home() {
               className="bench-panel"
               style={{ color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6, minHeight: 200, display: "flex", alignItems: "center" }}
             >
-              Paste code on the left and run an analysis — the growth curve, confidence, and driving spans will read out here.
+              Paste code on the left and run an analysis — the exact cost expression, how it was derived line by line, and the growth curve will read out here.
             </div>
           )}
         </div>
