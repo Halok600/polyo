@@ -1,4 +1,25 @@
 # PolyO model card: rungs 0-2
+
+> **Current state (2026-10-06).** The ML model is no longer what answers a request: the symbolic cost
+> engine (`ENGINE.md`) does, and the GNN below is consulted only when the engine reports `unknown`.
+>
+> **The served model** is the Phase 6 GNN (`models/artifacts/`): relational message passing over the
+> IR graph (5 edge kinds, hidden 64, 3 layers), a **mean+max graph readout** and training on a
+> dead-code-padded copy of every program, on an IR-deduplicated corpus capped per problem
+> (`data/AUDIT.md`). On the 144 independent blind programs it is right on **38% (time) and 44%
+> (space)** against 85% / 88% for the engine at first contact, and 84% of its answers survive 40 dead
+> statements (the model it replaced: 22%). It replaced the old model under a rule written before it was
+> trained (`eval/promotion.json`, `eval/COMPARISON.md`). Its gain in accuracy is within the noise of
+> 144 programs; the gain in robustness is not. It is better than the engine in no slice, so the
+> engine answers everywhere it can.
+>
+> **Known limits of the served model:** it trains on labels that agree with an independent reading
+> only 67% / 69% of the time; the corpus is 97.6% Python, so its non-Python behaviour is weakly
+> supported; its confidence is temperature-scaled on the (noisy) validation labels and is not a
+> guarantee on other data (ECE 0.11 time, 0.21 space on the blind programs).
+>
+> Everything below is the v1 classical-ML baseline, measured against the noisy corpus labels.
+
 Rungs 0-2 (rule -> TF-IDF+logistic regression -> IR features+LightGBM), evaluated on a held-out, problem-level test split -- see plan §9: solutions to the same problem never cross a split boundary, and `tests/test_data_splits.py` enforces it in CI. Rung 3 (the GNN, the model actually served in production) and everything built on top of it -- ablations, zero-shot cross-language transfer, failure buckets -- are in [`PHASE5_REPORT.md`](PHASE5_REPORT.md), not here; this card is the classical-ML baseline story rungs 0-3 are compared against.
 
 ## Corpus

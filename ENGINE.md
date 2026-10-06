@@ -88,7 +88,7 @@ bounds the code (a recursion with a data-dependent split, say): the API then ask
 | held-out regression | 172 programs labelled before the engine saw them, then **fixed against** | a regression net |
 | **blind corpus** | 144 programs written and labelled by independent agents that never saw the engine | **first contact: 85% time, 88% space, 81% both** (before any fix). certain: 93% / 95%; assumed: 64% / 71% |
 | corpus audit | a random sample of the real training corpus (competitive-programming code), re-labelled independently | engine first contact **69% time, 76% space**; the corpus labels themselves 67% / 69% |
-| invariance | dead code, renames, comments, reformatting, an unused helper, function order | 100% unchanged (the GNN: 43% of answers survive 40 dead statements) |
+| invariance | dead code, renames, comments, reformatting, an unused helper, function order | 100% unchanged (the v1 GNN: 22% of blind answers survive 40 dead statements; the Phase 6 retrain: 84%) |
 | cross-language | the same algorithm in every language must get one answer | 100% |
 
 The served confidence is **measured**: the Laplace-smoothed accuracy per certainty level on the blind

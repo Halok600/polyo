@@ -1,4 +1,13 @@
 # PolyO Phase 5 report
+
+> **Read this first (2026-10-06).** This report is the v1 research record and is kept unedited below.
+> It was measured on the noisy BigO(Bench)/CodeComplex labels (an independent reading agrees with those
+> labels on only 67% of time and 69% of space labels: `eval/LABEL_AUDIT.md`) and on a GNN that has since
+> been replaced. Two of its premises no longer hold: the GNN is **not** the product's answerer (a symbolic
+> cost engine is: `ENGINE.md`), and the GNN it describes read graph *size*, not loop nesting (22% of
+> blind answers survive 40 dead statements; the Phase 6 retrain reaches 84%: `eval/POOLING_EXPERIMENT.md`).
+> For the current numbers, on programs independent of the project, see `eval/COMPARISON.md`.
+
 Phase 5 of 7 (plan §14): rung 3 (GNN message-passing over the IR graph, shared encoder -> two heads), its ablations, the zero-shot cross-language transfer experiment, and failure-bucket analysis. See `MODEL_CARD.md` for rungs 0-2 on the same held-out, problem-level test split.
 
 Parsing/feature-extraction survival rate per split (`models/dataset.py`):

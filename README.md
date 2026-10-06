@@ -1,130 +1,130 @@
 # PolyO
 
-**Static, multi-language time & space complexity prediction — no LLM calls,
-no code execution at inference time.**
+**Static, multi-language time & space complexity analysis. No LLM calls, no code
+execution at inference time.**
 
-Paste code in Python, C++, Java, JavaScript, C, or Go and get its predicted
-worst-case **time and space** complexity: a class, a calibrated confidence,
-the code spans that drove the prediction, and a growth chart — computed by a
-model that only ever *reads* the code.
+Paste code in Python, C++, Java, JavaScript, C, or Go and get its worst-case
+**time and space** complexity: a class, the exact cost expression (`O(n * m)`,
+not just `O(n^2)`), how sure the analyser is, and the derivation that led there
+(which loop, which call, which recursion). It only ever *reads* the code.
 
-**Live demo:** _pending deployment — see [Status](#status) below._
+**Live demo:** _pending deployment, see [Status](#status) below._
 
-## Why this exists
+## What changed in v2, and why
 
-Two public benchmarks already label code with time complexity
-([CodeComplex](https://arxiv.org/abs/2401.08719)) or with time *and* space
-complexity ([BigO(Bench)](https://arxiv.org/abs/2503.15242), Meta). Both are
-Python/Java-only, and BigO(Bench)'s own inference framework has to *execute*
-the code to label it. Nobody has shipped a **static**, **multi-language**
-predictor of both — small enough to run for free, on a task where
-[BigO(Bench) found frontier LLMs themselves struggle](https://arxiv.org/abs/2503.15242).
+The first version was a graph neural network over a normalised IR. When it was
+tested on trivial programs it turned out to read the *size* of the program graph,
+not its loop nesting: O(n^2) code came back as O(n^3), 80 lines of dead code
+flipped an answer, and a ten-line rule on loop depth beat it. The diagnosis, with
+evidence, is in [`eval/SCORECARD.md`](eval/SCORECARD.md).
 
-The approach: normalise every language into one small intermediate
-representation (IR) via [tree-sitter](https://tree-sitter.github.io/), so one
-feature extractor and one model serve every language — and use dynamic
-profiling **only offline**, to auto-label training data, never in the
-deployed path.
+So v2 is **engine first, model second**:
 
-## Results
+* **A symbolic cost engine** ([`analysis/`](ENGINE.md)) reads the code, runs an
+  abstract interpreter over it and derives a cost expression. It solves loops
+  (counting, geometric, amortised pointers, worklists), recurrences (master
+  theorem, memoisation, mutual recursion) and the cost of several hundred
+  library calls. It reports `certain`, `assumed` (with the assumptions and their
+  lines) or `unknown`.
+* **The GNN is a fallback**, asked only when the engine says `unknown`. It is
+  retained as a research arm that has to *beat* the engine on a slice to be
+  promoted, by a rule written before it was trained. It has not, in any slice.
 
-Full numbers, ablations, and the zero-shot cross-language transfer
-experiment are in [`PHASE5_REPORT.md`](PHASE5_REPORT.md); rungs 0-2's own
-baseline comparison is in [`MODEL_CARD.md`](MODEL_CARD.md). Headline:
+## Results, and what each number is worth
 
-- A **GNN message-passing over the IR graph** (rung 3) beats a rule baseline,
-  TF-IDF over IR symbols, and IR-features+LightGBM on the same held-out,
-  problem-level test split — **~0.35-0.41 / ~0.33-0.34 macro-F1** (time /
-  space) on the full multi-language corpus (model v2: loop-bound-shape +
-  math-op-shape IR features and a targeted synthetic-data expansion). Given
-  as a range, honestly: an adversarial-testing pass this session found
-  training has real run-to-run variance at this scale that a single
-  retrain's number doesn't capture — see
-  [`PHASE5_REPORT.md`](PHASE5_REPORT.md#model-v2-continued-an-adversarial-test-two-real-parsing-bugs-and-a-training-variance-finding)
-  for the full retrain-comparison table and two real parsing bugs
-  (qualified recursive self-calls going undetected) found and fixed along
-  the way.
-- **Zero-shot cross-language transfer**: trained on Python+Java only,
-  evaluated on C++, JavaScript, Go, and C it never saw during training.
-  Directionally consistent with a language-agnostic IR, but honestly
-  caveated: `data/scrape.py` now exists (40 real, MIT-licensed solutions
-  from `github.com/TheAlgorithms`, hand-labelled by algorithm identity —
-  see its module docstring), but the reported numbers below predate it and
-  still reflect the smaller synthetic-only non-Python/Java test cells
-  (n=5-7) — **illustrative, not yet a statistically robust result**.
-  Retraining on the expanded corpus is a deliberate next step, not done
-  here. Python and Java, the languages with real corpus-scale test data,
-  transfer as expected. [`PHASE5_REPORT.md`](PHASE5_REPORT.md) reports the
-  per-language numbers plainly rather than only the aggregate.
-- Calibrated: temperature-scaled confidence, ECE reported, not just accuracy
-  (never bare accuracy — a fixed-rule baseline can *win* on accuracy while
-  losing badly on macro-F1, and the model card shows exactly that failure
-  mode as a concrete, measured example, not a hypothetical).
-- Failure-bucket analysis names *where* the model is weakest (complexity
-  hidden inside a library call is the single largest failure mode) instead
-  of stopping at an aggregate score.
-- **LLM zero-shot baseline**: [BigO(Bench) found frontier LLMs themselves
-  struggle](https://arxiv.org/abs/2503.15242) at this task; PolyO now has
-  its own number rather than only citing that. Roughly comparable on time
-  (0.365 vs. 0.377 macro-F1), clearly better on space (0.265 vs. 0.336) —
-  and it gets there with a model that runs in milliseconds, has no
-  per-request LLM call or API cost, and doesn't depend on a third party's
-  model being available. [`PHASE5_REPORT.md`](PHASE5_REPORT.md) has the
-  full methodology and reads the numbers honestly, including where they
-  don't tell the cleanest possible story.
-- **Conformal prediction, not just a confidence number**: the API doesn't
-  only return one class + a raw softmax score — it returns the smallest
-  *ordinally contiguous* set of classes (e.g. `O(n log n) – O(n^2)`)
-  guaranteed, distribution-free, to contain the true answer at a chosen
-  coverage rate, and the set width is adaptive per example (a confident
-  prediction gets a class or two, an unsure one gets more), not a fixed
-  size handed to every request regardless of how sure the model actually
-  is. Honestly reported too: at 90% target coverage, time's average set
-  is 3.86 of 7 classes — a real finding about task difficulty at that
-  operating point, not a number rounded up to look better.
-  [`PHASE5_REPORT.md`](PHASE5_REPORT.md) has the risk-coverage curve, the
-  full per-example set-size distribution, and the adaptivity bug an
-  earlier version of this shipped with, before it was caught and fixed.
+The engine was developed against its own test programs, so those numbers measure
+coverage, not accuracy. The honest number is the one on programs it had never seen.
+
+| evidence | what it is | time | space |
+|---|---|---|---|
+| **blind corpus, first contact** | 144 programs (24 per language) written and labelled by independent agents that never saw the repo | **85%** (122/144) | **88%** (127/144) |
+| &nbsp;&nbsp;engine says `certain` | 112 of those | 93% | 95% |
+| &nbsp;&nbsp;engine says `assumed` | 28 of those | 64% | 71% |
+| &nbsp;&nbsp;retrained GNN, same programs | | 38% | 44% |
+| &nbsp;&nbsp;ten-line loop-depth rule | | 35% | 33% |
+| real corpus audit | engine vs an independent re-labelling of a random sample of 49 real competitive-programming programs | 69% | 76% |
+| golden suite (744 programs, 6 languages) | **developed against**, so a regression ratchet, not a measurement | 100% | 100% |
+| invariance | dead code, renames, comments, reformatting, function order | engine 100% unchanged; GNN 84% (the v1 GNN: 22%) | |
+| cross-language consistency | the same algorithm in every language gets one answer | 100% | |
+
+Things worth knowing before quoting any of this:
+
+* The 85% / 88% figure is **first contact**: recorded before any fix made because of those programs
+  and never re-recorded. After the fixes the same corpus reads 135/144, but that is a regression net,
+  not a measurement (`tests/data/blind_v1_first_contact.json` is the evidence).
+* The served confidence is measured, not asserted: the accuracy per certainty level at first contact
+  (`analysis/certainty_calibration.json`), Laplace-smoothed.
+* The corpus the GNN trains on is noisy. An independent reading of a random sample agrees with the
+  corpus label on only 67% (time) and 69% (space) of programs, because BigO(Bench) labels a program
+  against its own test harness, not against the quantities it reads. A model trained on it can reach
+  that ceiling, not the project's convention. See [`data/AUDIT.md`](data/AUDIT.md) and
+  [`eval/LABEL_AUDIT.md`](eval/LABEL_AUDIT.md).
+* The corpus is 97.6% Python and 631 problems. The non-Python slices are thin; the cross-language claims
+  rest on the engine and the golden/blind programs, not on the corpus.
+* The engine keeps orders, not constants, and the known limits (a value shrinking inside its own loop,
+  array-backed stacks, halving a linked list...) are listed in [`ENGINE.md`](ENGINE.md#known-limits).
+  Nine blind programs it still gets wrong are strict `xfail`s with reasons.
+
+The full comparison (Wilson intervals, per-language, per-slice promotion) is in
+[`eval/COMPARISON.md`](eval/COMPARISON.md). The readout experiment that fixed the GNN's
+dead-code sensitivity (a mean readout dilutes a loop among straight-line nodes; mean+max does not) is in
+[`eval/POOLING_EXPERIMENT.md`](eval/POOLING_EXPERIMENT.md).
+
+### The v1 research results, kept for context
+
+[`PHASE5_REPORT.md`](PHASE5_REPORT.md) and [`MODEL_CARD.md`](MODEL_CARD.md) hold the original model
+ladder (rule, TF-IDF, LightGBM, GNN), the ablations, the zero-shot cross-language transfer experiment,
+the conformal prediction sets and the LLM zero-shot baseline. They were measured against the noisy
+corpus labels and on a served model that has since been replaced; read them as the history of the
+model arm, not as the product's accuracy.
 
 ## Architecture
 
 ```
-OFFLINE (labels training data; never deployed)      ONLINE (free tier; executes nothing)
-  BigO(Bench) + CodeComplex                           Next.js (Vercel) ──▶ FastAPI (Render)
-  + parallel synthetic generator                        paste box            tree-sitter → IR
-        │                                                growth chart        → features → GNN
-        ▼                                                                    (numpy, no torch)
-  oracle: codegen → run at n → BIC curve fit
-        │
-        ▼
-  train: rule → TF-IDF → LightGBM → GNN
+ONLINE (free tier; executes nothing)
+
+ source ─ tree-sitter ─▶ engine AST ─▶ abstract interpreter ─▶ cost expression
+                                          loops · recurrences    class + certainty
+                                          library costs          assumptions + derivation
+                                                  │
+                                       "unknown" ─┴─▶ IR graph ─▶ GNN (numpy, no torch)
 ```
 
-The served model is a graph neural network trained in PyTorch, but the
-*served image has no torch at all* — its forward pass is reimplemented in
-pure numpy (`models/export_numpy.py`), verified numerically identical to
-the trained model within `1e-4`. Per-prediction attribution similarly
-avoids a ~115MB `scipy` dependency (LightGBM's live SHAP requires it) in
-favour of a precomputed, scale-normalised feature-importance heuristic —
-both real, measured tradeoffs made explicit in the code, not silently
-eaten by the free-tier image-size budget.
+* `analysis/`: the symbolic engine. See [`ENGINE.md`](ENGINE.md) for what it answers, the
+  conventions behind a label, how it reasons and what each verification number means.
+* `api/predict.py`: the hybrid. Engine first, GNN on `unknown` or an engine crash (with a warning),
+  `mode="ml"` for the GNN alone. All new response fields are additive: the original seven keep their
+  shape.
+* `parsing/`, `core/`, `features/`: the tree-sitter normalisation into one IR (still the GNN's input).
+* `models/`: the research arm (rule, TF-IDF, LightGBM, GNN). The served GNN's forward pass is
+  reimplemented in numpy (`models/export_numpy.py`), verified identical to the trained model within
+  `1e-4`, so the serving image has no torch.
+* `oracle/`: offline only. Executes generated programs to label training data; never deployed.
+* `eval/`: the golden suite, perturbations, scorecard, blind comparison and audits.
 
-**Tier 3 languages** (TypeScript, Rust, C#, Kotlin) parse and normalise
-through the exact same IR mapping mechanism — proving "adding a language is
-a config file, not a rewrite" — but aren't wired into the live API yet
-(deliberately deferred, see `api/predict.py`).
+## Reproduce
+
+```
+python -m venv .venv && source .venv/Scripts/activate
+pip install -r requirements-dev.txt
+python -m pytest -q                  # ~3,900 tests
+python -m eval.golden_baseline       # must not lose a case
+python -m eval.compare               # engine vs model vs rule on the independent corpora
+```
 
 ## License
 
-Code is MIT (`LICENSE`). Some training data carries its own, more
-restrictive license — see `NOTICE.md` before reusing model weights
-commercially.
+Code is MIT (`LICENSE`). Some training data carries its own, more restrictive license; see
+`NOTICE.md` before reusing model weights commercially.
 
 ## Status
 
-All seven build phases are code-complete and CI-verified (see commit
-history and `MODEL_CARD.md`/`PHASE5_REPORT.md` for what each phase actually
-shipped, with real numbers, not just a checklist). What's left before this
-has a live URL is account-level, not code-level: see
-[`DEPLOY.md`](DEPLOY.md) for the exact steps (Render for the API, Vercel
-for the frontend, both free-tier, both already Dockerized/configured).
+The engine, the hybrid API, the retrained model and the evaluation are done and tested. Not done:
+
+* **The web UI has not been updated for v2.** It still shows the legacy class and probability bars; it
+  does not yet show the expression, the extended classes, the derivation or the engine/certainty badge.
+  That is a design task and is waiting on design direction, not a code blocker.
+* **No live URL yet.** What is left is account-level, not code-level: see [`DEPLOY.md`](DEPLOY.md)
+  (Render for the API, Vercel for the frontend).
+* The Java oracle timing test and the `web` type-check were already failing in CI before v2 and are
+  not part of this work.
