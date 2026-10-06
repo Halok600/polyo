@@ -119,12 +119,15 @@ Code is MIT (`LICENSE`). Some training data carries its own, more restrictive li
 
 ## Status
 
-The engine, the hybrid API, the retrained model and the evaluation are done and tested. Not done:
+Done and tested: the engine, the hybrid API, the retrained model, the evaluation and the web UI. CI
+(Python tests, the golden-suite ratchet, web lint/type-check/unit/build/e2e, the serving image) is green.
 
-* **The web UI has not been updated for v2.** It still shows the legacy class and probability bars; it
-  does not yet show the expression, the extended classes, the derivation or the engine/certainty badge.
-  That is a design task and is waiting on design direction, not a code blocker.
+* **The web UI shows the v2 answer**: the exact expression as the headline, a CERTAIN / ASSUMED / MODEL badge
+  with the measured accuracy of that level, the derivation inline in the code (a gutter marking each line a
+  step or an assumption points at, plus a linked step list), and the model's probability bars only when the
+  model answered. It has not been through a usability review, and the layout on a phone has only been
+  checked at one width (390px).
 * **No live URL yet.** What is left is account-level, not code-level: see [`DEPLOY.md`](DEPLOY.md)
   (Render for the API, Vercel for the frontend).
-* The Java oracle timing test and the `web` type-check were already failing in CI before v2 and are
-  not part of this work.
+* One CI test is timing-based (the Java oracle recovers a library sort's complexity from wall-clock
+  measurements on a shared runner) and has failed intermittently before; it is not part of the product path.
