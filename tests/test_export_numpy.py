@@ -180,3 +180,54 @@ def test_numpy_model_never_imports_torch():
             assert all(alias.name.split(".")[0] != "torch" for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             assert node.module.split(".")[0] != "torch"
+
+
+# ------------------------------------------------------------------ pooling variants (phase 6)
+def test_numpy_forward_matches_torch_for_mean_and_max_pooling(tmp_path):
+    examples, time_labels = _synthetic_examples()
+    space_labels = ["O(1)"] * len(examples)
+    time_model, space_model = fit_multitask(
+        examples, time_labels, space_labels, pooling="meanmax", **_FIT_KWARGS
+    )
+    npz_path = tmp_path / "gnn.npz"
+    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, npz_path)
+    numpy_model = NumpyGnnModel.load(npz_path)
+    assert numpy_model.pooling == "meanmax"
+
+    torch_scores = time_model.decision_function(examples)
+    for i, example in enumerate(examples):
+        graph = to_example_graph(example.ir)
+        numpy_out = numpy_model.forward(graph.symbol_ids, graph.edges_by_kind)
+        np.testing.assert_allclose(numpy_out["time"], torch_scores[i], atol=1e-4, rtol=1e-4)
+
+
+def test_a_mean_pooled_export_says_so_and_an_old_file_without_the_entry_is_mean_pooled(tmp_path):
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
+    assert NumpyGnnModel.load(npz_path).pooling == "mean"
+
+    stripped = tmp_path / "old.npz"
+    data = np.load(npz_path, allow_pickle=False)
+    np.savez(stripped, **{k: data[k] for k in data.files if k != "_pooling"})
+    assert NumpyGnnModel.load(stripped).pooling == "mean"
+
+
+def test_a_single_task_model_can_use_mean_and_max_pooling_too(tmp_path):
+    examples, labels = _synthetic_examples()
+    model = fit_single_task(examples, labels, "time", pooling="meanmax", **_FIT_KWARGS)
+    npz_path = tmp_path / "gnn.npz"
+    export_gnn(model.core, model.edge_kinds, IR_SYMBOLS, npz_path)
+    numpy_model = NumpyGnnModel.load(npz_path)
+    torch_scores = model.decision_function(examples)
+    graph = to_example_graph(examples[0].ir)
+    out = numpy_model.forward(graph.symbol_ids, graph.edges_by_kind)
+    np.testing.assert_allclose(out["time"], torch_scores[0], atol=1e-4, rtol=1e-4)
+
+
+def test_the_served_artifacts_are_mean_pooled_or_say_otherwise():
+    from api.models_registry import ARTIFACTS_DIR
+
+    loaded = NumpyGnnModel.load(ARTIFACTS_DIR / "gnn.npz", expected_symbols=IR_SYMBOLS)
+    assert loaded.pooling in ("mean", "meanmax")

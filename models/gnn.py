@@ -75,12 +75,31 @@ class _RelationalMessagePassing(nn.Module):
         return F.relu(self.norm(out))
 
 
-class _GnnEncoder(nn.Module):
-    """Symbol embedding -> N relational message-passing layers -> mean-pool
-    readout, one graph embedding per example."""
+POOLINGS = ("mean", "meanmax")
 
-    def __init__(self, hidden_dim: int, num_layers: int, edge_kinds: tuple[str, ...]):
+
+class _GnnEncoder(nn.Module):
+    """Symbol embedding -> N relational message-passing layers -> pooled
+    readout, one graph embedding per example.
+
+    `pooling="mean"` (the served model) averages the node embeddings: the readout does not grow
+    with the number of nodes, but it DILUTES: a loop among thirty straight-line nodes is a thirtieth
+    of the average, so dead code moves the answer (plan section 1.2). `"meanmax"` appends the
+    per-feature maximum, which a few strong nodes keep however many weak ones surround them. Only
+    `mean` can be exported to the numpy serving twin."""
+
+    def __init__(
+        self,
+        hidden_dim: int,
+        num_layers: int,
+        edge_kinds: tuple[str, ...],
+        pooling: str = "mean",
+    ):
         super().__init__()
+        if pooling not in POOLINGS:
+            raise ValueError(f"unknown pooling {pooling!r}; known: {list(POOLINGS)}")
+        self.pooling = pooling
+        self.out_dim = hidden_dim * (2 if pooling == "meanmax" else 1)
         self.embedding = nn.Embedding(NUM_SYMBOLS, hidden_dim)
         self.layers = nn.ModuleList(
             [
@@ -102,7 +121,14 @@ class _GnnEncoder(nn.Module):
             .clamp(min=1)
             .unsqueeze(1)
         )
-        return summed / counts
+        mean = summed / counts
+        if self.pooling == "mean":
+            return mean
+        index = batch.batch_index.unsqueeze(1).expand_as(x)
+        peak = torch.full((batch.num_graphs, x.shape[1]), -1e9, device=x.device).scatter_reduce(
+            0, index, x, reduce="amax", include_self=True
+        )
+        return torch.cat([mean, peak], dim=1)
 
 
 class _GnnCore(nn.Module):
@@ -111,12 +137,20 @@ class _GnnCore(nn.Module):
     one head, so there is one message-passing implementation, not two."""
 
     def __init__(
-        self, hidden_dim: int, num_layers: int, edge_kinds: tuple[str, ...], heads: tuple[str, ...]
+        self,
+        hidden_dim: int,
+        num_layers: int,
+        edge_kinds: tuple[str, ...],
+        heads: tuple[str, ...],
+        pooling: str = "mean",
     ):
         super().__init__()
-        self.encoder = _GnnEncoder(hidden_dim, num_layers, edge_kinds)
+        self.encoder = _GnnEncoder(hidden_dim, num_layers, edge_kinds, pooling)
         self.heads = nn.ModuleDict(
-            {name: nn.Linear(hidden_dim, len(_CLASSES_BY_DIMENSION[name])) for name in heads}
+            {
+                name: nn.Linear(self.encoder.out_dim, len(_CLASSES_BY_DIMENSION[name]))
+                for name in heads
+            }
         )
 
     def forward(self, batch: GraphBatch) -> dict[str, torch.Tensor]:
@@ -347,6 +381,7 @@ def fit_multitask(
     device: torch.device | None = None,
     verbose: bool = False,
     seed: int | None = 42,
+    pooling: str = "mean",
 ) -> tuple[GnnModel, GnnModel]:
     """Trains one shared encoder with both heads jointly -- the "multi-task"
     arm of the multi-task-vs-single-task ablation (plan §9). Returns
@@ -378,7 +413,7 @@ def fit_multitask(
             val_examples, {"time": val_time_labels or [], "space": val_space_labels or []}
         )
 
-    core = _GnnCore(hidden_dim, num_layers, edge_kinds, heads=("time", "space"))
+    core = _GnnCore(hidden_dim, num_layers, edge_kinds, heads=("time", "space"), pooling=pooling)
     core = _train(
         core,
         train_graphs,
@@ -430,6 +465,7 @@ def fit_single_task(
     device: torch.device | None = None,
     verbose: bool = False,
     seed: int | None = 42,
+    pooling: str = "mean",
 ) -> GnnModel:
     """Trains an independent single-head encoder for one dimension only --
     the "single-task" arm of the same ablation. Every example here already
@@ -457,7 +493,7 @@ def fit_single_task(
     if val_examples is not None and val_labels is not None:
         val_graphs, val_label_map = _prepare_dataset(val_examples, {dimension: list(val_labels)})
 
-    core = _GnnCore(hidden_dim, num_layers, edge_kinds, heads=(dimension,))
+    core = _GnnCore(hidden_dim, num_layers, edge_kinds, heads=(dimension,), pooling=pooling)
     core = _train(
         core,
         train_graphs,

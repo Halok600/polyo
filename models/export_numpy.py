@@ -21,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
+_POOLINGS = ("mean", "meanmax")  # models/gnn.py POOLINGS
 _LAYER_NORM_EPS = 1e-5
 
 
@@ -42,11 +43,15 @@ def export_gnn(
     `ir_symbols` should be `core.ir.IR_SYMBOLS` as it existed at train
     time -- saved alongside the weights so `NumpyGnnModel.load` can catch
     a vocabulary drift instead of silently serving scrambled embeddings."""
+    pooling = str(getattr(getattr(core, "encoder", None), "pooling", "mean"))
+    if pooling not in _POOLINGS:
+        raise ValueError(f"no numpy serving twin for pooling {pooling!r}; known: {_POOLINGS}")
     state = core.state_dict()  # type: ignore[attr-defined]
     arrays: dict[str, np.ndarray] = {
         key: tensor.detach().cpu().numpy() for key, tensor in state.items()
     }
     arrays["_edge_kinds"] = np.array(edge_kinds)
+    arrays["_pooling"] = np.array(pooling)
     arrays["_ir_symbols"] = np.array(ir_symbols)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(path, **arrays)  # type: ignore[arg-type]  # numpy's savez stub mistypes **kwds
@@ -56,9 +61,17 @@ class NumpyGnnModel:
     """Pure-numpy reimplementation of `_GnnCore.forward`, loaded from an
     `export_gnn` `.npz`."""
 
-    def __init__(self, weights: dict[str, np.ndarray], edge_kinds: tuple[str, ...]):
+    def __init__(
+        self,
+        weights: dict[str, np.ndarray],
+        edge_kinds: tuple[str, ...],
+        pooling: str = "mean",
+    ):
+        if pooling not in _POOLINGS:
+            raise ValueError(f"unknown pooling {pooling!r}; known: {_POOLINGS}")
         self.weights = weights
         self.edge_kinds = edge_kinds
+        self.pooling = pooling
         self.num_layers = len(
             {
                 k
@@ -92,7 +105,9 @@ class NumpyGnnModel:
                     f"serving.\ntrained:  {trained_symbols}\ncurrent:  {tuple(expected_symbols)}"
                 )
         weights = {k: data[k] for k in data.files if not k.startswith("_")}
-        return cls(weights, edge_kinds)
+        # artifacts written before the pooling option existed are mean-pooled
+        pooling = str(data["_pooling"]) if "_pooling" in data.files else "mean"
+        return cls(weights, edge_kinds, pooling)
 
     def _layer(self, x: np.ndarray, edges_by_kind: dict[str, np.ndarray], layer: int) -> np.ndarray:
         w = self.weights
@@ -125,6 +140,8 @@ class NumpyGnnModel:
         for layer in range(self.num_layers):
             x = self._layer(x, edges_by_kind, layer)
         pooled = x.mean(axis=0)
+        if self.pooling == "meanmax":  # the mean, then the per-feature maximum (see models/gnn.py)
+            pooled = np.concatenate([pooled, x.max(axis=0)])
         return {
             head: pooled @ self.weights[f"heads.{head}.weight"].T
             + self.weights[f"heads.{head}.bias"]

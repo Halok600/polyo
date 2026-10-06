@@ -251,3 +251,22 @@ def test_rename_follows_a_javascript_spread_operand() -> None:
     renamed = rename_identifiers(source, "javascript")
     assert renamed is not None
     assert "[...nums_r]" in renamed and "f(nums_r)" in renamed
+
+
+def test_dead_code_goes_above_the_decorators_of_a_nested_first_statement() -> None:
+    """The first statement of the function can be a decorated nested function: the padding must go
+    above its decorator, not between the decorator and the `def`."""
+    import ast
+
+    source = (
+        "from functools import lru_cache\n\n\n"
+        "def outer(n):\n"
+        "    @lru_cache(maxsize=None)\n"
+        "    def inner(k):\n"
+        "        return k\n\n"
+        "    return inner(n)\n"
+    )
+    padded = add_dead_code(source, "python", k=3)
+    assert padded is not None
+    ast.parse(padded)  # raises SyntaxError if the pad split the decorator from its def
+    assert padded.index("pad0") < padded.index("@lru_cache")

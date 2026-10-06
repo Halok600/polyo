@@ -31,6 +31,7 @@ from core.ir import IR_SYMBOLS
 from data.corpus import CorpusRecord, read_jsonl
 from eval.report import SPACE_CLASSES, TIME_CLASSES, compute_metrics
 from models import gbdt, gnn
+from models.augment import augment_with_dead_code
 from models.calibrate import fit_temperature
 from models.conformal import DEFAULT_ALPHAS, evaluate_conformal, fit_conformal
 from models.dataset import ParsedExample, build_examples, space_labels, time_labels, with_label
@@ -66,7 +67,10 @@ def _train_and_export_gnn(
     test_space_y: list[str | None],
     args: argparse.Namespace,
 ) -> None:
-    print("=== Training production GNN (multi-task, all edges) ===", flush=True)
+    print(
+        f"=== Training production GNN (multi-task, all edges, {args.pooling} pooling) ===",
+        flush=True,
+    )
     time_model, space_model = gnn.fit_multitask(
         train_ex,
         train_time_y,
@@ -80,6 +84,7 @@ def _train_and_export_gnn(
         max_epochs=args.max_epochs,
         patience=args.patience,
         verbose=True,
+        pooling=args.pooling,
     )
 
     calibration: dict[str, object] = {}
@@ -123,10 +128,11 @@ def _train_and_export_gnn(
             "mass_threshold_by_alpha": conformal_calibration.mass_threshold_by_alpha,
         }
 
-    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, ARTIFACTS_DIR / "gnn.npz")
-    calibration_path = ARTIFACTS_DIR / "calibration.json"
+    artifacts_dir = args.artifacts_dir
+    export_gnn(time_model.core, time_model.edge_kinds, IR_SYMBOLS, artifacts_dir / "gnn.npz")
+    calibration_path = artifacts_dir / "calibration.json"
     calibration_path.write_text(json.dumps(calibration, indent=2), encoding="utf-8")
-    conformal_path = ARTIFACTS_DIR / "conformal.json"
+    conformal_path = artifacts_dir / "conformal.json"
     conformal_path.write_text(json.dumps(conformal, indent=2), encoding="utf-8")
 
 
@@ -171,6 +177,7 @@ def _train_and_export_gbdt(
     test_ex: list[ParsedExample],
     test_time_y: list[str | None],
     test_space_y: list[str | None],
+    artifacts_dir: Path,
 ) -> None:
     """Trains rung 2 for attribution only (plan §8's "feature engineering,
     interpretability" rung) -- not saved as a LightGBM model file. Only
@@ -195,7 +202,7 @@ def _train_and_export_gbdt(
         weights_by_dimension[dimension] = _normalized_importance(model)
 
     scales = _feature_scales(train_ex)
-    importance_path = ARTIFACTS_DIR / "feature_importance.json"
+    importance_path = artifacts_dir / "feature_importance.json"
     importance_path.write_text(
         json.dumps({"weights": weights_by_dimension, "scales": scales}, indent=2),
         encoding="utf-8",
@@ -210,6 +217,28 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--hidden-dim", type=int, default=64)
     parser.add_argument("--num-layers", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=512)
+    parser.add_argument(
+        "--pooling",
+        choices=gnn.POOLINGS,
+        default="mean",
+        help="graph readout: mean, or mean and per-feature max (`eval/POOLING_EXPERIMENT.md`)",
+    )
+    parser.add_argument(
+        "--augment-dead-code",
+        action="store_true",
+        help="also train on a dead-code-padded copy of every training program (GNN only)",
+    )
+    parser.add_argument(
+        "--artifacts-dir",
+        type=Path,
+        default=ARTIFACTS_DIR,
+        help="where to write the artifacts (a candidate can be built beside the served ones)",
+    )
+    parser.add_argument(
+        "--skip-gbdt",
+        action="store_true",
+        help="leave the attribution weights (feature_importance.json) as they are",
+    )
     args = parser.parse_args(argv)
 
     splits = _load_splits(args.processed_dir)
@@ -222,15 +251,26 @@ def main(argv: list[str]) -> int:
     val_ex = examples_by_split["val"]
     test_ex = examples_by_split["test"]
 
+    gnn_train_ex = train_ex
+    if args.augment_dead_code:
+        # the originals come first: only the padded copies need parsing again
+        padded = augment_with_dead_code(splits["train"])[len(splits["train"]) :]
+        print(
+            f"augmented training set: {len(splits['train'])} -> "
+            f"{len(splits['train']) + len(padded)} records",
+            flush=True,
+        )
+        gnn_train_ex = train_ex + build_examples(padded)[0]
+
     train_time_y, train_space_y = time_labels(train_ex), space_labels(train_ex)
     val_time_y, val_space_y = time_labels(val_ex), space_labels(val_ex)
     test_time_y, test_space_y = time_labels(test_ex), space_labels(test_ex)
 
-    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    args.artifacts_dir.mkdir(parents=True, exist_ok=True)
     _train_and_export_gnn(
-        train_ex,
-        train_time_y,
-        train_space_y,
+        gnn_train_ex,
+        time_labels(gnn_train_ex),
+        space_labels(gnn_train_ex),
         val_ex,
         val_time_y,
         val_space_y,
@@ -239,11 +279,18 @@ def main(argv: list[str]) -> int:
         test_space_y,
         args,
     )
-    _train_and_export_gbdt(
-        train_ex, train_time_y, train_space_y, test_ex, test_time_y, test_space_y
-    )
+    if not args.skip_gbdt:
+        _train_and_export_gbdt(
+            train_ex,
+            train_time_y,
+            train_space_y,
+            test_ex,
+            test_time_y,
+            test_space_y,
+            args.artifacts_dir,
+        )
 
-    print(f"wrote artifacts to {ARTIFACTS_DIR}")
+    print(f"wrote artifacts to {args.artifacts_dir}")
     return 0
 
 

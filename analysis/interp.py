@@ -737,6 +737,11 @@ class Interp:
 
     # ---------------------------------------------------------------- assignment
     def exec_assign(self, st: Assign, env: Env) -> None:
+        if st.op == "=" and st.value is not None and _reads_one_line(st.value):
+            width = self._line_width(st)
+            if width is not None:
+                self._bind_line(st, width, env)
+                return
         if st.value is None:
             value = self.default_for_decl(st.decl)
         else:
@@ -747,6 +752,39 @@ class Interp:
             value = self._copy_container(value)  # type: ignore[arg-type]
         for target in st.targets:
             self.bind(target, value, env, st)
+
+    def _line_width(self, st: Assign) -> int | None:
+        """How many tokens a line of input read into `st` holds, when the program says so: names it
+        is unpacked into (`a, b = input().split()`), or positions it is only ever indexed at
+        (`s = line.split(" ")` then `s[0]`, `s[1]`). A line kept whole (`xs = list(map(int,
+        input().split()))`) is as long as the input and returns None."""
+        if len(st.targets) != 1:
+            return None
+        target = st.targets[0]
+        if (
+            isinstance(target, ListLit)
+            and target.elts
+            and not any(isinstance(e, Star) for e in target.elts)
+        ):
+            return len(target.elts)
+        if isinstance(target, Name):
+            return _constant_token_count(self._cur_func, target.id)
+        return None
+
+    def _bind_line(self, st: Assign, width: int, env: Env) -> None:
+        """A line of `width` tokens costs `width`, not the length of the input: `x, y =
+        map(int, input().split())` in a loop of n rounds is n pairs, not n lines of n numbers."""
+        self._cur.charge(Poly.const(width))
+        numbers = _converts_to_numbers(st.value)
+        token: Value = (
+            IntV(self.input_size) if numbers else make_container("str", self.input_size, owned=True)
+        )
+        target = st.targets[0]
+        if isinstance(target, ListLit):
+            self._bind_tuple(target, TupleV(tuple(token for _ in target.elts)), env, st)
+        else:
+            line = make_container("list", Poly.const(width), token, owned=True)
+            self.bind(target, line, env, st)
 
     def _is_copy_init(self, st: Assign, value: Value) -> bool:
         """C++ value semantics: `vector<int> items = nums;` copies, `vector<int>& items = nums;`
@@ -2075,6 +2113,18 @@ class Interp:
         result = substitute(summary.ret, mapping) or UNKNOWN
         if isinstance(result, ContV) and result.cap is not None and result.cap.kind == "pgrow":
             result = replace(result, cap=None)  # the callee's own handle on a parameter
+        if result is UNKNOWN or isinstance(result, UnknownV):
+            result = self._reader_result(func.name, result)
+        return result
+
+    def _reader_result(self, name: str, result: Value) -> Value:
+        """A program that wraps its input in its own `readLine()` / `nextInt()` (a debugging
+        switch next to `System.in`, a fast tokenizer) returns something the engine cannot follow
+        through the wrapper: it is still a line, or a number, of the input."""
+        if name in _READER_LINE:
+            return make_container("str", self.input_size, owned=True)
+        if name in _READER_INT:
+            return IntV(self.input_size)
         return result
 
     def _apply_effects(
@@ -2286,6 +2336,88 @@ def _is_qualified_chain(expr: Expr, env: Env) -> bool:
     while isinstance(node, Attribute):
         node = node.obj
     return isinstance(node, Name) and env.get(node.id) is None and node.id not in _SELF_NAMES
+
+
+_READER_LINE = frozenset({"readLine", "readline", "nextLine", "next", "nextToken", "read_line"})
+_READER_INT = frozenset({"nextInt", "nextLong", "readInt", "readLong", "read_int"})
+_LINE_READERS = frozenset({"input", "raw_input", "readline", "readLine", "nextLine"})
+_LINE_WRAPPERS = frozenset({"map", "list", "tuple", "split", "strip", "rstrip", "lstrip"})
+
+
+def _reads_one_line(expr: Expr | None) -> bool:
+    """`input()`, `input().split()`, `map(int, input().split())`, `sys.stdin.readline().strip()`,
+    `in.readLine().split(" ")`, `[int(x) for x in input().split()]`: the tokens of ONE line of
+    standard input."""
+    while expr is not None:
+        if isinstance(expr, Comp) and len(expr.generators) == 1 and expr.kind in ("list", "gen"):
+            expr = expr.generators[0].iter
+            continue
+        if not isinstance(expr, Call):
+            return False
+        func = expr.func
+        name = (
+            func.id if isinstance(func, Name) else func.attr if isinstance(func, Attribute) else ""
+        )
+        if name in _LINE_READERS:
+            return True
+        if name not in _LINE_WRAPPERS:
+            return False
+        if isinstance(func, Attribute):
+            expr = func.obj
+        elif expr.args:
+            expr = expr.args[-1]
+        else:
+            return False
+    return False
+
+
+def _converts_to_numbers(expr: Expr | None) -> bool:
+    """Is a line of input turned into numbers on the way (`map(int, ...)`, `[int(x) for ...]`)?"""
+    while expr is not None:
+        if isinstance(expr, Comp) and len(expr.generators) == 1:
+            element = expr.elt
+            if isinstance(element, Call) and isinstance(element.func, Name):
+                if element.func.id in ("int", "float"):
+                    return True
+            expr = expr.generators[0].iter
+            continue
+        if not isinstance(expr, Call):
+            return False
+        func = expr.func
+        if isinstance(func, Name) and func.id == "map" and expr.args:
+            first = expr.args[0]
+            return isinstance(first, Name) and first.id in ("int", "float")
+        if isinstance(func, Attribute):
+            expr = func.obj
+        elif expr.args:
+            expr = expr.args[-1]
+        else:
+            return False
+    return False
+
+
+def _constant_token_count(func: FuncDef | None, name: str) -> int | None:
+    """`k` when every use of `name` in the function is `name[<constant>]`: a line of input read
+    only by position holds as many tokens as the largest position says (`s[0]`, `s[1]` -> 2)."""
+    if func is None:
+        return None
+    uses = constant = assigned = 0
+    top = -1
+    for node in walk(func):
+        if isinstance(node, Name) and node.id == name:
+            uses += 1
+        elif (
+            isinstance(node, Subscript)
+            and isinstance(node.obj, Name)
+            and node.obj.id == name
+            and isinstance(node.index, Num)
+            and isinstance(node.index.value, int)
+        ):
+            constant += 1
+            top = max(top, node.index.value)
+        elif isinstance(node, Assign):
+            assigned += sum(isinstance(t, Name) and t.id == name for t in node.targets)
+    return top + 1 if constant and uses == constant + assigned else None
 
 
 def _self_multiple(poly: Poly, cap: Var) -> int | None:

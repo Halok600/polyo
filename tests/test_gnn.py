@@ -21,7 +21,8 @@ from models.gnn import (
     fit_single_task,
     ordinal_cross_entropy,
 )
-from models.graph_batch import collate, to_example_graph
+from models.graph_batch import ALL_EDGE_KINDS, collate, to_example_graph
+from parsing.normalize import normalize_source
 
 _CONSTANT = "def f(x):\n    return x + 1\n"
 _LINEAR = "def f(xs):\n    total = 0\n    for x in xs:\n        total += x\n    return total\n"
@@ -34,6 +35,10 @@ _QUADRATIC = (
     "    return total\n"
 )
 _FIT_KWARGS = dict(hidden_dim=8, num_layers=2, batch_size=8, max_epochs=3, patience=2)
+
+
+def _ir(code: str):
+    return normalize_source(code, "python")
 
 
 def _record(code: str, i: int, time_label: str, space_label: str | None) -> CorpusRecord:
@@ -171,3 +176,47 @@ def test_fit_respects_a_restricted_edge_kind_subset():
     model = fit_single_task(examples, time_labels, "time", edge_kinds=("AST_CHILD",), **_FIT_KWARGS)
     assert model.edge_kinds == ("AST_CHILD",)
     assert model.decision_function(examples).shape[0] == len(examples)
+
+
+# ------------------------------------------------------------------ pooling variants (phase 6)
+def test_mean_pooling_is_the_default_and_the_readout_is_the_node_mean():
+    core = _GnnCore(8, 2, ALL_EDGE_KINDS, heads=("time",))
+    assert core.encoder.pooling == "mean"
+    assert core.heads["time"].in_features == 8
+
+
+def test_mean_and_max_pooling_doubles_the_embedding():
+    core = _GnnCore(8, 2, ALL_EDGE_KINDS, heads=("time",), pooling="meanmax")
+    assert core.encoder.pooling == "meanmax"
+    assert core.heads["time"].in_features == 16
+
+
+def test_an_unknown_pooling_is_rejected():
+    with pytest.raises(ValueError):
+        _GnnCore(8, 2, ALL_EDGE_KINDS, heads=("time",), pooling="sum")
+
+
+def test_a_mean_and_max_model_trains_and_predicts():
+    examples, time_y, space_y = _synthetic_examples()
+    time_model, space_model = fit_multitask(
+        examples, time_y, space_y, pooling="meanmax", **_FIT_KWARGS
+    )
+    assert len(time_model.predict(examples)) == len(examples)
+    assert time_model.core.encoder.pooling == "meanmax"
+
+
+def test_the_max_part_of_the_readout_sees_the_strongest_node_not_the_average():
+    """Mean pooling dilutes a loop among many straight-line nodes; the max part does not."""
+    core = _GnnCore(8, 1, ALL_EDGE_KINDS, heads=("time",), pooling="meanmax")
+    core.eval()
+    short = to_example_graph(_ir(_LINEAR))
+    dead_code = "    a = 1\n" * 30
+    padded_source = _LINEAR.replace("    return total", dead_code + "    return total")
+    padded = to_example_graph(_ir(padded_source))
+    batch = collate([short, padded], ALL_EDGE_KINDS, torch.device("cpu"))
+    with torch.no_grad():
+        embedding = core.encoder(batch)
+    mean_part, max_part = embedding[:, :8], embedding[:, 8:]
+    mean_shift = (mean_part[0] - mean_part[1]).abs().sum()
+    max_shift = (max_part[0] - max_part[1]).abs().sum()
+    assert max_shift < mean_shift

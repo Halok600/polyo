@@ -116,13 +116,15 @@ def _score(name: str, pairs: list[tuple[str, str]]) -> int:
 
 def test_the_gnn_alone_still_fails_where_it_failed_and_the_hybrid_does_not(product) -> None:
     """The unflattering fact that started the rebuild, kept as an executable statement: on the
-    pairs the served model got wrong, the GNN alone is still wrong on most, a ten-line rule on loop
-    depth beats it on time, and the hybrid that replaced it gets all of them."""
+    pairs the previously served model got wrong, the GNN alone still misses some and the hybrid
+    that replaced it gets all of them. (The v1 GNN got 0 of these 20 right; the mean+max readout
+    retrained in Phase 6 gets 11 of 20: better, and still not the engine, so the engine stays
+    the default.)"""
     wrong = sorted(_WRONG_FOR_THE_GNN)
     gnn_hits = _score("gnn", wrong)
     hybrid_hits = _score("product", wrong)
     assert hybrid_hits == len(wrong)
-    assert gnn_hits < len(wrong) // 2, "the GNN alone no longer fails: revisit the promotion rule"
+    assert gnn_hits < hybrid_hits, "the GNN alone now matches the hybrid: revisit promotion"
 
 
 def test_the_rule_baseline_beats_the_gnn_alone_on_the_originally_reported_cases() -> None:

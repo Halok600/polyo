@@ -762,3 +762,238 @@ def test_a_tree_walked_level_by_level_is_not_exponential(source: str) -> None:
     """The next level is built out of the children of this one: bounded by the nodes in the tree,
     not multiplied by a constant each round."""
     assert _answer(source)[0] != "O(2^n)"
+
+
+# ------------------------------------------------------------------ reading standard input
+def test_a_line_unpacked_into_names_has_exactly_that_many_tokens() -> None:
+    source = """
+a, b, x = map(int, input().split())
+print((b // x) - ((a - 1) // x))
+"""
+    assert _answer(source)[:2] == ("O(1)", "O(1)")
+
+
+def test_reading_pairs_in_a_loop_is_linear_in_the_number_of_pairs() -> None:
+    source = """
+n = int(input())
+best = 0
+for _ in range(n):
+    x, y = map(int, input().split())
+    best = max(best, x + y)
+print(best)
+"""
+    assert _answer(source)[:2] == ("O(n)", "O(1)")
+
+
+def test_counting_pairs_read_one_per_line_stores_at_most_one_key_per_line() -> None:
+    source = """
+n = int(input())
+count = {}
+for _ in range(n):
+    a, b = input().split()
+    count[(a, b)] = count.get((a, b), 0) + 1
+print(max(count.values()))
+"""
+    assert _answer(source)[:2] == ("O(n)", "O(n)")
+
+
+def test_a_whole_line_kept_as_a_list_is_as_long_as_the_input() -> None:
+    source = """
+n = int(input())
+xs = list(map(int, input().split()))
+print(sum(xs))
+"""
+    assert _answer(source)[:2] == ("O(n)", "O(n)")
+
+
+def test_a_grid_read_row_by_row_is_rows_times_columns() -> None:
+    source = """
+n, m = map(int, input().split())
+grid = [input().split() for _ in range(n)]
+print(len(grid))
+"""
+    assert _answer(source)[:2] == ("O(n^2)", "O(n^2)")
+
+
+def test_tokens_used_only_by_constant_index_are_a_constant_number() -> None:
+    source = """
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        String[] s = in.readLine().split(" ");
+        int n = Integer.parseInt(s[0]);
+        int[] a = new int[n];
+        for (int i = 0; i < n; i++) {
+            s = in.readLine().split(" ");
+            a[i] = Integer.parseInt(s[0]);
+        }
+        Arrays.sort(a);
+        System.out.println(a[0]);
+    }
+}
+"""
+    assert _answer(source, "java")[:2] == ("O(n log n)", "O(n)")
+
+
+# ------------------------------------------------------------------ a call on something unknown
+def test_splitting_an_unknown_string_is_an_assumed_input_sized_list_not_one_token() -> None:
+    """The separator used to be taken for the subject, so `line.split(" ")` on a value the engine
+    knows nothing about was a list of ONE token and every loop over it free."""
+    source = """
+class A {
+    void f() {
+        String line = mystery();
+        String[] s = line.split(" ");
+        int x = 0;
+        for (int i = 0; i < s.length; i++) { x += i; }
+    }
+}
+"""
+    time_cls, _space, certainty = _answer(source, "java")
+    assert time_cls == "O(n)" and certainty != "certain"
+
+
+def test_a_free_function_still_takes_its_subject_from_the_arguments() -> None:
+    assert _answer("def f(xs):\n    return sorted(xs)\n")[0] == "O(n log n)"
+
+
+def test_a_user_defined_line_reader_returns_a_line_of_input() -> None:
+    source = """
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+    String[] canned = { "4", "1 1 2" };
+    boolean test = false;
+    int at = -1;
+
+    String readLine() throws IOException {
+        at++;
+        if (test) return canned[at];
+        return in.readLine();
+    }
+
+    void solve() throws IOException {
+        readLine();
+        String[] parts = readLine().split(" ");
+        List<Integer> values = new ArrayList<>();
+        for (int i = 0; i < parts.length; i++) {
+            values.add(Integer.valueOf(parts[i]));
+        }
+        Collections.sort(values);
+        System.out.println(values.get(0));
+    }
+
+    public static void main(String[] args) throws IOException {
+        new Main().solve();
+    }
+}
+"""
+    assert _answer(source, "java")[:2] == ("O(n log n)", "O(n)")
+
+
+# ------------------------------------------------------------------ itertools
+def test_every_triple_of_a_list_is_a_cubic_walk() -> None:
+    source = """
+from itertools import combinations
+
+
+def f(xs):
+    best = 0
+    for a, b, c in combinations(xs, 3):
+        best = max(best, a + b + c)
+    return best
+"""
+    assert _answer(source)[:2] == ("O(n^3)", "O(1)")
+
+
+def test_every_ordering_of_a_list_is_factorial() -> None:
+    source = """
+import itertools
+
+
+def f(xs):
+    best = 0
+    for p in itertools.permutations(xs):
+        best = max(best, p[0])
+    return best
+"""
+    assert _answer(source)[0] == "O(2^n)"  # n!, rounded up to the largest legacy class
+
+
+def test_pairs_of_orderings_with_a_fixed_length_are_polynomial() -> None:
+    source = """
+from itertools import permutations
+
+
+def f(xs):
+    t = 0
+    for a, b in permutations(xs, 2):
+        t += a * b
+    return t
+"""
+    assert _answer(source)[0] == "O(n^2)"
+
+
+def test_the_product_of_two_lists_visits_every_pair() -> None:
+    source = """
+import itertools
+
+
+def f(a, b):
+    t = 0
+    for x, y in itertools.product(a, b):
+        t += x * y
+    return t
+"""
+    assert _answer(source)[0] == "O(n^2)"
+
+
+def test_counting_pairs_in_a_generator_costs_the_pairs() -> None:
+    source = """
+from itertools import combinations
+
+
+def f(xs):
+    return sum(1 for a, b in combinations(xs, 2) if a < b)
+"""
+    assert _answer(source)[0] == "O(n^2)"
+
+
+def test_materialising_all_pairs_stores_all_pairs() -> None:
+    source = """
+from itertools import combinations
+
+
+def f(xs):
+    return list(combinations(xs, 2))
+"""
+    assert _answer(source)[:2] == ("O(n^2)", "O(n^2)")
+
+
+def test_a_comprehension_over_one_line_of_input_unpacked_into_names() -> None:
+    source = """
+n = int(input())
+seen = {}
+for _ in range(n):
+    h, m = (int(x) for x in input().split())
+    seen[h * 60 + m] = seen.get(h * 60 + m, 0) + 1
+print(max(seen.values()))
+"""
+    assert _answer(source)[:2] == ("O(n)", "O(n)")
+
+
+def test_a_list_comprehension_over_one_line_of_input_unpacked_into_names() -> None:
+    source = """
+n = int(input())
+total = 0
+for i in range(n):
+    a, b = [int(x) for x in input().split(" ")]
+    total += a * b
+print(total)
+"""
+    assert _answer(source)[:2] == ("O(n)", "O(1)")

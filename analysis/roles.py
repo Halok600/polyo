@@ -68,7 +68,7 @@ CONTAINER_CONSUMERS = frozenset(
     {
         "len", "sorted", "sum", "max", "min", "list", "set", "tuple", "dict", "enumerate",
         "reversed", "zip", "any", "all", "map", "filter", "iter", "heapify", "deque",
-        "frozenset", "Counter",
+        "frozenset", "Counter", "permutations", "combinations", "combinations_with_replacement",
     }
 )  # fmt: skip
 
@@ -85,6 +85,7 @@ _MODULE_CONSUMERS = frozenset(
     {
         "bisect_left", "bisect_right", "bisect", "insort", "heappush", "heappop", "heapify",
         "heappushpop", "heapreplace", "nlargest", "nsmallest", "permutations", "combinations",
+        "combinations_with_replacement", "product",
         "accumulate", "chain", "groupby", "deepcopy", "copy", "shuffle", "choice", "sample",
         "fsum", "mean", "median", "reduce", "sort", "sorted", "sum", "max", "min", "reverse",
         "fill", "binarySearch", "asList", "copyOf", "copyOfRange", "stream", "join", "Join",
@@ -297,6 +298,9 @@ def infer_roles(
                         func_expr.attr in ("max", "min", "sum") and len(node.args) >= 2
                     ):  # `Math.max(a, b)` compares values; the first argument is the collection
                         container(_root_of(node.args[0], aliases))
+                        if func_expr.attr in ("product", "chain"):  # every argument is iterated
+                            for extra in node.args[1:]:
+                                container(_root_of(extra, aliases))
             elif isinstance(func_expr, Name) and func_expr.id in CONTAINER_CONSUMERS:
                 if func_expr.id in ("max", "min") and len(node.args) >= 2:
                     continue  # `max(a, b)` compares two values; only `max(xs)` iterates

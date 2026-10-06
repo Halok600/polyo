@@ -59,3 +59,30 @@ def test_predictors_are_deterministic() -> None:
     for name in ("rule", "gnn"):
         predictor = get_predictor(name)
         assert predictor(_QUADRATIC_PY, "python") == predictor(_QUADRATIC_PY, "python")
+
+
+def test_a_candidate_artifacts_directory_can_be_named_in_the_environment(
+    monkeypatch, tmp_path
+) -> None:
+    """A retrained GNN is compared against the served one before it replaces it: the predictors
+    load whatever directory `POLYO_ARTIFACTS_DIR` names (and the served one when it is unset)."""
+    import api.models_registry as registry_module
+    from eval import predictors
+
+    seen: list[object] = []
+
+    def fake_load(*directory: object) -> str:
+        seen.append(directory)
+        return "registry"
+
+    monkeypatch.setattr(registry_module, "load_registry", fake_load)
+    try:
+        monkeypatch.setenv("POLYO_ARTIFACTS_DIR", str(tmp_path))
+        predictors._registry.cache_clear()
+        assert predictors._registry() == "registry"
+        monkeypatch.delenv("POLYO_ARTIFACTS_DIR")
+        predictors._registry.cache_clear()
+        assert predictors._registry() == "registry"
+    finally:
+        predictors._registry.cache_clear()
+    assert seen == [(tmp_path,), ()]

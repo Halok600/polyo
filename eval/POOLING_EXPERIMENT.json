@@ -1,0 +1,74 @@
+[
+ {
+  "variant": "mean",
+  "train_records": 12000,
+  "blind_n": 144,
+  "blind_time_correct": 42,
+  "blind_space_correct": 62,
+  "unchanged_after_padding": {
+   "10": [
+    33,
+    144
+   ],
+   "40": [
+    7,
+    144
+   ]
+  },
+  "seconds": 80
+ },
+ {
+  "variant": "meanmax",
+  "train_records": 12000,
+  "blind_n": 144,
+  "blind_time_correct": 59,
+  "blind_space_correct": 58,
+  "unchanged_after_padding": {
+   "10": [
+    112,
+    144
+   ],
+   "40": [
+    105,
+    144
+   ]
+  },
+  "seconds": 73
+ },
+ {
+  "variant": "mean+aug",
+  "train_records": 24000,
+  "blind_n": 144,
+  "blind_time_correct": 39,
+  "blind_space_correct": 52,
+  "unchanged_after_padding": {
+   "10": [
+    53,
+    144
+   ],
+   "40": [
+    27,
+    144
+   ]
+  },
+  "seconds": 179
+ },
+ {
+  "variant": "meanmax+aug",
+  "train_records": 24000,
+  "blind_n": 144,
+  "blind_time_correct": 53,
+  "blind_space_correct": 60,
+  "unchanged_after_padding": {
+   "10": [
+    126,
+    144
+   ],
+   "40": [
+    122,
+    144
+   ]
+  },
+  "seconds": 179
+ }
+]

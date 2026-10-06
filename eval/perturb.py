@@ -167,7 +167,8 @@ def add_dead_code(source: str, language: str, k: int = 20) -> str | None:
         if func is not None:
             first = func.body[0]
             indent = " " * first.col_offset
-            insert_at = first.lineno - 1
+            decorators = [d.lineno for d in getattr(first, "decorator_list", [])]
+            insert_at = min([first.lineno, *decorators]) - 1  # above the decorators, not below
         else:
             indent = ""
             insert_at = 0

@@ -24,7 +24,7 @@ from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from analysis.nodes import Attribute, Expr, Name, Star, Subscript
-from analysis.poly import Poly
+from analysis.poly import Poly, Var
 from analysis.values import (
     SCALAR,
     ContV,
@@ -67,7 +67,9 @@ class LibCall:
     def subject(self) -> ContV | None:
         if isinstance(self.receiver, ContV):
             return self.receiver
-        if self.args and isinstance(self.args[0], ContV):
+        # a method call on something the engine knows nothing about (`line.split(" ")` with an
+        # unknown `line`) has no subject: its first argument is the separator, not the container
+        if self.receiver is None and self.args and isinstance(self.args[0], ContV):
             return self.args[0]
         return None
 
@@ -75,7 +77,7 @@ class LibCall:
         """Arguments after the subject container (the whole list for a method call)."""
         if isinstance(self.receiver, ContV):
             return list(self.args)
-        if self.args and isinstance(self.args[0], ContV):
+        if self.receiver is None and self.args and isinstance(self.args[0], ContV):
             return list(self.args[1:])
         return list(self.args)
 
@@ -571,6 +573,8 @@ def _c_allocate(c: LibCall) -> LibResult | None:
      "getAsInt", "frequency", "Frequency", "Sum", "count_if", "all_of", "any_of", "none_of",
      "equal", "mismatch", "lexicographical_compare", "is_sorted", "adjacent_find")  # fmt: skip
 def _reduce(c: LibCall) -> LibResult | None:
+    if c.name == "product" and c.qualifier == "itertools":
+        return None  # itertools.product builds tuples, it does not multiply numbers
     subject = c.subject()
     if subject is not None and (
         c.name not in ("max", "min", "Max", "Min")
@@ -777,7 +781,7 @@ def _stringify(c: LibCall) -> LibResult | None:
 
 # ------------------------------------------------------------------------ lazy iterators
 @lib("reversed", "enumerate", "zip", "map", "filter", "iter", "Array.keys", "islice",
-     "chain", "permutations", "combinations", "product_iter", "cycle", "takewhile",
+     "chain", "product_iter", "cycle", "takewhile",
      "dropwhile", "accumulate_iter", "groupby", "pairwise", "batched")  # fmt: skip
 def _lazy(c: LibCall) -> LibResult | None:
     containers = [a for a in c.args if isinstance(a, ContV)]
@@ -948,6 +952,58 @@ def _scan(c: LibCall) -> LibResult | None:
     if c.name in ("scanf", "scan"):
         binds = {i: IntV(c.input()) for i in range(1 if c.name == "scanf" else 0, len(c.args))}
     return LibResult(SCALAR, ONE, binds_args=binds)
+
+
+def _only_var(poly: Poly) -> Var | None:
+    """The variable of a polynomial that is exactly one variable with coefficient 1."""
+    if len(poly.terms) != 1:
+        return None
+    mono, coef = poly.terms[0]
+    if coef != 1 or len(mono.pows) != 1 or mono.exps or mono.facts:
+        return None
+    var, power, log = mono.pows[0]
+    return var if power == 1 and log == 0 else None
+
+
+@lib("combinations", "combinations_with_replacement", "permutations", "product")
+def _itertools(c: LibCall) -> LibResult | None:
+    """`itertools` iterators are lazy: building one is free and each of the tuples it yields costs
+    one step of whatever loops over it. How many there are is the point: `combinations(xs, 3)` is
+    C(n, 3) <= n^3, `permutations(xs, r)` is n^r and `permutations(xs)` n!, `product(a, b)` is
+    |a| * |b| (and `product(xs, repeat=k)` is |xs|^k)."""
+    if c.lang != "python" or c.qualifier not in (None, "itertools"):
+        return None
+    subject = c.subject()
+    if subject is None:
+        return None
+    rest = c.rest()
+    if c.name == "product":
+        pools = [subject, *[a for a in rest if isinstance(a, ContV)]]
+        repeat = c.kwargs.get("repeat")
+        times = _const(repeat.mag) if isinstance(repeat, IntV) and repeat.mag is not None else 1
+        if times is None:
+            return None
+        length = ONE
+        for pool in pools:
+            length = (length * pool.length).order()
+        length = length.power(times) if times != 1 else length
+        width = len(pools) * int(times)
+    else:
+        given = next((a for a in rest if isinstance(a, IntV)), None)
+        r = _const(given.mag) if given is not None and given.mag is not None else None
+        if r is None and c.name == "permutations":
+            var = _only_var(subject.length)
+            if var is None:
+                return None
+            length, width = Poly.fact(var), 1
+        elif r is None:
+            return None
+        else:
+            length, width = subject.length.power(r).order(), int(r)
+    walk_ = make_container(
+        "list", length, TupleV((SCALAR,) * max(1, width)), view=True
+    )  # a view: nothing is materialised until something copies it
+    return LibResult(walk_, ONE)
 
 
 @lib("range", "xrange", "Range", "arange")

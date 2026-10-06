@@ -10,9 +10,11 @@ be compared against that floor, not just against the model it replaces.
 """
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 from features.tabular import extract_features
 from models.rule import predict_space, predict_time
@@ -51,9 +53,12 @@ def _rule(source: str, language: str) -> Prediction:
 
 @lru_cache(maxsize=1)
 def _registry():  # noqa: ANN202 -- ModelRegistry, imported lazily to keep `rule` torch/numpy-free
+    """The served artifacts, or the directory `POLYO_ARTIFACTS_DIR` names: a retrained candidate is
+    compared against the served model (`eval/compare.py`) before it replaces it."""
     from api.models_registry import load_registry
 
-    return load_registry()
+    candidate = os.environ.get("POLYO_ARTIFACTS_DIR")
+    return load_registry(Path(candidate)) if candidate else load_registry()
 
 
 def _from_api(engine: str, source: str, language: str, mode: str = "hybrid") -> Prediction:
