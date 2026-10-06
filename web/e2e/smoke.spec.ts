@@ -116,3 +116,86 @@ test("a static-engine answer leads with the expression, shows its derivation and
   await expect(page.getByText("CH.04 — SOURCE")).toBeVisible();
   await expect(page.getByText(/MODEL CLASS PROBABILITY/)).toHaveCount(0);
 });
+
+// --- layout: the two columns share a top line and end on a shared bottom line --------------------
+
+const box = async (page: import("@playwright/test").Page, selector: string, nth = 0) => {
+  const rect = await page.locator(selector).nth(nth).boundingBox();
+  if (!rect) throw new Error(`no box for ${selector}`);
+  return { top: rect.y, bottom: rect.y + rect.height };
+};
+
+test("idle: the two columns open on one line and the playground ends with the setup column", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "RUN THE BENCH →" }).click();
+  await expect(page.getByTestId("playground")).toBeVisible();
+
+  const setup = await box(page, "form .bench-colhead");
+  const readout = await box(page, ".bench-readout .bench-colhead");
+  expect(readout.top).toBeCloseTo(setup.top, 0);
+
+  // the first panel on the right starts where the intro text on the left starts
+  const intro = await box(page, "form > p.bench-intro");
+  const panel = await box(page, ".bench-readout > .bench-panel");
+  expect(panel.top).toBeCloseTo(intro.top, 0);
+
+  // and the playground finishes where the left column finishes
+  const form = await box(page, "form");
+  expect(panel.bottom).toBeCloseTo(form.bottom, 0);
+});
+
+test("results: panels share the top line, and the growth panel ends where the code input ends", async ({
+  page,
+}) => {
+  await page.route("**/v1/predict", (route) => route.fulfill({ json: SYMBOLIC_RESPONSE }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "RUN THE BENCH →" }).click();
+  await page.getByRole("button", { name: "RUN ANALYSIS" }).click();
+  await expect(page.getByTestId("time-headline")).toBeVisible();
+
+  const intro = await box(page, "form > p.bench-intro");
+  const timePanel = await box(page, ".bench-readout section > div .bench-panel", 0);
+  const spacePanel = await box(page, ".bench-readout section > div .bench-panel", 1);
+  expect(timePanel.top).toBeCloseTo(intro.top, 0);
+  expect(spacePanel.top).toBeCloseTo(timePanel.top, 0);
+
+  // the growth panel is stretched after layout settles, so poll instead of reading once
+  await expect
+    .poll(async () => {
+      const growth = await box(page, ".bench-match");
+      const input = await box(page, "form .bench-panel");
+      return Math.abs(growth.bottom - input.bottom);
+    })
+    .toBeLessThan(1);
+});
+
+// --- the idle playground --------------------------------------------------------------------------
+
+test("idle playground: the slider drives n, a lane explains itself, and clicking jumps to its breaking point", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "RUN THE BENCH →" }).click();
+
+  // taking the slider stops the autoplay and sets n on a log scale (500 of 1000 is n = 100)
+  await page.getByRole("slider", { name: "Input size n" }).fill("500");
+  await expect(page.getByTestId("playground-n")).toHaveText("n = 100");
+  await expect(page.locator('.pg-lane[data-verdict="never"]')).toHaveCount(1); // only 2^n is out of reach at n = 100
+
+  await page.getByRole("button", { name: /^O\(2\^n\),/ }).hover();
+  await expect(page.getByTestId("playground-footer")).toContainText("Passes 1 second at n = 30");
+
+  await page.getByRole("button", { name: /^O\(2\^n\),/ }).click();
+  await expect(page.getByTestId("playground-n")).toHaveText("n = 30");
+});
+
+test("idle playground: runs by itself, and a result replaces it", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "RUN THE BENCH →" }).click();
+  const first = await page.getByTestId("playground-n").innerText();
+  await expect.poll(() => page.getByTestId("playground-n").innerText()).not.toBe(first);
+
+  await page.getByRole("button", { name: "RUN ANALYSIS" }).click();
+  await expect(page.getByTestId("time-headline")).toBeVisible();
+  await expect(page.getByTestId("playground")).toHaveCount(0);
+});

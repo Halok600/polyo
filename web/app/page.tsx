@@ -9,6 +9,7 @@ import { ClassChip } from "@/components/ClassChip";
 import { CodeWithSpans } from "@/components/CodeWithSpans";
 import { DerivationPanel } from "@/components/DerivationPanel";
 import { GrowthChart } from "@/components/GrowthChart";
+import { IdlePlayground } from "@/components/IdlePlayground";
 import { Landing } from "@/components/Landing";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { ProbabilityBars } from "@/components/ProbabilityBars";
@@ -17,6 +18,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Toolbar } from "@/components/Toolbar";
 import { ApiError, fetchLanguages, predict } from "@/lib/api";
 import { usePrefersReducedMotion, withViewTransition } from "@/lib/motion";
+import { useMatchBottom } from "@/lib/useMatchBottom";
 import type { LanguageOption, PredictResponse } from "@/lib/types";
 
 // CodeMirror (core + language packages) is a ~650KB chunk on its own --
@@ -166,6 +168,9 @@ export default function Home() {
   const [activeLine, setActiveLine] = useState<number | null>(null);
   const [wakingUp, setWakingUp] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
+  // The code input (left) and the growth chart (right) end on the same line: see useMatchBottom.
+  const inputPanelRef = useRef<HTMLDivElement>(null);
+  const growthPanelRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -222,6 +227,8 @@ export default function Home() {
   // Reads current values through a ref instead of listing them as effect
   // deps -- `code` changes on every keystroke, and re-subscribing a global
   // window listener that often is pure churn for no behavioural gain.
+  const growthMinHeight = useMatchBottom(inputPanelRef, growthPanelRef, entered && result !== null, runId);
+
   const shortcutStateRef = useRef({ entered, loading, code, runAnalysis });
   useEffect(() => {
     shortcutStateRef.current = { entered, loading, code, runAnalysis };
@@ -276,7 +283,10 @@ export default function Home() {
 
       <div className="bench-grid">
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+          <div className="mono-nums field-label bench-colhead">
+            <span>SETUP</span>
+          </div>
+          <p className="bench-intro" style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
             Static, multi-language time &amp; space complexity prediction. No LLM, no code execution.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -296,9 +306,11 @@ export default function Home() {
             </div>
           </div>
           <LanguageSelector languages={languages} value={language} onChange={setLanguage} />
-          <BenchPanel channel="CH.00 — INPUT">
-            <CodeEditor value={code} onChange={setCode} language={language} />
-          </BenchPanel>
+          <div ref={inputPanelRef}>
+            <BenchPanel channel="CH.00 — INPUT">
+              <CodeEditor value={code} onChange={setCode} language={language} />
+            </BenchPanel>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
               type="submit"
@@ -318,13 +330,17 @@ export default function Home() {
           ) : null}
         </form>
 
-        <div>
+        <div className="bench-readout">
+          <div className="mono-nums field-label bench-colhead">
+            <span>READOUT</span>
+            {result ? (
+              <span>
+                LANG <span style={{ color: "var(--text-primary)" }}>{result.language_detected}</span>
+              </span>
+            ) : null}
+          </div>
           {result ? (
             <section key={runId} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <p className="mono-nums" style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                LANG <span style={{ color: "var(--text-primary)" }}>{result.language_detected}</span>
-              </p>
-
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 <ClassChip
                   channel="CH.01 — TIME"
@@ -359,7 +375,8 @@ export default function Home() {
                 />
               </div>
 
-              <BenchPanel channel="CH.03 — GROWTH" revealDelayMs={120}>
+              <div ref={growthPanelRef} className="bench-match" style={{ minHeight: growthMinHeight }}>
+              <BenchPanel channel="CH.03 — GROWTH" revealDelayMs={120} style={{ flex: 1 }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                   {(["time", "space"] as const).map((dim) => (
                     <button
@@ -385,6 +402,7 @@ export default function Home() {
                   )}
                 />
               </BenchPanel>
+              </div>
 
               {showDistribution ? (
                 <BenchPanel channel="CH.04 — DISTRIBUTION" revealDelayMs={180}>
@@ -435,12 +453,7 @@ export default function Home() {
               ) : null}
             </section>
           ) : (
-            <div
-              className="bench-panel"
-              style={{ color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6, minHeight: 200, display: "flex", alignItems: "center" }}
-            >
-              Paste code on the left and run an analysis — the exact cost expression, how it was derived line by line, and the growth curve will read out here.
-            </div>
+            <IdlePlayground />
           )}
         </div>
       </div>

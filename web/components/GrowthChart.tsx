@@ -181,7 +181,7 @@ export function GrowthChart({ title, n, series, predictedClass, betterClass }: G
   };
 
   return (
-    <div>
+    <div className="growth-chart">
       <div className="mono-nums" style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 8 }}>
         {title.toUpperCase()}
       </div>
